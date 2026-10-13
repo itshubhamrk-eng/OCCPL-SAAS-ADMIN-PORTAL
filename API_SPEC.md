@@ -101,16 +101,36 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 | GET/PUT | `/platform/users/{userId}/roles` | P:`platform.roles.manage` | Platform role assignment; last SUPER_ADMIN cannot be removed (409 `LAST_ADMIN`) — implemented |
 | GET | `/platform/roles` | P:`platform.roles.manage` | Platform roles with permissions — implemented |
 
-### Product catalogue
+### Product catalogue (implemented)
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| POST | `/products` | P:`platform.products.manage` | Register product (DRAFT) |
-| GET | `/products` | P:`platform.products.read` | List/filter |
-| GET/PATCH | `/products/{productId}` | P | Details / update metadata |
-| POST | `/products/{productId}/activate` · `/retire` | P:`platform.products.manage` | Lifecycle |
-| GET/POST | `/products/{productId}/versions` | P:`platform.products.manage` | List / publish validated config version |
-| GET/POST/PATCH | `/products/{productId}/features[/{featureId}]` | P:`platform.products.manage` | Features |
+| POST | `/products` | P:`platform.products.manage` | Register (DRAFT): `code`, `name`, `description?`, `appUrl`, `apiBaseUrl?`, `apiAudience?` |
+| GET | `/products` | P:`platform.products.read` | `q` (code/name prefix), `status`, paging, `sort=name\|code\|createdAt\|status` |
+| GET | `/products/config-schema` | P:`platform.products.read` | JSON Schema for configuration versions |
+| GET | `/products/{productId}` | P:`platform.products.read` | Details incl. `currentVersionNo`, `ETag` |
+| PATCH | `/products/{productId}` | P:`platform.products.manage` | Omitted fields unchanged, `""` clears optional ones; `code` immutable; `If-Match` |
+| POST | `/products/{productId}/activate` · `/retire` | P:`platform.products.manage` | Lifecycle; activate needs a published version (422 otherwise) |
+| POST | `/products/{productId}/versions` | P:`platform.products.manage` | `{config, notes?}` → DRAFT version N; 400 with `errors[]` (field = JSON path) if invalid; 409 if identical to the latest |
+| GET | `/products/{productId}/versions` · `/{versionNo}` | P:`platform.products.read` | History (without bodies) / one version with `config` |
+| POST | `/products/{productId}/versions/{versionNo}/publish` | P:`platform.products.manage` | Make current (rollback if older) |
+| DELETE | `/products/{productId}/versions/{versionNo}` | P:`platform.products.manage` | Drafts only (409 for published) |
+| POST | `/products/{productId}/features` | P:`platform.products.manage` | `{code, name, description?, type, unit?, resetPeriod?}` |
+| GET | `/products/{productId}/features` | P:`platform.products.read` | `status` filter |
+| PATCH | `/products/{productId}/features/{featureId}` | P:`platform.products.manage` | Rename/describe only |
+| POST | `/products/{productId}/features/{featureId}/deprecate` · `/reactivate` | P:`platform.products.manage` | Deprecated features cannot be added to new plans |
+
+Configuration (schema version 1) example:
+
+```json
+{
+  "schemaVersion": 1,
+  "launch": { "path": "/app/{companyCode}", "openInNewTab": true },
+  "provisioning": { "mode": "SYNC", "path": "/provisioning/v1/tenants/{companyId}", "timeoutSeconds": 30, "maxAttempts": 8 },
+  "tenantSettings": [ { "key": "region", "type": "enum", "label": "Data region", "options": ["in", "eu"], "default": "in" } ],
+  "metadata": { "owner": "inventory-team" }
+}
+```
 
 ### Plans
 

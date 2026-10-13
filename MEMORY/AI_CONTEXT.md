@@ -5,9 +5,10 @@ users/memberships, roles/permissions, product catalogue, plans, subscriptions, e
 provisioning, billing integration (Razorpay), audit, notifications. Products are separate services
 that own their data. Core contains no product business logic.
 
-**Current phase**: Phase 4 (Company & membership management) done 2026-10-13; **wait for approval
-before Phase 5** (Product catalogue: BACKLOG PC-1…PC-3). Open follow-ups: I-1 expired-token test,
-C-8 custom roles, C-9 Keycloak email theme, C-10 Idempotency-Key, C-11 seat limits (Phase 6).
+**Current phase**: Phase 5 (Product catalogue) done 2026-10-13; **wait for approval before Phase 6**
+(Plans, subscriptions & entitlements: BACKLOG S-1…S-6; decide D-5 grace period/retention then).
+Open follow-ups: I-1 expired-token test, C-8 custom roles, C-9 Keycloak email theme,
+C-10 Idempotency-Key, C-11 seat limits, PC-4 tenant setting values, PC-5 product logos.
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,
@@ -35,6 +36,10 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
   (`occpl.scheduling.enabled=false`) — call `NotificationDispatcher.dispatchDue()` / `InvitationService.expireOverdue()`.
 - Invitation tokens: SHA-256 stored; new users → Keycloak execute-actions email (redirect to accept URL),
   existing users → `Notifications.enqueue` email. Tests capture tokens from the IdP mock or the notification row.
+- Catalog: `ProductCatalog` API (find, features, currentConfig) for plans/provisioning; config JSON Schema at
+  `src/main/resources/catalog/product-config-v1.schema.json` (networknt 3.x, Jackson 3); multi-field errors via
+  `ValidationException`.
+- Integration tests share one DB and run in any order: never assume an empty table; clean up what a test relies on.
 - Shared test containers: `MySqlTestDatabase`, `KeycloakTestServer` (GreenMail on host port 3025).
 - Current user: `CurrentUser.require()` (identity api); audit actor via `shared.security.Actor`.
 - Company endpoints: `@PreAuthorize("@tenant.check(#companyId, '<company perm>', '<platform perm>')")`,

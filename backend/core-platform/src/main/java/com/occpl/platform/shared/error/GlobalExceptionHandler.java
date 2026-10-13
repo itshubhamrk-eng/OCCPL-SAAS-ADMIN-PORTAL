@@ -33,6 +33,11 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ProblemDetail> handleApi(ApiException ex, HttpServletRequest request) {
+        if (ex instanceof ValidationException validation) {
+            ProblemDetail problem = Problems.validation(request.getRequestURI(), validation.violations());
+            problem.setDetail(validation.getMessage());
+            return respond(problem);
+        }
         return respond(Problems.of(ex.code(), ex.getMessage(), request.getRequestURI()));
     }
 

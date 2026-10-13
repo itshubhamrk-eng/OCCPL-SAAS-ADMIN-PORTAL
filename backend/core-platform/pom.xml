@@ -21,6 +21,7 @@
         <spring-modulith.version>2.1.1</spring-modulith.version>
         <springdoc.version>3.1.1</springdoc.version>
         <bucket4j.version>8.21.0</bucket4j.version>
+        <json-schema-validator.version>3.0.8</json-schema-validator.version>
     </properties>
 
     <dependencyManagement>
@@ -55,6 +56,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bucket4j</groupId>

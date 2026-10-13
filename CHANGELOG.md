@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 5 — Product catalogue (2026-10-13)
+- Products: register (DRAFT), search, get, PATCH with ETag (code immutable, unique API audience,
+  HTTPS-only URLs), activate (requires published configuration) / retire / reinstate, audited.
+- Configuration versions: validated against a published JSON Schema (`GET /api/v1/products/config-schema`)
+  plus no-secrets and consistency rules; immutable; identical content rejected; publish and rollback;
+  draft deletion.
+- Features: BOOLEAN and LIMIT (unit, reset period; stock units must not reset), deprecate/reactivate.
+- `ProductCatalog` module API for plans and provisioning; multi-field `ValidationException`.
+- Tests: 31 unit/slice + 48 integration tests. Fixed an order-dependent integration test.
+
 ### Phase 4 — Company & membership management (2026-10-13)
 - Companies: create (with settings, primary contact and initial Company Admin invitation in one
   transaction), search, get, PATCH with ETag/If-Match, activate/suspend/deactivate with status

@@ -160,6 +160,15 @@ the need.
   (account disabled, sessions ended); Super Admins and one's own account cannot be disabled.
 - Email bodies (which can contain invitation links) are deleted from the outbox once sent.
 
+### Implemented in Phase 5 (verified)
+
+- Product configuration cannot carry secrets: setting/metadata names that look like secrets
+  (secret, password, token, api key, private key, credential) and values that look like private keys
+  or JWTs are rejected. Product service credentials live in Keycloak (client per product) and the
+  secret store.
+- Product URLs must use HTTPS (HTTP only for localhost) and may not embed credentials.
+- Catalogue management requires `platform.products.manage`; Platform Support has read-only access.
+
 ## 5. Secrets and data protection
 
 - No secrets in Git. Local dev uses `.env` (gitignored) with dev-only values; staging/prod use

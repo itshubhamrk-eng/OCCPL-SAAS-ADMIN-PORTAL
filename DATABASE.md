@@ -1,6 +1,6 @@
 # Database Design
 
-Status: Phase 4 — tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_settings`,
+Status: Phase 5 — tables `product`, `product_version`, `product_feature` (catalog) plus Phase 3–4 tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_settings`,
 `company_contact`, `company_status_history`, `company_membership`, `invitation`, `permission`, `role`,
 `role_permission`, `platform_role_assignment`, `membership_role`, `audit_log`, `notification` are created by Flyway (`db/migration/<module>/`); the rest of this design follows in later phases. MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
 `occpl_core`. Product services own separate schemas/databases.
@@ -79,9 +79,9 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 
 | Table | Key columns / constraints |
 |---|---|
-| `product` | id, `code` UK (immutable), name, description, `status` (DRAFT, ACTIVE, RETIRED), `app_url`, `api_base_url`, `api_audience`, `provisioning_mode` (NONE, SYNC, ASYNC), current_version_id, version |
-| `product_version` | id, product_id FK, `version_no` INT — UK(product_id, version_no), `config_json` JSON (validated against a JSON schema), `config_schema_version`, published_at, published_by. Immutable once published. |
-| `product_feature` | id, product_id FK, `code` — UK(product_id, code), name, `type` (BOOLEAN, LIMIT), `unit` (SEATS, GB, API_CALLS, RECORDS, …), `default_reset_period` (NONE, DAILY, MONTHLY, BILLING_PERIOD) |
+| `product` | id, `code` **UK** (immutable), name, description, `status` (DRAFT, ACTIVE, RETIRED), `app_url`, `api_base_url`, `api_audience` **UK**, `current_version_id` FK → product_version, created/updated by/at, version; IX(status, name), IX(name). Provisioning mode lives in the versioned configuration, not on the row. |
+| `product_version` | id, product_id FK, `version_no` — **UK(product_id, version_no)**, `schema_version`, `config_json` JSON (canonical: keys sorted), `config_hash` CHAR(64) (SHA-256 of the canonical JSON, used to reject identical versions), `status` (DRAFT, PUBLISHED), notes, created_by/at, published_by/at. Content columns are never updated. |
+| `product_feature` | id, product_id FK, `code` — **UK(product_id, code)**, name, description, `type` (BOOLEAN, LIMIT), `unit` (SEATS, STORAGE_GB, RECORDS, API_CALLS, TRANSACTIONS, DOCUMENTS, MESSAGES, COUNT), `reset_period` (NONE, DAILY, MONTHLY, BILLING_PERIOD), `status` (ACTIVE, DEPRECATED), version; CHECK: BOOLEAN ⇒ no unit/period, LIMIT ⇒ both. |
 
 Product service credentials are **not** stored here; they live in Keycloak / secret manager.
 

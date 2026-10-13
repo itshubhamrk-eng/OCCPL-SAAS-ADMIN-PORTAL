@@ -1,6 +1,6 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 4 (Company & membership management) complete — awaiting approval for Phase 5 (Product catalogue).**
+Status: **Phase 5 (Product catalogue) complete — awaiting approval for Phase 6 (Plans, subscriptions & entitlements).**
 Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective

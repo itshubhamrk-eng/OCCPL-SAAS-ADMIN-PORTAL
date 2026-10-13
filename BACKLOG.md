@@ -85,11 +85,22 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 5 — Product catalogue
 
-- ☐ **PC-1** Product register/update/activate/retire. AC: immutable `code`; retired product
-  cannot be added to new plans.
-- ☐ **PC-2** Versioned, JSON-schema-validated configuration. AC: invalid config → 400; published
-  versions immutable.
-- ☐ **PC-3** Product features (BOOLEAN/LIMIT, unit, reset period). AC: duplicate feature code → 409.
+- ☑ **PC-1** Products: register (DRAFT; `apiAudience` defaults to `product-<code>` and is unique),
+  search, get, PATCH with ETag/If-Match (`code` immutable), activate (requires a published
+  configuration; also reinstates), retire. URLs must be HTTPS (HTTP only for localhost), without
+  credentials, query or fragment. Verified (`CatalogIT`, `UrlRulesTest`). The rule "retired products
+  cannot be added to new plans" is exposed through `ProductCatalog` and enforced when plans exist (Phase 6).
+- ☑ **PC-2** Configuration versions validated against a published JSON Schema
+  (`GET /products/config-schema`) plus rules: no secrets (names or values), unique setting keys,
+  consistent defaults/options. Versions are immutable; identical content (any key order) → 409;
+  publish makes a version current; re-publishing an older version is a rollback; only drafts can be
+  deleted. Verified (`ProductConfigValidatorTest`, `CatalogIT`).
+- ☑ **PC-3** Features: BOOLEAN or LIMIT (unit + reset period; stock units such as SEATS must use
+  NONE), immutable code/type/unit/period, rename, deprecate/reactivate, duplicate code → 409.
+  Verified (`CatalogIT`).
+- ☐ **PC-4** Per-company values for `tenantSettings` (definitions exist; values are set when products
+  are provisioned, Phase 7).
+- ☐ **PC-5** Product logo/branding assets (needs safe file upload handling).
 
 ## Phase 6 — Plans, subscriptions & entitlements
 

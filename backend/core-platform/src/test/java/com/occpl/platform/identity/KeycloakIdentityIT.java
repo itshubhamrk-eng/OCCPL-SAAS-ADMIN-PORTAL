@@ -103,6 +103,9 @@ class KeycloakIdentityIT {
 
     @Test
     void bootstrapsSuperAdminAndRequiresMfaBeforeGrantingPlatformPermissions() throws Exception {
+        // Integration tests share one database: start from a platform without Super Admins.
+        jdbc.update("delete from platform_role_assignment where role_id = UUID_TO_BIN(?)",
+                "01920000-0000-7000-8000-000000000001");
         String subject = readyUser(BOOTSTRAP_EMAIL);
 
         // 1. Password-only token: SUPER_ADMIN assigned, but platform permissions withheld.
@@ -110,8 +113,8 @@ class KeycloakIdentityIT {
         assertThat(me.get("platform").get("roles").toString()).contains("SUPER_ADMIN");
         assertThat(me.get("platform").get("permissions").size()).isZero();
         assertThat(me.get("platform").get("mfaRequired").asBoolean()).isTrue();
-        assertThat(jdbc.queryForObject("select count(*) from audit_log where action = 'platform.super_admin.bootstrapped'",
-                Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from audit_log where action = 'platform.super_admin.bootstrapped' "
+                + "and target_id = ?", Integer.class, me.get("id").asString())).isEqualTo(1);
         assertThat(idp.findBySubject(subject).orElseThrow().requiredActions()).contains("CONFIGURE_TOTP");
 
         // 2. Browser login: Keycloak makes the user enrol an authenticator app.
