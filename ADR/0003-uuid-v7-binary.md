@@ -1,6 +1,6 @@
 # ADR-0003: UUID v7 identifiers stored as BINARY(16)
 
-- Status: Proposed · Date: 2026-10-13
+- Status: Accepted · Date: 2026-10-13
 
 ## Context
 Need globally unique, non-guessable-ish, application-generated ids (useful for idempotent

@@ -1,6 +1,7 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 1 (Discovery & Architecture) — awaiting approval.** No application code exists yet.
+Status: **Phase 2 (Foundation) complete — awaiting approval for Phase 3 (Identity & access).**
+Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective
 
@@ -65,20 +66,25 @@ Inspected on 2026-10-13, branch `claude/affectionate-bardeen-8xrm9g`:
   Angular `latest` = 22.2.x (21.x and 20.x on LTS); Spring Boot newest GA = 4.1.x;
   Spring Modulith 1.4.x (Boot 3.5 line); Keycloak 26.x.
 
-### Technology assessment and version notes
+### Technology versions (decision: "use the latest version")
 
-| Area | Mandated | Proposed pin (confirm at Phase 2 start) | Note |
+Checked against the public registries on 2026-10-13. Where a product has both a newest feature
+release and a newer-than-previous LTS line, the **latest LTS** is used for production stability
+(see ADR-0007); moving to the feature release is a one-line change if OCCPL prefers it.
+
+| Area | Version in use | Newest available | Note |
 |---|---|---|---|
-| Java | 21 | 21 LTS | Available locally |
-| Spring Boot | 3.x | **3.5.x latest patch** | Spring's published OSS support window for 3.5 was scheduled to end mid-2026. If the business requires vendor-OSS-supported versions, choose Boot 4.x instead (Decision D-1). The architecture does not depend on the choice. |
-| Angular | supported stable | 22.x (current `latest`), strict TS | 21 LTS is acceptable if a longer support window is preferred |
-| DB | MySQL 8 | MySQL 8.4 LTS | |
-| IdP | OIDC, e.g. Keycloak | Keycloak 26.x (self-hosted) | Managed alternative possible (D-2) |
-| Migrations | Flyway | Flyway (Boot-managed version) + `flyway-mysql` | |
-| Cache / rate limit | Redis when justified | Redis 7 (entitlement cache, rate limiting) | Justified in ADR-0006 |
-| Module boundaries | — | Spring Modulith verification + ArchUnit | ADR-0001 |
-| API docs | OpenAPI | springdoc-openapi | |
-| Tests | JUnit 5, Mockito, Spring Boot Test | + Testcontainers (MySQL, Keycloak), Angular TestBed, k6 for load | |
+| Java | **25 LTS** (Temurin 25.0.4) | 27 (non-LTS, 6-month support) | Supersedes the original "Java 21" mandate |
+| Spring Boot | **4.1.1** (Spring Framework 7, Security 7, Hibernate 7.4, Jackson 3.1, Flyway 12.4) | 4.1.1 GA | Supersedes the original "3.x" mandate |
+| Spring Modulith | 2.1.1 | — | Module boundary verification |
+| springdoc-openapi | 3.1.1 | — | |
+| Angular | **22.2** (TypeScript 6.0, Vitest 5, zoneless) | 22.2.2 | |
+| Node.js (build only) | 24 LTS | 26 | Angular 22 requires ≥ 22.22.3 / 24.15 |
+| MySQL | **9.7 LTS** | 26.7 (innovation track) | Flyway 12.4 logs "verified up to MySQL 9.4"; integration tests pass on 9.7 (risk R-1) |
+| Keycloak | **26.8.1** | 26.8.1 | |
+| Nginx | 1.30 (stable, unprivileged image) | 1.31 mainline | |
+| Redis | not yet added | 8.10 | Added with rate limiting / caching in Phase 3 |
+| Testcontainers | 2.0.x (Boot-managed) | 2.0.5 | |
 
 ## 4. Explicit assumptions
 
@@ -95,17 +101,26 @@ Inspected on 2026-10-13, branch `claude/affectionate-bardeen-8xrm9g`:
 | A-9 | Data residency: single region (India) at launch. |
 | A-10 | Email is the only notification channel at launch (SMTP / transactional email provider). |
 
-## 5. Unresolved business decisions
+## 5. Business decisions
 
-| # | Decision needed | Blocks | Default if not answered |
-|---|---|---|---|
-| D-1 | Spring Boot 3.5.x (mandated) vs 4.x (newer support window) | Phase 2 | 3.5.x as mandated |
-| D-2 | Self-hosted Keycloak vs managed IdP (Auth0, Cognito, Entra) | Phase 3 | Self-hosted Keycloak |
-| D-3 | Payment gateway (Razorpay, Stripe, other) | Billing backlog items | Razorpay (India), behind a gateway port |
-| D-4 | Invoicing/tax (GST) ownership: gateway vs accounting system vs in-house | Billing | Gateway-generated invoices; we store references |
-| D-5 | Grace period length for PAST_DUE before SUSPENDED; retention after CANCELLED/EXPIRED | Phase 6 | 7 days grace; data retained 90 days after expiry |
-| D-6 | Confirm SLOs in §2 | Phase 9 | Provisional values above |
-| D-7 | Can a Company Admin self-serve purchases/upgrades, or only Super Admin assigns plans? | Phase 6/8 | Super Admin assigns; Company Admin views (self-serve later) |
-| D-8 | Should users self-register, or only via invitation? | Phase 3 | Invitation-only |
-| D-9 | Product launch model: separate domains per product with SSO, or path-based behind one gateway | Phase 7 | Separate subdomains, shared IdP SSO |
-| D-10 | Personal-data retention/export obligations (DPDP Act 2023 or customer contracts) | Phase 9 | Implement export + deletion workflow, retention configurable |
+| # | Decision | Status |
+|---|---|---|
+| D-1 | Versions | **Decided:** latest versions — see §3 and ADR-0007 |
+| D-2 | Login provider | **Decided:** the secure option — self-hosted Keycloak (data stays in OCCPL infrastructure), MFA enforced for platform roles, brute-force protection, strong password policy (ADR-0002, SECURITY.md) |
+| D-3 | Payment gateway | **Decided:** Razorpay, behind a gateway port |
+| D-4 | Invoicing / GST | **Decided:** invoices generated by the gateway (Razorpay); Core stores references |
+| D-5 | Grace period, retention after cancel/expiry | **Deferred:** decided when subscriptions are implemented (Phase 6); must be configurable |
+| D-6 | Confirm SLOs in §2 | Open — needed by Phase 9 |
+| D-7 | Company Admin self-serve purchases? | Open — default: Super Admin assigns plans |
+| D-8 | Self-registration vs invitation only | Open — default: invitation only |
+| D-9 | Product launch model (subdomains + SSO vs path-based) | Open — needed by Phase 7 |
+| D-10 | Personal-data retention/export obligations (DPDP Act 2023, contracts) | Open — needed by Phase 9 |
+
+## 6. Risks
+
+| # | Risk | Mitigation |
+|---|---|---|
+| R-1 | Flyway 12.4 has not been verified by its vendor on MySQL 9.7 (warns at startup) | CI runs every migration on a MySQL 9.7 Testcontainer; upgrade Flyway when verification catches up; fall back to MySQL 8.4 LTS if a defect appears |
+| R-2 | Spring Boot 4 / Jackson 3 ecosystem is newer; some third-party libraries may lag | Prefer Boot-managed dependencies; check compatibility before adding libraries |
+| R-3 | Self-hosted Keycloak must be operated (HA, upgrades, backups) | Two-node deployment, DB backups, upgrade runbook (Phase 10) |
+| R-4 | Scale targets unproven until load-tested | BACKLOG H-3; never claim capacity without measurements |

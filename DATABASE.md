@@ -1,6 +1,6 @@
 # Database Design
 
-Status: Phase 1 proposal. MySQL 8.4, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
+Status: Phase 1 design (no tables created yet — first migrations arrive in Phase 3). MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
 `occpl_core`. Product services own separate schemas/databases.
 
 ## 1. Conventions
@@ -171,7 +171,7 @@ subscription event (event-driven, idempotent full recompute for the company).
   contract) to allow rolling deploys and rollback of the application without DB rollback.
 - Large-table changes use online DDL (`ALGORITHM=INSTANT/INPLACE`) or a pt-online-schema-change
   / gh-ost runbook; never long table locks during business hours.
-- CI runs all migrations against a fresh MySQL 8.4 Testcontainer and against a copy of the
+- CI runs all migrations against a fresh MySQL 9.7 Testcontainer (implemented: `CorePlatformApplicationIT`) and against a copy of the
   previous release's schema; `flyway validate` gates deployment.
 - Separate DB users: `occpl_migrator` (DDL, used only by the migration step) and `occpl_app`
   (DML only; no UPDATE/DELETE on `audit_log`).

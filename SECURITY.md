@@ -1,10 +1,13 @@
 # Security Design
 
-Status: Phase 1 proposal.
+Status: Design approved (D-2: self-hosted Keycloak, the secure option). Phase 2 implemented the
+resource-server baseline, error handling, headers and CORS; identity mapping and authorization
+arrive in Phase 3.
 
 ## 1. Authentication
 
-- **IdP**: Keycloak 26.x, realm `occpl` (ADR-0002). The Core Platform never stores passwords or
+- **IdP**: Keycloak 26.8, realm `occpl` (ADR-0002), self-hosted so credentials and identity data stay
+  in OCCPL-controlled infrastructure. The Core Platform never stores passwords or
   issues end-user tokens.
 - **Browser (Angular)**: Authorization Code + PKCE, public client `occpl-admin-portal`.
   Access token lifetime 5 min, refresh-token rotation enabled, SSO session idle 30 min /
@@ -74,8 +77,8 @@ The permission catalogue is seeded by migrations; API_SPEC.md references these c
   resource's own `company_id`, never from the request.
 - `TenantContext` is built per request (no thread-local leakage across async boundaries;
   explicit propagation to async tasks).
-- Repositories for tenant-owned tables expose only `findByCompanyIdAnd…` methods; an ArchUnit
-  rule forbids unscoped `findById` on tenant-owned repositories outside platform services.
+- Repositories for tenant-owned tables expose only `findByCompanyIdAnd…` methods; a module test
+  forbids unscoped `findById` on tenant-owned repositories outside platform services.
 - Lookups of a resource belonging to another tenant return **404** (not 403) to avoid
   enumeration.
 - Mandatory negative tests (BACKLOG H-2): for every company-scoped endpoint, a user of company A
@@ -103,6 +106,19 @@ membership therefore loses access within the cache TTL, not at token expiry.
 | Errors | RFC 9457 problem details; no stack traces, SQL or internal IDs of other tenants. |
 | Webhooks | HMAC signature verification with constant-time compare, timestamp tolerance, event-id idempotency, raw body retained only as a hash. |
 | Uploads | None initially. If added: type sniffing, size limits, AV scan, object storage, never served from app origin. |
+
+### Implemented in Phase 2 (verified)
+
+- JWT validation of signature (JWKS), issuer and audience `occpl-core`: unit/slice tests, plus a
+  manual end-to-end check against Keycloak 26.8.1 (valid token accepted; missing audience, foreign
+  issuer and tampered signature → 401).
+- Local realm import (`infra/docker/keycloak/occpl-realm.json`): public PKCE (S256) client, no
+  implicit or password grants, audience mapper, brute-force lockout, password policy
+  `length(12)`, history 5, 5-minute access tokens, refresh-token rotation, email verification.
+  MFA enforcement for platform roles is configured in Phase 3 together with role mapping.
+- Portal Nginx: strict CSP (`script-src 'self'`, no inline scripts — Angular critical-CSS inlining
+  is disabled for this reason), `frame-ancestors 'none'`, `nosniff`, no caching of `index.html` /
+  `config.json`, unprivileged container user.
 
 ## 5. Secrets and data protection
 

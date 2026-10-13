@@ -1,0 +1,18 @@
+# Build output
+target/
+dist/
+out-tsc/
+.angular/
+node_modules/
+coverage/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# Local secrets — never commit
+.env
+*.env.local

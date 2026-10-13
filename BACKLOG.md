@@ -5,29 +5,35 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 1 — Discovery & architecture
 
-- ◐ **P1-1** Phase 1 documentation set (this file, PROJECT, ARCHITECTURE, DATABASE, API_SPEC,
-  SECURITY, DEPLOYMENT, ADRs, MEMORY). AC: reviewed and approved by OCCPL; decisions D-1…D-10
-  answered or defaults accepted. *(Docs written; awaiting approval.)*
+- ☑ **P1-1** Phase 1 documentation set. Decisions D-1–D-4 answered on 2026-10-13; D-5 deferred
+  to Phase 6; D-6–D-10 open with defaults.
 
 ## Phase 2 — Foundation
 
-- ☐ **F-1** Repo layout, Maven parent, `core-platform` Spring Boot app (Java 21), Angular
-  workspace (strict). AC: `mvn verify` and `ng build`/`ng test` pass in CI.
-- ☐ **F-2** Docker Compose: MySQL 8.4, Redis 7, Keycloak 26 (realm import), Mailpit, core,
-  portal, Nginx. AC: `docker compose up` yields healthy services; README quickstart works.
-- ☐ **F-3** Flyway baseline + `shared` module (UUIDv7, Clock, paging DTOs, problem-details
-  handler, correlation-id filter, JSON logging). AC: unit tests for error mapping and
-  correlation propagation; migration test on Testcontainers MySQL.
-- ☐ **F-4** Module-boundary verification (Spring Modulith + ArchUnit). AC: test fails on an
-  illegal `internal` import.
-- ☐ **F-5** Actuator health/readiness, Prometheus metrics, OpenAPI. AC: endpoints reachable;
-  prometheus endpoint not exposed publicly via Nginx.
-- ☐ **F-6** CI pipeline (build, test, dependency scan, image build). AC: green pipeline on PR.
+- ☑ **F-1** Repo layout, Maven aggregator, `core-platform` (Java 25, Spring Boot 4.1.1), Angular 22
+  workspace (strict TS + strict templates). Verified: `mvn verify` green; `ng build`, `ng test`,
+  `ng lint`, `prettier --check` green.
+- ☑ **F-2** Docker Compose: MySQL 9.7 (least-privilege users), Keycloak 26.8.1 (realm import),
+  core, portal (unprivileged Nginx, runtime config, strict CSP). Verified in this environment with
+  images built from host artifacts: all services healthy, JWT validation end-to-end, portal renders
+  with no console/CSP errors. *Not verified here:* the in-container `mvn`/`npm` build stages (the
+  sandbox has no network inside `docker build`); CI builds both images. Redis and Mailpit are added
+  when first needed (Phase 3 / notifications).
+- ☑ **F-3** `shared` module: UUIDv7, UTC Clock, paging, RFC 9457 error handling, correlation-id
+  filter, structured JSON logging. No Flyway migrations yet (first tables in Phase 3); Flyway +
+  `ddl-auto=validate` verified against MySQL 9.7 by `CorePlatformApplicationIT`.
+- ☑ **F-4** Module-boundary verification with Spring Modulith (`ModularityTests`). ArchUnit
+  dropped as redundant. Rule violation tests become meaningful once a second module exists (Phase 3).
+- ☑ **F-5** Actuator liveness/readiness/info/prometheus on management port 8081 (others denied),
+  Hikari metrics, OpenAPI (off unless `API_DOCS_ENABLED=true`). Verified by integration tests.
+- ☑ **F-6** GitHub Actions CI (backend verify, frontend checks + `npm audit`, image builds) and
+  Dependabot. *Not yet run on GitHub* — first run happens on the next PR/push to `main`.
 
 ## Phase 3 — Identity & access
 
-- ☐ **I-1** Resource-server JWT validation (iss/aud/exp) against Keycloak. AC: tests with
-  invalid issuer/audience/expired token → 401.
+- ◐ **I-1** Resource-server JWT validation (iss/aud/exp) against Keycloak. Configured in Phase 2
+  and checked manually end-to-end; remaining AC: automated tests with signed tokens for invalid
+  issuer/audience/expired token → 401.
 - ☐ **I-2** User mapping (`user`, `user_identity`), `GET /me`. AC: first authenticated call
   links invited user by verified email; unverified email not linked.
 - ☐ **I-3** Permissions/roles seed + `access` module decision service + `TenantContext`

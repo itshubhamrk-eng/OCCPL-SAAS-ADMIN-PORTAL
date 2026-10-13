@@ -1,0 +1,27 @@
+# Local development against infra/docker/docker-compose.yml. Never use these values elsewhere.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/occpl_core}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8180/realms/occpl}
+
+logging:
+  structured:
+    format:
+      console: ""
+  pattern:
+    level: "%5p [%X{correlationId:-}]"
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+occpl:
+  security:
+    cors:
+      allowed-origins: http://localhost:4200

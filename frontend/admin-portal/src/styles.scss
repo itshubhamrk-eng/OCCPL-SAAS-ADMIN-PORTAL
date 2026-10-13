@@ -1,0 +1,26 @@
+@use 'styles/tokens';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--occpl-color-background);
+  color: var(--occpl-color-text);
+  font-family: var(--occpl-font-family);
+  font-size: var(--occpl-font-size-md);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--occpl-color-primary);
+}
+
+:focus-visible {
+  outline: 2px solid var(--occpl-color-focus);
+  outline-offset: 2px;
+}

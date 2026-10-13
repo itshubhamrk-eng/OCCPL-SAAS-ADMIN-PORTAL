@@ -1,0 +1,29 @@
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="shell-header">
+  <a class="brand" routerLink="/">
+    <span class="brand-mark" aria-hidden="true">O</span>
+    <span class="brand-name">OCCPL Innovations</span>
+    <span class="brand-product">Admin Portal</span>
+  </a>
+</header>
+
+@if (notifier.error(); as error) {
+  <div class="alert" role="alert">
+    <p class="alert-message">{{ error.message }}</p>
+    @if (error.correlationId) {
+      <p class="alert-reference">Reference: {{ error.correlationId }}</p>
+    }
+    <button
+      type="button"
+      class="alert-dismiss"
+      (click)="notifier.dismiss()"
+      aria-label="Dismiss error"
+    >
+      ×
+    </button>
+  </div>
+}
+
+<main id="main-content" class="shell-main" tabindex="-1">
+  <router-outlet />
+</main>

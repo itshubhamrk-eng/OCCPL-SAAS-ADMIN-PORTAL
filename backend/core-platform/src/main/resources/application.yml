@@ -1,0 +1,77 @@
+# Defaults are production-safe: API docs off, no CORS origins, structured JSON logs.
+# Secrets and environment-specific values come from environment variables only.
+spring:
+  application:
+    name: core-platform
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/occpl_core}
+    username: ${DB_USERNAME:occpl_app}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 5000
+      max-lifetime: 1500000
+      pool-name: core-hikari
+  flyway:
+    # Migrations run with a DDL-capable account; the application account is DML-only.
+    user: ${DB_MIGRATOR_USERNAME:${spring.datasource.username}}
+    password: ${DB_MIGRATOR_PASSWORD:${spring.datasource.password}}
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+          audiences: ${OIDC_AUDIENCE:occpl-core}
+
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:false}
+
+occpl:
+  security:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:}

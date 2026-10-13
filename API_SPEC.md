@@ -1,6 +1,6 @@
 # API Specification (initial inventory)
 
-Status: Phase 1 proposal. The authoritative contract will be the generated OpenAPI document
+Status: Phase 1 inventory; the error format (§2) and conventions are implemented in Phase 2. The authoritative contract will be the generated OpenAPI document
 (`/v3/api-docs`, Swagger UI in non-production) once endpoints are implemented. Nothing below is
 implemented yet.
 

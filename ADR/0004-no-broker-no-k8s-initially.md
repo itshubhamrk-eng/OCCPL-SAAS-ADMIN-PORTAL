@@ -1,6 +1,6 @@
 # ADR-0004: Transactional outbox + DB-backed jobs; no message broker or Kubernetes initially
 
-- Status: Proposed · Date: 2026-10-13
+- Status: Accepted · Date: 2026-10-13
 
 ## Context
 Provisioning and notifications must survive crashes and retries. Event volume at launch is low

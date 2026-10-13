@@ -1,0 +1,12 @@
+# Test profile (activated with @ActiveProfiles("test")), layered over the main application.yml. The issuer is never contacted: slice tests
+# use mocked JWTs and Boot resolves the issuer lazily.
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://idp.test.invalid/realms/occpl
+logging:
+  structured:
+    format:
+      console: ""

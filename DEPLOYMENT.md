@@ -1,6 +1,6 @@
 # Deployment
 
-Status: Phase 1 plan. No deployment artifacts exist yet (created in Phase 2 / Phase 10).
+Status: Local stack, Dockerfiles and CI implemented in Phase 2. Production deployment in Phase 10.
 
 ## 1. Environments
 
@@ -9,11 +9,54 @@ Status: Phase 1 plan. No deployment artifacts exist yet (created in Phase 2 / Ph
 | local | Development | Docker Compose on developer machine | Synthetic seed |
 | test (CI) | Automated tests | Testcontainers (MySQL, Keycloak, Redis) | Ephemeral |
 | staging | Release verification, load tests | Same topology as prod, smaller sizes | Synthetic / anonymized |
-| production | Customers | Ubuntu 24.04 LTS VMs (≥ 2 app nodes) behind LB/Nginx, managed or replicated MySQL 8.4, Redis, Keycloak (2 nodes) | Real |
+| production | Customers | Ubuntu 24.04 LTS VMs (≥ 2 app nodes) behind LB/Nginx, managed or replicated MySQL 9.7 LTS, Redis, Keycloak (2 nodes) | Real |
 
-Configuration: Spring profiles `local`, `test`, `staging`, `prod`; Angular environment files
-for API/IdP URLs only. All secrets injected at runtime (env vars / secret manager); none in
+Configuration: Spring profiles `local` and `test` exist (staging/prod use the production-safe defaults in
+`application.yml` plus environment variables); the portal reads a runtime `config.json`
+generated from environment variables. All secrets injected at runtime (env vars / secret manager); none in
 Git or images.
+
+### Local development
+
+Prerequisites: Docker, JDK 25, Maven 3.9+, Node.js 24 LTS.
+
+```bash
+# Full stack in containers
+cd infra/docker && cp .env.example .env   # edit the passwords
+docker compose up --build
+#   Portal http://localhost:4200 · API http://localhost:8080 · Swagger http://localhost:8080/swagger-ui.html
+#   Health http://localhost:8081/actuator/health · Keycloak http://localhost:8180
+
+# Or run the backend from source against the compose MySQL/Keycloak
+docker compose up -d mysql keycloak
+cd backend/core-platform
+SPRING_PROFILES_ACTIVE=local DB_USERNAME=occpl_app DB_PASSWORD=<app> \
+  DB_MIGRATOR_USERNAME=occpl_migrator DB_MIGRATOR_PASSWORD=<migrator> mvn spring-boot:run
+
+# Frontend dev server (uses public/config.json)
+cd frontend/admin-portal && npm ci && npm start
+```
+
+Checks a contributor runs before pushing: `mvn verify` in `backend/` (needs Docker for
+Testcontainers) and `npm run format:check && npx ng lint && npm test && npx ng build` in
+`frontend/admin-portal`.
+
+### Core Platform configuration (environment variables)
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `DB_URL` | yes | JDBC URL of `occpl_core` |
+| `DB_USERNAME` / `DB_PASSWORD` | yes | DML-only application account |
+| `DB_MIGRATOR_USERNAME` / `DB_MIGRATOR_PASSWORD` | yes (prod) | DDL account used by Flyway |
+| `DB_POOL_MAX_SIZE` / `DB_POOL_MIN_IDLE` | no (20 / 5) | HikariCP sizing per instance |
+| `OIDC_ISSUER_URI` | yes | Expected `iss` (and discovery URL unless a JWK set URI is given) |
+| `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI` | no | Internal JWKS URL when the issuer URL is not reachable from the container |
+| `OIDC_AUDIENCE` | no (`occpl-core`) | Required `aud` |
+| `CORS_ALLOWED_ORIGINS` | no (none) | Comma-separated portal origins |
+| `API_DOCS_ENABLED` | no (`false`) | OpenAPI/Swagger UI; keep `false` in production |
+
+Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
+(space-separated origins of the API and IdP).
 
 ## 2. Initial production topology
 

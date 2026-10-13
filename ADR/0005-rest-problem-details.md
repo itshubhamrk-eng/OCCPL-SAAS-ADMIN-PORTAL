@@ -1,6 +1,6 @@
 # ADR-0005: Versioned REST APIs with RFC 9457 problem details
 
-- Status: Proposed · Date: 2026-10-13
+- Status: Accepted · Date: 2026-10-13
 
 ## Decision
 Path versioning `/api/v1`, DTOs only, RFC 9457 error bodies with a stable `code` field and

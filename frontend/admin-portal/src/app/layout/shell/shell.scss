@@ -1,0 +1,106 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--occpl-space-3);
+  top: calc(-1 * var(--occpl-space-8));
+  padding: var(--occpl-space-2) var(--occpl-space-3);
+  background: var(--occpl-color-surface);
+  color: var(--occpl-color-primary);
+  border-radius: var(--occpl-radius-sm);
+  z-index: 10;
+
+  &:focus {
+    top: var(--occpl-space-3);
+  }
+}
+
+.shell-header {
+  display: flex;
+  align-items: center;
+  height: var(--occpl-header-height);
+  padding: 0 var(--occpl-space-4);
+  background: var(--occpl-color-primary);
+  color: var(--occpl-color-on-primary);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--occpl-space-2);
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--occpl-radius-sm);
+  background: var(--occpl-color-accent);
+  color: var(--occpl-color-on-accent);
+  font-weight: 700;
+}
+
+.brand-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.brand-product {
+  opacity: 0.8;
+  white-space: nowrap;
+
+  @media (max-width: 30rem) {
+    display: none;
+  }
+}
+
+.alert {
+  position: relative;
+  margin: var(--occpl-space-3) var(--occpl-space-4) 0;
+  padding: var(--occpl-space-3) var(--occpl-space-8) var(--occpl-space-3) var(--occpl-space-4);
+  border: 1px solid var(--occpl-color-danger);
+  border-radius: var(--occpl-radius-md);
+  background: var(--occpl-color-danger-surface);
+  color: var(--occpl-color-text);
+}
+
+.alert-message,
+.alert-reference {
+  margin: 0;
+}
+
+.alert-reference {
+  margin-top: var(--occpl-space-1);
+  font-size: var(--occpl-font-size-sm);
+  color: var(--occpl-color-text-muted);
+}
+
+.alert-dismiss {
+  position: absolute;
+  top: var(--occpl-space-2);
+  right: var(--occpl-space-2);
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.shell-main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--occpl-content-max-width);
+  margin: 0 auto;
+  padding: var(--occpl-space-6) var(--occpl-space-4);
+  outline: none;
+}

@@ -3,7 +3,15 @@
 Central multi-product SaaS management platform for OCCPL Innovations (Core Platform + Super
 Admin / Company Admin portals).
 
-**Status:** Phase 1 (discovery & architecture) documented — awaiting approval. No code yet.
+**Status:** Phase 2 (foundation) complete — awaiting approval for Phase 3 (identity & access).
+
+Stack: Java 25 · Spring Boot 4.1 · Angular 22 · MySQL 9.7 · Keycloak 26.8 · Docker Compose.
+
+```bash
+cd infra/docker && cp .env.example .env && docker compose up --build
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for local development and test commands.
 
 | Document | Contents |
 |---|---|
