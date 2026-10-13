@@ -84,7 +84,17 @@ Testcontainers; includes the Core ↔ sample product end-to-end test in `backend
 | `RATE_LIMIT_SERVICE_PER_MINUTE` | no (6000) | Per product service client |
 
 Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
-(space-separated origins of the API and IdP).
+(space-separated origins of the API and IdP). The portal's origin must be a valid redirect URI
+(`<origin>/*`) and post-logout redirect URI of the `occpl-admin-portal` client in Keycloak, and an
+allowed CORS origin of Core (`CORS_ALLOWED_ORIGINS`).
+
+### Using the admin portal locally
+
+Open http://localhost:4200 and sign in with the first Super Admin (see below). The first sign-in
+shows "Sign in with authenticator": Keycloak then asks to set up an authenticator app, and the next
+sign-in with a code unlocks the platform area. Company administrators receive an email (Mailpit,
+http://localhost:8025) to set their password; the link brings them back to the portal, which
+accepts the invitation and opens their company.
 
 ### Sample product configuration (environment variables)
 

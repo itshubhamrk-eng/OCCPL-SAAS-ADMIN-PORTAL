@@ -1,0 +1,308 @@
+@if (product(); as p) {
+  <occpl-page-header
+    [heading]="p.name"
+    [subtitle]="p.code"
+    backLink="/platform/products"
+    backLabel="Products"
+  >
+    <occpl-status-badge [status]="p.status" />
+    @if (canManage()) {
+      @if (p.status !== 'ACTIVE') {
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="!p.currentVersionNo"
+          (click)="activateDialog.open()"
+          [title]="p.currentVersionNo ? '' : 'Publish a configuration version first'"
+        >
+          {{ p.status === 'RETIRED' ? 'Reinstate' : 'Activate' }}
+        </button>
+      }
+      @if (p.status !== 'RETIRED') {
+        <button type="button" class="btn danger" (click)="retireDialog.open()">Retire</button>
+      }
+    }
+  </occpl-page-header>
+  <occpl-action-dialog
+    #activateDialog
+    heading="Activate product"
+    confirmLabel="Activate"
+    reason="optional"
+    message="Active products can be added to plans."
+    (confirmed)="changeStatus('activate', $event)"
+  />
+  <occpl-action-dialog
+    #retireDialog
+    heading="Retire product"
+    confirmLabel="Retire"
+    [danger]="true"
+    reason="optional"
+    message="Retired products cannot be added to new plans."
+    (confirmed)="changeStatus('retire', $event)"
+  />
+
+  <div class="stack">
+    <section class="card">
+      <div class="row">
+        <h2>Details</h2>
+        <span class="spacer"></span>
+        @if (canManage() && !editing()) {
+          <button type="button" class="btn small" (click)="startEdit()">Edit</button>
+        }
+      </div>
+      @if (editing()) {
+        @for (message of editErrors(); track message) {
+          <p class="field-error" role="alert">{{ message }}</p>
+        }
+        <form class="stack" [formGroup]="editForm" (ngSubmit)="saveEdit()">
+          <occpl-product-fields [group]="editForm" />
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save</button>
+            <button type="button" class="btn" (click)="editing.set(false)">Cancel</button>
+          </div>
+        </form>
+      } @else {
+        <dl class="details">
+          <dt>App URL</dt>
+          <dd>{{ p.appUrl }}</dd>
+          <dt>API base URL</dt>
+          <dd>{{ p.apiBaseUrl ?? '—' }}</dd>
+          <dt>Token audience</dt>
+          <dd class="mono">{{ p.apiAudience }}</dd>
+          <dt>Service client</dt>
+          <dd class="mono">{{ p.serviceClientId ?? '—' }}</dd>
+          <dt>Description</dt>
+          <dd>{{ p.description ?? '—' }}</dd>
+          <dt>Updated</dt>
+          <dd>{{ p.updatedAt | date: 'medium' }}</dd>
+        </dl>
+      }
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>Configuration versions</h2>
+        <span class="spacer"></span>
+        @if (canManage() && !creatingVersion()) {
+          <button type="button" class="btn small" (click)="startVersion()">New version</button>
+        }
+      </div>
+      <p class="muted small">
+        Versions are validated against the configuration schema and never change once saved.
+        Publishing an older version rolls back.
+      </p>
+      @if (creatingVersion()) {
+        @for (message of versionErrors(); track message) {
+          <p class="field-error" role="alert">{{ message }}</p>
+        }
+        <form class="stack" [formGroup]="versionForm" (ngSubmit)="createVersion()">
+          <div class="field">
+            <label for="config">Configuration (JSON)</label>
+            <textarea
+              id="config"
+              class="code"
+              formControlName="config"
+              spellcheck="false"
+              aria-describedby="config-error"
+            ></textarea>
+            <occpl-field-error [control]="versionForm.controls.config" errorId="config-error" />
+          </div>
+          <div class="field">
+            <label for="notes">Notes</label>
+            <input id="notes" formControlName="notes" />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save version</button>
+            <button type="button" class="btn" (click)="creatingVersion.set(false)">Cancel</button>
+          </div>
+        </form>
+      }
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Version</th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th>Created</th>
+              <th><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of versions(); track v.versionNo) {
+              <tr>
+                <td data-label="Version">
+                  {{ v.versionNo }}
+                  @if (v.current) {
+                    <strong>(current)</strong>
+                  }
+                </td>
+                <td data-label="Status"><occpl-status-badge [status]="v.status" /></td>
+                <td data-label="Notes">{{ v.notes ?? '—' }}</td>
+                <td data-label="Created">{{ v.createdAt | date: 'medium' }}</td>
+                <td class="actions">
+                  <button
+                    type="button"
+                    class="btn small link"
+                    (click)="toggleVersion(v.versionNo)"
+                    [attr.aria-expanded]="openVersion() === v.versionNo"
+                  >
+                    {{ openVersion() === v.versionNo ? 'Hide' : 'View' }}
+                  </button>
+                  @if (canManage() && !v.current) {
+                    <button type="button" class="btn small" (click)="publish(v.versionNo)">
+                      Publish
+                    </button>
+                  }
+                  @if (canManage() && v.status === 'DRAFT') {
+                    <button
+                      type="button"
+                      class="btn small danger"
+                      (click)="deleteDraft(v.versionNo)"
+                    >
+                      Delete
+                    </button>
+                  }
+                </td>
+              </tr>
+              @if (openVersion() === v.versionNo) {
+                <tr>
+                  <td colspan="5">
+                    <pre class="json">{{ v.config | json }}</pre>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="5" class="muted">No configuration yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Features</h2>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Type</th>
+              <th>Unit</th>
+              <th>Resets</th>
+              <th>Status</th>
+              <th><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of features(); track f.id) {
+              <tr>
+                <td data-label="Feature">
+                  {{ f.name }}
+                  <div class="mono muted">{{ f.code }}</div>
+                </td>
+                <td data-label="Type">{{ f.type | humanize }}</td>
+                <td data-label="Unit">{{ f.unit | humanize }}</td>
+                <td data-label="Resets">{{ f.resetPeriod | humanize }}</td>
+                <td data-label="Status"><occpl-status-badge [status]="f.status" /></td>
+                <td class="actions">
+                  @if (canManage()) {
+                    @if (f.status === 'ACTIVE') {
+                      <button
+                        type="button"
+                        class="btn small"
+                        (click)="setFeatureStatus(f, 'deprecate')"
+                      >
+                        Deprecate
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn small"
+                        (click)="setFeatureStatus(f, 'reactivate')"
+                      >
+                        Reactivate
+                      </button>
+                    }
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="muted">No features yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (canManage()) {
+        <h3 class="add-heading">Add feature</h3>
+        @for (message of featureErrors(); track message) {
+          <p class="field-error" role="alert">{{ message }}</p>
+        }
+        <form class="form" [formGroup]="featureForm" (ngSubmit)="addFeature()">
+          <div class="field">
+            <label for="f-code">Code</label>
+            <input
+              id="f-code"
+              formControlName="code"
+              placeholder="api.calls"
+              aria-describedby="f-code-error"
+            />
+            <occpl-field-error [control]="featureForm.controls.code" errorId="f-code-error" />
+          </div>
+          <div class="field">
+            <label for="f-name">Name</label>
+            <input id="f-name" formControlName="name" aria-describedby="f-name-error" />
+            <occpl-field-error [control]="featureForm.controls.name" errorId="f-name-error" />
+          </div>
+          <div class="field">
+            <label for="f-type">Type</label>
+            <select id="f-type" formControlName="type">
+              <option value="LIMIT">Limit (counted)</option>
+              <option value="BOOLEAN">On/off</option>
+            </select>
+          </div>
+          @if (featureForm.controls.type.value === 'LIMIT') {
+            <div class="field">
+              <label for="f-unit">Unit</label>
+              <select id="f-unit" formControlName="unit">
+                @for (u of units; track u) {
+                  <option [value]="u">{{ u | humanize }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label for="f-reset">Resets</label>
+              <select
+                id="f-reset"
+                formControlName="resetPeriod"
+                aria-describedby="f-reset-hint f-reset-error"
+              >
+                @for (r of periods; track r) {
+                  <option [value]="r">
+                    {{ r === 'NONE' ? 'Never (current quantity)' : (r | humanize) }}
+                  </option>
+                }
+              </select>
+              <span class="hint" id="f-reset-hint"
+                >Seats, storage and records measure a current quantity: use Never.</span
+              >
+              <occpl-field-error
+                [control]="featureForm.controls.resetPeriod"
+                errorId="f-reset-error"
+              />
+            </div>
+          }
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Add feature</button>
+          </div>
+        </form>
+      }
+    </section>
+  </div>
+} @else {
+  <p role="status">Loading…</p>
+}

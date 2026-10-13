@@ -1,0 +1,167 @@
+<occpl-page-header
+  [heading]="planId() ? 'Edit plan' : 'New plan'"
+  backLink="/platform/plans"
+  backLabel="Plans"
+  subtitle="Drafts can be changed freely; published plans are fixed (copy them to make changes)."
+/>
+@for (message of formErrors(); track message) {
+  <p class="field-error" role="alert">{{ message }}</p>
+}
+<form class="stack" [formGroup]="form" (ngSubmit)="save()">
+  <section class="card">
+    <h2>Plan</h2>
+    <div class="form">
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" formControlName="name" aria-describedby="name-error" />
+        <occpl-field-error [control]="form.controls.name" errorId="name-error" />
+      </div>
+      <div class="field">
+        <label for="code">Code</label>
+        <input id="code" formControlName="code" aria-describedby="code-error" />
+        <occpl-field-error [control]="form.controls.code" errorId="code-error" />
+      </div>
+      <div class="field">
+        <label for="billingPeriod">Billing period</label>
+        <select id="billingPeriod" formControlName="billingPeriod">
+          @for (p of periods; track p) {
+            <option [value]="p">{{ p | humanize }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="trialDays">Trial days</label>
+        <input
+          id="trialDays"
+          type="number"
+          min="0"
+          max="365"
+          formControlName="trialDays"
+          aria-describedby="trialDays-error"
+        />
+        <occpl-field-error [control]="form.controls.trialDays" errorId="trialDays-error" />
+      </div>
+      <div class="field full">
+        <label for="description">Description</label>
+        <textarea id="description" formControlName="description" rows="2"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" formArrayName="prices">
+    <h2>Prices</h2>
+    <p class="muted small">One price per currency, per billing period.</p>
+    @for (price of prices.controls; track price; let i = $index) {
+      <div class="row price" [formGroupName]="i">
+        <div class="field">
+          <label [for]="'cur' + i">Currency</label>
+          <input [id]="'cur' + i" formControlName="currency" maxlength="3" class="currency" />
+        </div>
+        <div class="field">
+          <label [for]="'amt' + i">Amount</label>
+          <input [id]="'amt' + i" type="number" min="0" step="0.01" formControlName="amount" />
+        </div>
+        @if (prices.length > 1) {
+          <button type="button" class="btn small link" (click)="removePrice(i)">Remove</button>
+        }
+      </div>
+    }
+    <button type="button" class="btn small" (click)="addPrice()">Add currency</button>
+  </section>
+
+  <section class="card">
+    <h2>Products and features</h2>
+    <div formArrayName="products" class="stack">
+      @for (product of products.controls; track product; let p = $index) {
+        <fieldset class="product" [formGroupName]="p">
+          <legend>
+            <strong>{{ product.get('productName')?.value }}</strong>
+          </legend>
+          <div class="table-wrap">
+            <table class="data" formArrayName="features">
+              <thead>
+                <tr>
+                  <th>Included</th>
+                  <th>Feature</th>
+                  <th>Limit</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (feature of featuresOf(product).controls; track feature; let f = $index) {
+                  <tr [formGroupName]="f">
+                    <td data-label="Included">
+                      <input
+                        type="checkbox"
+                        formControlName="included"
+                        [id]="'inc' + p + '-' + f"
+                        [attr.aria-label]="'Include ' + feature.controls.name.value"
+                      />
+                    </td>
+                    <td data-label="Feature">
+                      <label [for]="'inc' + p + '-' + f">{{ feature.controls.name.value }}</label>
+                      <div class="mono muted">{{ feature.controls.code.value }}</div>
+                    </td>
+                    <td data-label="Limit">
+                      @if (
+                        feature.controls.type.value === 'LIMIT' && feature.controls.included.value
+                      ) {
+                        <div class="row">
+                          @if (!feature.controls.unlimited.value) {
+                            <input
+                              type="number"
+                              min="0"
+                              formControlName="limit"
+                              class="limit"
+                              [attr.aria-label]="'Limit for ' + feature.controls.name.value"
+                            />
+                            <span class="small muted">{{
+                              feature.controls.unit.value | humanize
+                            }}</span>
+                          }
+                          <label class="check small"
+                            ><input type="checkbox" formControlName="unlimited" /> Unlimited</label
+                          >
+                        </div>
+                      } @else if (feature.controls.type.value === 'BOOLEAN') {
+                        <span class="muted small">On/off</span>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="muted">This product has no active features.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <button type="button" class="btn small link" (click)="removeProduct(p)">
+            Remove product
+          </button>
+        </fieldset>
+      }
+    </div>
+    <div class="row add-product">
+      <label for="addProduct" class="sr-only">Product to add</label>
+      <select
+        id="addProduct"
+        [value]="productToAdd"
+        (change)="productToAdd = $any($event.target).value"
+      >
+        <option value="">Choose an active product…</option>
+        @for (product of available(); track product.id) {
+          <option [value]="product.id">{{ product.name }}</option>
+        }
+      </select>
+      <button type="button" class="btn" [disabled]="!productToAdd" (click)="addProduct()">
+        Add product
+      </button>
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <button type="submit" class="btn primary" [disabled]="saving()">
+      {{ planId() ? 'Save changes' : 'Create draft' }}
+    </button>
+  </div>
+</form>

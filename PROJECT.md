@@ -1,6 +1,6 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 7 (Provisioning & sample product) complete — awaiting approval for Phase 8 (Frontend portals).**
+Status: **Phase 8 (Frontend portals) complete — awaiting approval for the next phase (Billing or Phase 9 Hardening).**
 Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective

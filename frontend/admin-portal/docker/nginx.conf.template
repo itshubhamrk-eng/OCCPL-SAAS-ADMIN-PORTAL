@@ -1,6 +1,13 @@
 # Rendered by the nginx image's envsubst step (only ${CSP_CONNECT_SRC} is substituted).
+# Invitation links carry a one-time token in the query string: never write them to the access log.
+map $request_uri $occpl_loggable {
+    ~^/invitations/ 0;
+    default 1;
+}
+
 server {
     listen 8080;
+    access_log /dev/stdout combined if=$occpl_loggable;
     server_name _;
     root /usr/share/nginx/html;
     server_tokens off;

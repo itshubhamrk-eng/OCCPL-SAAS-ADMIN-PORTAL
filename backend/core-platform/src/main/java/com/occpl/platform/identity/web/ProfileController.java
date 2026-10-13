@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.DateTimeException;
 import java.time.ZoneId;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +24,12 @@ class ProfileController {
 
     ProfileController(ProfileService profiles) {
         this.profiles = profiles;
+    }
+
+    @GetMapping
+    @Operation(summary = "The current user's profile")
+    ProfileService.ProfileView get() {
+        return profiles.get(CurrentUser.require().userId());
     }
 
     @PutMapping

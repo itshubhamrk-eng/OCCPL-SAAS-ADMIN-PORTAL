@@ -314,6 +314,9 @@ class TenantIsolationIT {
     @Test
     void profileUpdateValidatesInput() throws Exception {
         user("dave", false);
+        mvc.perform(get("/api/v1/me/profile").header("Authorization", "Bearer dave"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phone").doesNotExist());
         mvc.perform(put("/api/v1/me/profile").header("Authorization", "Bearer dave")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"\",\"phone\":\"12\",\"timeZone\":\"Mars/Base\"}"))
@@ -326,6 +329,9 @@ class TenantIsolationIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("Dave K"))
                 .andExpect(jsonPath("$.timeZone").value("Asia/Kolkata"));
+        mvc.perform(get("/api/v1/me/profile").header("Authorization", "Bearer dave"))
+                .andExpect(jsonPath("$.phone").value("+919876543210"))
+                .andExpect(jsonPath("$.locale").value("en-IN"));
     }
 
     @Test

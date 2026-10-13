@@ -48,3 +48,27 @@
     --occpl-color-danger-surface: #3a1d1a;
   }
 }
+
+:root {
+  --occpl-color-info: #1f6feb;
+  --occpl-color-success-surface: #e6f4ea;
+  --occpl-color-warning-surface: #fff4e0;
+  --occpl-color-info-surface: #e8f0fe;
+  --occpl-color-neutral-surface: #eef1f5;
+  --occpl-nav-width: 15rem;
+  --occpl-shadow-sm: 0 1px 2px rgb(16 22 29 / 8%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --occpl-color-success-surface: #1b3324;
+    --occpl-color-warning-surface: #3a2c12;
+    --occpl-color-info-surface: #1b2a44;
+    --occpl-color-neutral-surface: #232e3a;
+    --occpl-color-success: #5cc27a;
+    --occpl-color-warning: #e3a33b;
+    --occpl-color-danger: #f0776a;
+    --occpl-color-info: #79a8ff;
+    --occpl-color-focus: #79a8ff;
+  }
+}

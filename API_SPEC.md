@@ -56,6 +56,7 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/me` | Me | Profile, platform roles/permissions/`mfaRequired`, active memberships (company, roles, permissions) — implemented |
+| GET | `/me/profile` | Me | Own profile (displayName, phone, locale, time zone) — implemented (Phase 8, used by the portal's profile page) |
 | PUT | `/me/profile` | Me | Replace own profile (displayName, phone E.164, locale, IANA time zone) — implemented |
 | POST | `/invitations/{token}/accept` | Me (token-bound) | Accept invitation; links identity to membership |
 

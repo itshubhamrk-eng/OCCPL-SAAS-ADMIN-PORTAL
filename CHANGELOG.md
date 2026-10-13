@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 8 — Frontend portals (2026-10-13)
+- Sign-in: own OpenID Connect client (Authorization Code + PKCE, tokens in memory, refresh,
+  logout), auth interceptor, guards, MFA notice for platform staff.
+- Super Admin screens: dashboard, companies (list, create), users (list, detail, enable/disable,
+  platform roles), products (register, edit, activate/retire, configuration versions with schema
+  errors shown, features), plans (editor with prices, products and limits; publish, archive, copy),
+  subscriptions, provisioning jobs (retry, cancel), audit log.
+- Company workspace (Company Admins and platform staff): overview (details, settings, contacts,
+  status history, status changes for staff), product launcher, subscription (assign and lifecycle
+  actions for staff), users and invitations (invite, roles, suspend/reactivate/remove, resend/revoke),
+  usage and limits, audit log; invitation acceptance page; own profile page.
+- Shared UI: page header, status badges, pager, accessible confirmation dialog, server validation
+  errors on form fields; responsive tables and navigation.
+- Core: `GET /api/v1/me/profile` (the profile page needs current values before saving).
+- Portal Nginx: invitation URLs (one-time tokens) are not written to the access log.
+- Tests: 47 frontend tests; lint, format and production build clean. Browser walkthrough with
+  Playwright against the Docker stack: Super Admin sign-in with TOTP enrolment and OTP, product,
+  plan, company, subscription, automatic provisioning of the sample product, company admin
+  invitation from the real email through to the company workspace, phone-width layout.
+- Fixed during verification: a zoneless change-detection gap in the plan editor, list endpoint
+  without platform roles, wording of company status actions (companies start active), hidden
+  dialogs adding layout gaps.
+
 ### Phase 7 — Provisioning & sample product (2026-10-13)
 - Service-to-service sign-in: client-credentials tokens become a service principal limited to the
   new service API; products are linked to their Keycloak client (`serviceClientId`); service actions

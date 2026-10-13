@@ -1,0 +1,229 @@
+<div class="stack">
+  @if (manage()) {
+    <section class="card">
+      <h2>Assign a plan</h2>
+      <div class="filters">
+        <div class="field">
+          <label for="assignPlan">Plan</label>
+          <select id="assignPlan" [(ngModel)]="assignPlanId" (ngModelChange)="onPlanSelected()">
+            <option value="">Choose a published plan…</option>
+            @for (p of plans(); track p.id) {
+              <option [value]="p.id">{{ p.name }} ({{ p.billingPeriod | humanize }})</option>
+            }
+          </select>
+        </div>
+        @if (selectedPlan(); as plan) {
+          <div class="field">
+            <label for="assignCurrency">Currency</label>
+            <select id="assignCurrency" [(ngModel)]="assignCurrency">
+              @for (price of plan.prices; track price.currency) {
+                <option [value]="price.currency">
+                  {{ price.currency }} · {{ price.amountMinor | money: price.currency }}
+                </option>
+              }
+            </select>
+          </div>
+          @if (plan.trialDays > 0) {
+            <label class="check"
+              ><input type="checkbox" [(ngModel)]="assignTrial" /> Start with
+              {{ plan.trialDays }}-day trial</label
+            >
+          }
+        }
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="!assignPlanId || !assignCurrency"
+          (click)="assign()"
+        >
+          Assign
+        </button>
+      </div>
+    </section>
+  }
+
+  <occpl-action-dialog
+    #cancelEndDialog
+    heading="Cancel at period end"
+    confirmLabel="Cancel at period end"
+    reason="optional"
+    message="Access continues until the current period ends."
+    (confirmed)="cancel('PERIOD_END', $event)"
+  />
+  <occpl-action-dialog
+    #cancelNowDialog
+    heading="Cancel now"
+    confirmLabel="Cancel now"
+    [danger]="true"
+    reason="optional"
+    message="Access to the plan's products ends immediately. Data is kept for the retention period."
+    (confirmed)="cancel('IMMEDIATE', $event)"
+  />
+  <occpl-action-dialog
+    #suspendDialog
+    heading="Suspend subscription"
+    confirmLabel="Suspend"
+    [danger]="true"
+    reason="optional"
+    message="Access to the plan's products stops until the subscription is renewed."
+    (confirmed)="suspend($event)"
+  />
+
+  @for (s of live(); track s.id) {
+    <section class="card">
+      <div class="row">
+        <h2>{{ s.planName }}</h2>
+        <occpl-status-badge [status]="s.status" />
+        <span class="spacer"></span>
+        <strong>{{ s.priceMinor | money: s.currency }}</strong
+        ><span class="muted small">/ {{ s.billingPeriod | humanize | lowercase }}</span>
+      </div>
+      <dl class="details">
+        <dt>Current period</dt>
+        <dd>
+          {{ s.currentPeriodStart | date: 'mediumDate' }} –
+          {{ s.currentPeriodEnd | date: 'mediumDate' }}
+        </dd>
+        @if (s.trialEnd) {
+          <dt>Trial ends</dt>
+          <dd>{{ s.trialEnd | date: 'mediumDate' }}</dd>
+        }
+        @if (s.graceUntil) {
+          <dt>Grace period until</dt>
+          <dd>{{ s.graceUntil | date: 'medium' }}</dd>
+        }
+        @if (s.cancelAtPeriodEnd) {
+          <dt>Cancellation</dt>
+          <dd>Ends on {{ s.currentPeriodEnd | date: 'mediumDate' }}</dd>
+        }
+        @if (s.pendingPlanId) {
+          <dt>Scheduled change</dt>
+          <dd>Moves to {{ planName(s.pendingPlanId) }} at period end</dd>
+        }
+      </dl>
+      @if (manage()) {
+        <div class="row action-row">
+          @if (s.status === 'TRIAL') {
+            <button type="button" class="btn primary small" (click)="act(s, 'activate')">
+              Activate (end trial)
+            </button>
+          }
+          @if (s.status === 'ACTIVE' || s.status === 'PAST_DUE' || s.status === 'SUSPENDED') {
+            <button type="button" class="btn small" (click)="act(s, 'renew')">
+              Record renewal
+            </button>
+          }
+          @if (s.cancelAtPeriodEnd) {
+            <button type="button" class="btn small" (click)="act(s, 'resume')">
+              Keep subscription
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn small"
+              (click)="changing.set(changing() === s.id ? null : s.id)"
+            >
+              Change plan
+            </button>
+            <button type="button" class="btn small" (click)="target = s; cancelEndDialog.open()">
+              Cancel at period end
+            </button>
+          }
+          @if (s.status !== 'SUSPENDED') {
+            <button
+              type="button"
+              class="btn small danger"
+              (click)="target = s; suspendDialog.open()"
+            >
+              Suspend
+            </button>
+          }
+          <button
+            type="button"
+            class="btn small danger"
+            (click)="target = s; cancelNowDialog.open()"
+          >
+            Cancel now
+          </button>
+        </div>
+        @if (changing() === s.id) {
+          <div class="filters change-plan">
+            <div class="field">
+              <label [for]="'newPlan' + s.id">New plan</label>
+              <select [id]="'newPlan' + s.id" [(ngModel)]="newPlanId">
+                <option value="">Choose…</option>
+                @for (p of otherPlans(s); track p.id) {
+                  <option [value]="p.id">{{ p.name }}</option>
+                }
+              </select>
+              <span class="hint">Upgrades apply now; downgrades at the end of the period.</span>
+            </div>
+            <button
+              type="button"
+              class="btn primary"
+              [disabled]="!newPlanId"
+              (click)="changePlan(s)"
+            >
+              Change
+            </button>
+          </div>
+        }
+      }
+      <button
+        type="button"
+        class="btn small link"
+        [attr.aria-expanded]="openHistory() === s.id"
+        (click)="openHistory.set(openHistory() === s.id ? null : s.id)"
+      >
+        History
+      </button>
+      @if (openHistory() === s.id) {
+        <ul class="history small">
+          @for (h of s.history; track $index) {
+            <li>
+              {{ h.occurredAt | date: 'medium' }} — {{ h.event | humanize }}
+              @if (h.toStatus) {
+                → {{ h.toStatus | humanize }}
+              }
+              @if (h.reason) {
+                ({{ h.reason }})
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  } @empty {
+    <p class="muted">{{ loaded() ? 'No current subscription.' : 'Loading…' }}</p>
+  }
+
+  @if (past().length > 0) {
+    <section class="card">
+      <h2>Previous subscriptions</h2>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Plan</th>
+              <th>Status</th>
+              <th>Ended</th>
+              <th>Data kept until</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of past(); track s.id) {
+              <tr>
+                <td data-label="Plan">{{ s.planName }}</td>
+                <td data-label="Status"><occpl-status-badge [status]="s.status" /></td>
+                <td data-label="Ended">{{ (s.endedAt | date: 'mediumDate') ?? '—' }}</td>
+                <td data-label="Data kept until">
+                  {{ (s.dataRetentionUntil | date: 'mediumDate') ?? '—' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

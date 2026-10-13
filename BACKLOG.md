@@ -155,13 +155,20 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 8 — Frontend portals
 
-- ☐ **UI-1** Shell, OIDC login/logout, interceptors, guards, design tokens, company switcher.
-- ☐ **UI-2** Super Admin: dashboard, companies, users, products, plans, subscriptions,
+- ☑ **UI-1** Shell, OIDC login/logout (own PKCE client, tokens in memory), interceptors, guards, design tokens,
+  company navigation, MFA notice — done in Phase 8.
+- ☑ **UI-2** (done, Phase 8; platform settings page deferred: no settings API yet) Super Admin: dashboard, companies, users, products, plans, subscriptions,
   entitlements, provisioning, audit, settings.
-- ☐ **UI-3** Company Admin: dashboard, profile/settings, products & launch, subscription,
+- ☑ **UI-3** (done, Phase 8; billing history waits for the billing module, custom roles for C-8) Company Admin: dashboard, profile/settings, products & launch, subscription,
   users, roles, usage, billing history.
 - AC (all): typed API clients, reactive forms with validation messages, responsive at 360 px and
   desktop, keyboard accessible, component/service unit tests.
+
+- ☐ **UI-4** Platform settings page (needs a settings API) and billing history page (needs billing B-1).
+- ☐ **UI-5** Show company and actor names instead of ids in the platform subscription list and audit
+  log (needs batch name lookups or names in those API responses).
+- ☐ **UI-6** Browser end-to-end tests in CI (the Phase 8 walkthrough ran manually with Playwright
+  against the Docker stack).
 
 ## Billing (scheduled after D-3/D-4, can run parallel to Phase 8)
 

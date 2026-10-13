@@ -5,9 +5,9 @@ users/memberships, roles/permissions, product catalogue, plans, subscriptions, e
 provisioning, billing integration (Razorpay), audit, notifications. Products are separate services
 that own their data. Core contains no product business logic.
 
-**Current phase**: Phase 7 (Provisioning & sample product) done 2026-10-13; **wait for approval
-before Phase 8** (Frontend portals UI-1…UI-3). Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5,
-S-8 billing, S-9 per-product seats, PR-5 (UPDATE operation), PR-6, PR-7.
+**Current phase**: Phase 8 (Frontend portals) done 2026-10-13; **wait for approval before the next
+phase** (Billing B-1/B-2 with Razorpay, or Phase 9 Hardening). Open follow-ups: I-1, C-8, C-9, C-10,
+PC-4, PC-5, S-8 billing, S-9 per-product seats, PR-5, PR-6, PR-7, UI-4, UI-5, UI-6.
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,
@@ -67,6 +67,12 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
 - Tests: Spring tests use `@ActiveProfiles("test")` (`application-test.yml`); never add a test
   `application.yml` (it shadows the main one).
 - Portal CSP forbids inline scripts — keep `inlineCritical: false`.
+- Portal: zoneless + OnPush everywhere (lint rule). State in signals; if a non-signal (form array,
+  plain field) changes after an `await`, call `ChangeDetectorRef.markForCheck()`. API shapes in
+  `core/api/models.ts`; clients per area in `core/api/*.api.ts`; `SessionService.can(companyId, companyPerm,
+  platformPerm)` for UI permission checks; route inputs: inputs absent from route data become undefined.
+- Portal tests: `src/app/testing/fixtures.ts` (TEST_CONFIG, FakeBrowser, me()); browser walkthrough
+  scripts are not in the repo (UI-6).
 - Never mark backlog items done without passing tests; never claim tests pass without running.
 
 **Environment notes (cloud sandbox)**: JDK 25 at `/opt/jdk25`, Node 24 at `/opt/node24`; start

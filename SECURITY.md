@@ -157,8 +157,8 @@ the need.
 - Invitation tokens: 256-bit random, stored only as SHA-256, valid 7 days, rotated on resend,
   accepted only by the signed-in user the invitation was addressed to (otherwise 404), submitted in
   the request body (not the URL). New users prove email ownership through Keycloak's account-setup
-  link before they can sign in. The accept URL carries the token as a query parameter; the portal
-  must not log it (Phase 8: disable access logging for `/invitations/` in the portal's Nginx).
+  link before they can sign in. The accept URL carries the token as a query parameter; the portal's
+  Nginx does not log `/invitations/` requests (done in Phase 8).
 - Platform user disable takes effect on the next request in Core and is mirrored to Keycloak
   (account disabled, sessions ended); Super Admins and one's own account cannot be disabled.
 - Email bodies (which can contain invitation links) are deleted from the outbox once sent.
@@ -198,6 +198,24 @@ the need.
   environment variable (`PROVISIONING_CLIENT_SECRET`).
 - Service actions are audited with actor type SERVICE and the client id (`audit_log.actor_client_id`).
 - Service clients have their own rate-limit bucket (`RATE_LIMIT_SERVICE_PER_MINUTE`, default 6000).
+
+### Implemented in Phase 8 (verified)
+
+- Admin portal sign-in: Authorization Code + PKCE (S256) with state check against the public client
+  `occpl-admin-portal`; access, refresh and ID tokens are held in memory only (never in
+  `localStorage`/`sessionStorage`/cookies); only the one-time PKCE verifier and state are kept in
+  `sessionStorage` for the duration of the redirect. Return URLs after sign-in are restricted to
+  in-app paths (no open redirect). Logout ends the Keycloak session (RP-initiated logout).
+- Bearer tokens are attached to Core API requests only, never to other origins.
+- Platform staff without MFA are told to sign in with their authenticator (re-authentication with
+  `prompt=login`); verified in a browser against Keycloak 26.8.1: first sign-in → notice, TOTP
+  enrolment, OTP sign-in → platform permissions.
+- The portal hides what the user may not do, but Core remains the only enforcement point; a company
+  user opening a platform URL gets the access-denied page and Core answers 403/404.
+- Invitation links: the token is removed from the address bar as soon as the page loads, sent in
+  the request body, and invitation URLs are excluded from the portal's Nginx access log (verified).
+- Strict CSP unchanged (`script-src 'self'`, no inline scripts); confirmations use the native
+  `<dialog>` element; no `innerHTML` with API data.
 
 ## 5. Secrets and data protection
 

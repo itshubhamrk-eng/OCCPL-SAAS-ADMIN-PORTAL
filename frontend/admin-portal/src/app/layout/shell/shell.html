@@ -1,11 +1,36 @@
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="shell-header">
+  @if (hasNav()) {
+    <button
+      type="button"
+      class="nav-toggle"
+      [attr.aria-expanded]="navOpen()"
+      aria-controls="main-nav"
+      (click)="navOpen.set(!navOpen())"
+    >
+      <span aria-hidden="true">☰</span><span class="sr-only">Menu</span>
+    </button>
+  }
   <a class="brand" routerLink="/">
     <span class="brand-mark" aria-hidden="true">O</span>
     <span class="brand-name">OCCPL Innovations</span>
     <span class="brand-product">Admin Portal</span>
   </a>
+  <span class="spacer"></span>
+  @if (session.me()) {
+    <a class="user" routerLink="/profile" title="Your profile">{{ userName() }}</a>
+    <button type="button" class="sign-out" (click)="signOut()">Sign out</button>
+  }
 </header>
+
+@if (showMfaBanner()) {
+  <div class="notice warning banner" role="status">
+    Your platform permissions are paused because you signed in without your authenticator app.
+    <button type="button" class="btn small" (click)="signInWithMfa()">
+      Sign in with authenticator
+    </button>
+  </div>
+}
 
 @if (notifier.error(); as error) {
   <div class="alert" role="alert">
@@ -24,6 +49,43 @@
   </div>
 }
 
-<main id="main-content" class="shell-main" tabindex="-1">
-  <router-outlet />
-</main>
+<div class="shell-body">
+  @if (hasNav()) {
+    <nav id="main-nav" class="shell-nav" [class.open]="navOpen()" aria-label="Main">
+      @if (platformNav().length > 0) {
+        <p class="nav-heading">OCCPL platform</p>
+        <ul>
+          @for (item of platformNav(); track item.link) {
+            <li>
+              <a
+                [routerLink]="item.link"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                >{{ item.label }}</a
+              >
+            </li>
+          }
+        </ul>
+      }
+      @if (companies().length > 0) {
+        <p class="nav-heading">My companies</p>
+        <ul>
+          @for (company of companies(); track company.link) {
+            <li>
+              <a [routerLink]="company.link" routerLinkActive="active">
+                {{ company.label }}
+                @if (company.status !== 'ACTIVE') {
+                  <span class="nav-note">({{ company.status.toLowerCase() }})</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </nav>
+  }
+
+  <main id="main-content" class="shell-main" tabindex="-1">
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,240 @@
+@if (notice(); as message) {
+  <p class="notice success" role="status">{{ message }}</p>
+}
+<occpl-action-dialog
+  #statusDialog
+  [heading]="actionLabel(pending?.action)"
+  [confirmLabel]="actionLabel(pending?.action)"
+  [danger]="pending?.action !== 'reactivate'"
+  reason="optional"
+  [message]="
+    pending?.action === 'deactivate'
+      ? 'The person loses access to this company. Invite them again to restore access.'
+      : null
+  "
+  (confirmed)="changeStatus($event)"
+/>
+
+<div class="stack">
+  <section class="card">
+    <div class="row">
+      <h2>Members</h2>
+      <span class="spacer"></span>
+      @if (canManage() && !inviting()) {
+        <button type="button" class="btn primary" (click)="inviting.set(true)">
+          Invite people
+        </button>
+      }
+    </div>
+
+    @if (inviting()) {
+      <div class="invite card">
+        <h3>Invite a person</h3>
+        @for (message of inviteErrors(); track message) {
+          <p class="field-error" role="alert">{{ message }}</p>
+        }
+        <form class="form" [formGroup]="inviteForm" (ngSubmit)="invite()">
+          <div class="field">
+            <label for="inv-email">Email</label>
+            <input
+              id="inv-email"
+              type="email"
+              formControlName="email"
+              aria-describedby="inv-email-error"
+            />
+            <occpl-field-error [control]="inviteForm.controls.email" errorId="inv-email-error" />
+          </div>
+          <div class="field">
+            <label for="inv-first">First name</label>
+            <input id="inv-first" formControlName="firstName" />
+          </div>
+          <div class="field">
+            <label for="inv-last">Last name</label>
+            <input id="inv-last" formControlName="lastName" />
+          </div>
+          <fieldset class="field full plain">
+            <legend class="label">Roles</legend>
+            @for (role of roles(); track role.code) {
+              <label class="check"
+                ><input
+                  type="checkbox"
+                  [checked]="inviteRoles().has(role.code)"
+                  (change)="toggleRole('invite', role.code)"
+                />
+                <span
+                  ><strong>{{ role.name }}</strong>
+                  <span class="muted small">{{ role.description }}</span></span
+                ></label
+              >
+            }
+            @if (inviteRoles().size === 0) {
+              <p class="field-error">Choose at least one role.</p>
+            }
+          </fieldset>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Send invitation</button>
+            <button type="button" class="btn" (click)="inviting.set(false)">Cancel</button>
+          </div>
+        </form>
+      </div>
+    }
+
+    <form class="filters" (ngSubmit)="search(0)" role="search">
+      <div class="field">
+        <label for="m-q">Search</label>
+        <input id="m-q" name="q" [(ngModel)]="q" placeholder="Name or email" />
+      </div>
+      <div class="field">
+        <label for="m-status">Status</label>
+        <select id="m-status" name="status" [(ngModel)]="status" (ngModelChange)="search(0)">
+          <option value="">All</option>
+          <option value="ACTIVE">active</option>
+          <option value="INVITED">invited</option>
+          <option value="SUSPENDED">suspended</option>
+          <option value="DEACTIVATED">removed</option>
+        </select>
+      </div>
+      <button type="submit" class="btn">Search</button>
+    </form>
+
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Person</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of members()?.items ?? []; track m.membershipId) {
+            <tr>
+              <td data-label="Person">
+                {{ m.displayName || m.email }}
+                @if (isSelf(m)) {
+                  <span class="muted small">(you)</span>
+                }
+                <div class="muted small">{{ m.email }}</div>
+              </td>
+              <td data-label="Roles">
+                @if (editingRoles() === m.membershipId) {
+                  <fieldset class="plain">
+                    <legend class="sr-only">Roles of {{ m.email }}</legend>
+                    @for (role of roles(); track role.code) {
+                      <label class="check small"
+                        ><input
+                          type="checkbox"
+                          [checked]="roleSelection().has(role.code)"
+                          (change)="toggleRole('edit', role.code)"
+                        />
+                        {{ role.name }}</label
+                      >
+                    }
+                  </fieldset>
+                  <div class="row">
+                    <button
+                      type="button"
+                      class="btn small primary"
+                      [disabled]="roleSelection().size === 0"
+                      (click)="saveRoles(m)"
+                    >
+                      Save
+                    </button>
+                    <button type="button" class="btn small" (click)="editingRoles.set(null)">
+                      Cancel
+                    </button>
+                  </div>
+                } @else {
+                  {{ roleNames(m.roles) }}
+                }
+              </td>
+              <td data-label="Status"><occpl-status-badge [status]="m.status" /></td>
+              <td data-label="Joined">{{ (m.joinedAt | date: 'mediumDate') ?? '—' }}</td>
+              <td class="actions">
+                @if (!isSelf(m) && m.status !== 'DEACTIVATED') {
+                  @if (
+                    canAssignRoles() && m.status !== 'INVITED' && editingRoles() !== m.membershipId
+                  ) {
+                    <button type="button" class="btn small" (click)="editRoles(m)">Roles</button>
+                  }
+                  @if (canManage()) {
+                    @if (m.status === 'ACTIVE') {
+                      <button
+                        type="button"
+                        class="btn small"
+                        (click)="ask(m, 'suspend', statusDialog)"
+                      >
+                        Suspend
+                      </button>
+                    }
+                    @if (m.status === 'SUSPENDED') {
+                      <button
+                        type="button"
+                        class="btn small"
+                        (click)="ask(m, 'reactivate', statusDialog)"
+                      >
+                        Reactivate
+                      </button>
+                    }
+                    @if (m.status !== 'INVITED') {
+                      <button
+                        type="button"
+                        class="btn small danger"
+                        (click)="ask(m, 'deactivate', statusDialog)"
+                      >
+                        Remove
+                      </button>
+                    }
+                  }
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="muted">{{ members() ? 'No members match.' : 'Loading…' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <occpl-pager [page]="members()" (pageChange)="search($event)" />
+  </section>
+
+  <section class="card">
+    <h2>Pending invitations</h2>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Roles</th>
+            <th>Expires</th>
+            <th><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of invitations()?.items ?? []; track i.id) {
+            <tr>
+              <td data-label="Email">{{ i.email }}</td>
+              <td data-label="Roles">{{ roleNames(i.roles) }}</td>
+              <td data-label="Expires">{{ i.expiresAt | date: 'medium' }}</td>
+              <td class="actions">
+                @if (canManage()) {
+                  <button type="button" class="btn small" (click)="resend(i)">Resend</button>
+                  <button type="button" class="btn small danger" (click)="revoke(i)">Revoke</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="muted">No pending invitations.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <occpl-pager [page]="invitations()" (pageChange)="loadInvitations($event)" />
+  </section>
+</div>

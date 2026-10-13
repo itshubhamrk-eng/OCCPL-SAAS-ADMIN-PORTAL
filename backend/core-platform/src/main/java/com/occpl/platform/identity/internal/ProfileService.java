@@ -82,6 +82,14 @@ public class ProfileService implements UserDirectory {
                 profiles.findById(user.id()).map(UserProfile::displayName).orElse(null), user.status());
     }
 
+    @Transactional(readOnly = true)
+    public ProfileView get(UUID userId) {
+        PlatformUser user = users.findById(userId).orElseThrow(() -> ApiException.notFound("User"));
+        return profiles.findById(userId)
+                .map(p -> new ProfileView(userId, user.email(), p.displayName(), p.phone(), p.locale(), p.timeZone()))
+                .orElse(new ProfileView(userId, user.email(), null, null, null, null));
+    }
+
     @Transactional
     public ProfileView update(UUID userId, String displayName, String phone, String locale, String timeZone) {
         PlatformUser user = users.findById(userId).orElseThrow(() -> ApiException.notFound("User"));
