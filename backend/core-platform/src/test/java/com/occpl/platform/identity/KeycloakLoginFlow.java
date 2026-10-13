@@ -23,8 +23,9 @@ import javax.crypto.spec.SecretKeySpec;
  * Drives Keycloak's real browser login pages (authorization code + PKCE) over HTTP, including
  * authenticator-app enrolment and OTP entry, so MFA can be verified end to end without a browser.
  * Parses the pinned Keycloak version's login theme; update the selectors when upgrading Keycloak.
+ * Public because e2e-tests reuse it through the core-platform test jar.
  */
-final class KeycloakLoginFlow {
+public final class KeycloakLoginFlow {
 
     static final String REDIRECT_URI = "http://localhost:4200/callback";
     private static final Pattern FORM = Pattern.compile("<form\\b[^>]*>", Pattern.CASE_INSENSITIVE);
@@ -37,17 +38,17 @@ final class KeycloakLoginFlow {
     private final Map<String, String> cookies = new LinkedHashMap<>();
     private String otpSecret;
 
-    KeycloakLoginFlow(String realmUrl, String clientId) {
+    public KeycloakLoginFlow(String realmUrl, String clientId) {
         this.realmUrl = realmUrl;
         this.clientId = clientId;
     }
 
-    String otpSecret() {
+    public String otpSecret() {
         return otpSecret;
     }
 
     /** Logs in; enrols TOTP if Keycloak asks for it; answers the OTP prompt with {@code otpSecret}. */
-    String login(String username, String password, String knownOtpSecret, long otpStepOffset) throws Exception {
+    public String login(String username, String password, String knownOtpSecret, long otpStepOffset) throws Exception {
         String verifier = randomUrlSafe(48);
         String challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(
                 MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII)));
@@ -126,7 +127,7 @@ final class KeycloakLoginFlow {
     }
 
     /** Blocks until the next 30-second OTP window, because a code cannot be reused within its window. */
-    static void awaitNextOtpWindow() throws InterruptedException {
+    public static void awaitNextOtpWindow() throws InterruptedException {
         long now = System.currentTimeMillis();
         Thread.sleep(30_000 - now % 30_000 + 500);
     }

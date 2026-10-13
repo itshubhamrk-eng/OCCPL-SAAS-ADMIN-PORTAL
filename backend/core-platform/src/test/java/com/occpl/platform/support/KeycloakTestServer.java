@@ -26,6 +26,8 @@ import tools.jackson.databind.json.JsonMapper;
 public final class KeycloakTestServer {
 
     public static final String ADMIN_CLIENT_SECRET = "integration-test-secret";
+    public static final String CORE_SERVICES_CLIENT_SECRET = "core-services-test-secret";
+    public static final String SAMPLE_SERVICE_CLIENT_SECRET = "sample-service-test-secret";
     public static final String PASSWORD = "Integration-Test-Passw0rd!";
     public static final int SMTP_PORT = 3025;
 
@@ -39,6 +41,8 @@ public final class KeycloakTestServer {
             .withEnv("KC_BOOTSTRAP_ADMIN_PASSWORD", "admin")
             .withEnv("KC_HEALTH_ENABLED", "true")
             .withEnv("KEYCLOAK_ADMIN_CLIENT_SECRET", ADMIN_CLIENT_SECRET)
+            .withEnv("PROVISIONING_CLIENT_SECRET", CORE_SERVICES_CLIENT_SECRET)
+            .withEnv("PRODUCT_SAMPLE_CLIENT_SECRET", SAMPLE_SERVICE_CLIENT_SECRET)
             .withCopyFileToContainer(MountableFile.forHostPath(Path.of("../../infra/docker/keycloak/occpl-realm.json")),
                     "/opt/keycloak/data/import/occpl-realm.json")
             .withAccessToHost(true)
@@ -115,7 +119,7 @@ public final class KeycloakTestServer {
         return JSON.readTree(response.body()).get("access_token").asString();
     }
 
-    private static void createClient(Map<String, Object> client) throws Exception {
+    public static void createClient(Map<String, Object> client) throws Exception {
         send("POST", baseUrl() + "/admin/realms/occpl/clients", masterAdminToken(), JSON.writeValueAsString(client));
     }
 }

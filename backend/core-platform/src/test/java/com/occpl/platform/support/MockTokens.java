@@ -28,4 +28,12 @@ public final class MockTokens {
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600)).build())
                 .given(decoder).decode(token);
     }
+
+    /** A client-credentials token of a product service: Keycloak puts the client in {@code client_id}. */
+    public void registerService(String token, String clientId) {
+        willReturn(Jwt.withTokenValue(token).header("alg", "RS256").subject("service-account-" + clientId)
+                .claim("client_id", clientId).claim("azp", clientId)
+                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600)).build())
+                .given(decoder).decode(token);
+    }
 }

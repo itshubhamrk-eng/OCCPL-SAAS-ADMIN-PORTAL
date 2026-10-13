@@ -155,6 +155,22 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- Executable jar gets the "exec" classifier so the plain jar can be a dependency (e2e-tests). -->
+                    <classifier>exec</classifier>
+                </configuration>
+            </plugin>
+            <!-- Test helpers (Keycloak login flow, test containers) are shared with e2e-tests. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!-- *IT tests (Testcontainers, need Docker) run in `mvn verify`; unit/slice tests in `mvn test`. -->
             <plugin>

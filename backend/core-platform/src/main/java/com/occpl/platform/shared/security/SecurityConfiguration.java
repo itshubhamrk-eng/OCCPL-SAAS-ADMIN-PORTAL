@@ -3,6 +3,7 @@ package com.occpl.platform.shared.security;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Supplier;
 import org.springframework.beans.factory.ObjectProvider;
 import com.occpl.platform.shared.ratelimit.RateLimitFilter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
@@ -13,7 +14,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationResult;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -82,7 +88,9 @@ class SecurityConfiguration {
         ProblemDetailsAuthenticationHandlers handlers = new ProblemDetailsAuthenticationHandlers(jsonMapper);
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated())
+                        // Product services (client-credentials tokens) may use the service API only, and users never.
+                        .requestMatchers("/api/v1/service/**").hasAuthority(ServicePrincipal.AUTHORITY)
+                        .anyRequest().access(SecurityConfiguration::userOnly))
                 .oauth2ResourceServer(oauth2 -> oauth2
                         // The identity module supplies a converter that maps the token to a platform user.
                         .jwt(jwt -> principalResolver.ifAvailable(r -> jwt.jwtAuthenticationConverter(r::resolve)))
@@ -101,6 +109,14 @@ class SecurityConfiguration {
                         .frameOptions(frame -> frame.deny()));
         rateLimitFilter.ifAvailable(filter -> http.addFilterAfter(filter, BearerTokenAuthenticationFilter.class));
         return http.build();
+    }
+
+    private static AuthorizationResult userOnly(Supplier<? extends Authentication> authentication,
+            RequestAuthorizationContext context) {
+        Authentication auth = authentication.get();
+        boolean user = auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)
+                && auth.getAuthorities().stream().noneMatch(a -> ServicePrincipal.AUTHORITY.equals(a.getAuthority()));
+        return new AuthorizationDecision(user);
     }
 
     @Bean

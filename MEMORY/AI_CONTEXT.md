@@ -5,9 +5,9 @@ users/memberships, roles/permissions, product catalogue, plans, subscriptions, e
 provisioning, billing integration (Razorpay), audit, notifications. Products are separate services
 that own their data. Core contains no product business logic.
 
-**Current phase**: Phase 6 (Plans, subscriptions & entitlements) done 2026-10-13; **wait for approval
-before Phase 7** (Provisioning & sample product: PR-1…PR-4, plus S-7 service endpoints that need
-service-account tokens). Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5, S-8 billing, S-9 per-product seats.
+**Current phase**: Phase 7 (Provisioning & sample product) done 2026-10-13; **wait for approval
+before Phase 8** (Frontend portals UI-1…UI-3). Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5,
+S-8 billing, S-9 per-product seats, PR-5 (UPDATE operation), PR-6, PR-7.
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,
@@ -15,7 +15,8 @@ springdoc 3.1, MySQL 9.7 LTS, Keycloak 26.8.1 (self-hosted), Angular 22.2 (zonel
 TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, Bucket4j/Lettuce).
 
 **Layout**: `backend/core-platform` (package `com.occpl.platform.<module>.{api,web,internal}`,
-`shared` is OPEN), `frontend/admin-portal` (`core/`, `layout/`, `features/`), `infra/docker`
+`shared` is OPEN), `backend/product-sample` (independent sample product `com.occpl.sample`, own DB),
+`backend/e2e-tests` (Keycloak + Core in-process + sample as a process), `frontend/admin-portal` (`core/`, `layout/`, `features/`), `infra/docker`
 (compose, realm, MySQL users), `.github/workflows/ci.yml`.
 
 **Commands**: backend `cd backend && mvn verify` (Docker needed for *IT); frontend
@@ -28,7 +29,9 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
 - UUID v7 `BINARY(16)`, UTC `DATETIME(6)`, `version` optimistic lock, Flyway only,
   `ddl-auto=validate`, expand/contract migrations, migrator vs DML-only app DB user.
 - Errors: throw `ApiException(ErrorCode, detail)`; never return entities; paging via `PageRequests`.
-- Module deps: identity→access,audit; company→identity,audit; membership→identity,access,company,audit,notification;
+- Module deps: identity→access,audit; company→identity,audit; membership→identity,access,company,audit,notification,entitlement;
+  catalog→identity,audit; subscription→identity,company,catalog,audit; entitlement→subscription,catalog,company;
+  provisioning→catalog,company,entitlement,audit,notification; integration→catalog,entitlement,identity,membership,provisioning;
   access/audit/notification→shared only. `MembershipQueries` is the documented read-only cross-module SQL exception.
 - List endpoints take `SortParams` (raw `sort` values) — a plain `List<String> sort` gets split at commas.
 - Background jobs: `@Scheduled`, multi-instance safe (SKIP LOCKED / idempotent UPDATE); disabled in tests
@@ -46,6 +49,15 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
 - Integration tests share one DB and run in any order: never assume an empty table; clean up what a test relies on.
 - Shared test containers: `MySqlTestDatabase`, `KeycloakTestServer` (GreenMail on host port 3025).
 - Current user: `CurrentUser.require()` (identity api); audit actor via `shared.security.Actor`.
+- Service tokens: JWT with `client_id` → `ServicePrincipal` (authority SERVICE), allowed only on `/api/v1/service/**`
+  (security chain). Product = `ProductCatalog.findByServiceClientId` via `integration.internal.ServiceCaller`.
+  `AuditLogger.record` audits SERVICE actors with `actor_client_id`. Tests: `MockTokens.registerService(token, clientId)`.
+- Provisioning: `EntitlementsChanged` (from `EntitlementRecomputer`) → `ProvisioningService` creates jobs in the same tx;
+  `ProvisioningRunner.runDue()` (scheduled every 5 s; call directly in tests) claims, calls the product outside tx,
+  records under row lock. Tests fake products with `support.ProductServiceStub` (also serves `/token`).
+- Executable jars use classifier `exec` (Dockerfiles copy `*-exec.jar`); core-platform also builds a test-jar
+  (KeycloakTestServer, KeycloakLoginFlow, MySqlTestDatabase, TestData) used by e2e-tests.
+- Keycloak realm secrets via env: KEYCLOAK_ADMIN_CLIENT_SECRET, PROVISIONING_CLIENT_SECRET, PRODUCT_SAMPLE_CLIENT_SECRET.
 - Company endpoints: `@PreAuthorize("@tenant.check(#companyId, '<company perm>', '<platform perm>')")`,
   then `TenantContext.current()`. Platform endpoints: `hasAuthority('<platform perm>')`.
 - Platform permissions are withheld unless the JWT `amr` contains `otp` (MFA).

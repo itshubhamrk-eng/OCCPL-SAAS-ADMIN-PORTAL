@@ -18,6 +18,10 @@ interface ProductRepository extends JpaRepository<Product, UUID> {
 
     Optional<Product> findByCode(String code);
 
+    Optional<Product> findByServiceClientId(String serviceClientId);
+
+    boolean existsByServiceClientIdAndIdNot(String serviceClientId, UUID id);
+
     @Query("""
             select p from Product p
             where (:status is null or p.status = :status)

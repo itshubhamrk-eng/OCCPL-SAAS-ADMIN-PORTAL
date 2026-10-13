@@ -31,7 +31,8 @@ public class AuditQueryService {
             Instant from, Instant to) {
     }
 
-    public record Entry(UUID id, Instant occurredAt, String actorType, UUID actorUserId, UUID companyId, String action,
+    public record Entry(UUID id, Instant occurredAt, String actorType, UUID actorUserId, String actorClientId,
+            UUID companyId, String action,
             String targetType, String targetId, String outcome, String correlationId, JsonNode details) {
     }
 
@@ -82,13 +83,15 @@ public class AuditQueryService {
         params.put("limit", size + 1);
         List<Entry> rows = jdbc.sql("""
                         select BIN_TO_UUID(id) id, occurred_at, actor_type, BIN_TO_UUID(actor_user_id) actor_user_id,
+                               actor_client_id,
                                BIN_TO_UUID(company_id) company_id, action, target_type, target_id, outcome,
                                correlation_id, details
                         from audit_log""" + where + " order by occurred_at desc, id desc limit :limit")
                 .params(params)
                 .query((rs, i) -> new Entry(UUID.fromString(rs.getString("id")),
                         rs.getTimestamp("occurred_at").toInstant(), rs.getString("actor_type"),
-                        uuid(rs.getString("actor_user_id")), uuid(rs.getString("company_id")), rs.getString("action"),
+                        uuid(rs.getString("actor_user_id")), rs.getString("actor_client_id"),
+                        uuid(rs.getString("company_id")), rs.getString("action"),
                         rs.getString("target_type"), rs.getString("target_id"), rs.getString("outcome"),
                         rs.getString("correlation_id"),
                         rs.getString("details") == null ? null : jsonMapper.readTree(rs.getString("details"))))

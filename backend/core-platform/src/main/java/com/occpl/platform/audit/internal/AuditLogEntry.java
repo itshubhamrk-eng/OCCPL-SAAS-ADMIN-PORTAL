@@ -25,6 +25,9 @@ class AuditLogEntry {
     @Column(name = "actor_user_id")
     private UUID actorUserId;
 
+    @Column(name = "actor_client_id")
+    private String actorClientId;
+
     @Column(name = "company_id")
     private UUID companyId;
 
@@ -50,12 +53,14 @@ class AuditLogEntry {
     protected AuditLogEntry() {
     }
 
-    AuditLogEntry(UUID id, Instant occurredAt, String actorType, UUID actorUserId, UUID companyId, String action,
-            String targetType, String targetId, String outcome, String correlationId, String details) {
+    AuditLogEntry(UUID id, Instant occurredAt, String actorType, UUID actorUserId, String actorClientId,
+            UUID companyId, String action, String targetType, String targetId, String outcome, String correlationId,
+            String details) {
         this.id = id;
         this.occurredAt = occurredAt;
         this.actorType = actorType;
         this.actorUserId = actorUserId;
+        this.actorClientId = actorClientId;
         this.companyId = companyId;
         this.action = action;
         this.targetType = targetType;

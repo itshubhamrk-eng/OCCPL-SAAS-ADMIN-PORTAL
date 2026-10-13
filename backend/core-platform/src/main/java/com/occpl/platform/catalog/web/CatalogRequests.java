@@ -24,12 +24,14 @@ final class CatalogRequests {
             @Size(max = 2000) String description,
             @NotBlank @Size(max = 500) String appUrl,
             @Size(max = 500) String apiBaseUrl,
-            @Pattern(regexp = AUDIENCE, message = "lower-case letters, digits and hyphens; 3-100 characters") String apiAudience) {
+            @Pattern(regexp = AUDIENCE, message = "lower-case letters, digits and hyphens; 3-100 characters") String apiAudience,
+            @Pattern(regexp = AUDIENCE, message = "lower-case letters, digits and hyphens; 3-100 characters") String serviceClientId) {
     }
 
     record UpdateProduct(@Size(min = 1, max = 200) String name, @Size(max = 2000) String description,
             @Size(min = 1, max = 500) String appUrl, @Size(max = 500) String apiBaseUrl,
-            @Pattern(regexp = AUDIENCE) String apiAudience) {
+            @Pattern(regexp = AUDIENCE) String apiAudience,
+            @Pattern(regexp = "|" + AUDIENCE, message = "empty, or lower-case letters, digits and hyphens; 3-100 characters") String serviceClientId) {
     }
 
     record Reason(@Size(max = 500) String reason) {

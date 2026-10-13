@@ -5,7 +5,7 @@ COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 mvn -B -q dependency:go-offline
 COPY src src
 RUN --mount=type=cache,target=/root/.m2 mvn -B -q package -DskipTests \
-    && java -Djarmode=tools -jar target/core-platform-*.jar extract --layers --launcher --destination target/extracted
+    && java -Djarmode=tools -jar target/core-platform-*-exec.jar extract --layers --launcher --destination target/extracted
 
 FROM eclipse-temurin:25-jre-noble
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* \

@@ -1,8 +1,8 @@
 # API Specification (initial inventory)
 
-Status: Phase 1 inventory; the error format (§2) and conventions are implemented in Phase 2. The authoritative contract will be the generated OpenAPI document
-(`/v3/api-docs`, Swagger UI in non-production) once endpoints are implemented. Nothing below is
-implemented yet.
+Status: endpoints marked "implemented" (or in sections marked implemented) exist as of Phase 7; the
+rest is the planned inventory. The authoritative contract for implemented endpoints is the generated
+OpenAPI document (`/v3/api-docs`, Swagger UI in non-production).
 
 ## 1. Conventions
 
@@ -163,18 +163,29 @@ Invalid transitions return 422 `INVALID_STATE_TRANSITION`. Timed transitions run
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/companies/{companyId}/entitlements` | P:`platform.subscriptions.read` or C:`company.usage.read` | Products with access status, feature limits and current usage — implemented |
-| GET | `/entitlements/check?companyId&productCode&featureCode` | S:`entitlements:read` | Product-service check — Phase 7 (logic implemented in `Entitlements.check`) |
-| POST | `/usage/consume` · `/usage/release` | S:`usage:write` | `{companyId, productCode, featureCode, quantity, idempotencyKey}` — Phase 7 (logic implemented and tested) |
+| GET | `/service/access?companyId&userSubject&featureCode` | S (product service token) | Access of a company (and, with `userSubject`, of that user) to the **calling** product or one of its features. Always 200: `{allowed, reason, productCode, companyId, userId, roles, entitlementStatus, limit, used, remaining}`; reasons `OK, COMPANY_INACTIVE, NO_ENTITLEMENT, SUSPENDED, FEATURE_NOT_INCLUDED, LIMIT_REACHED, UNKNOWN_USER, USER_INACTIVE, NOT_A_MEMBER, NOT_PERMITTED` — implemented |
+| POST | `/service/usage/consume` · `/service/usage/release` | S | `{companyId, featureCode, quantity (1–1,000,000), idempotencyKey (≤ 80, [A-Za-z0-9_.:-])}` → `{used, limit, remaining, replayed}`; 409 `LIMIT_EXCEEDED`, 403 `ENTITLEMENT_REQUIRED` — implemented |
+
+S = client-credentials token of a product service (`client_id` claim) registered as the product's
+`serviceClientId`. Service tokens are refused (403) on every other endpoint and user tokens on
+`/service/**`; an unregistered or retired client gets 403 `FORBIDDEN`.
 
 ### Provisioning
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/platform/provisioning-jobs` | P:`platform.provisioning.read` | Filter by status/product/company |
-| GET | `/platform/provisioning-jobs/{id}` | P | Detail with attempts |
-| POST | `/platform/provisioning-jobs/{id}/retry` · `/cancel` | P:`platform.provisioning.manage` | Manual retry / cancel |
-| POST | `/provisioning/callbacks` | S:`provisioning:callback` | Async completion from product service (idempotent) |
-| GET | `/companies/{companyId}/products` | C:`company.products.launch` | Entitled products with launch URLs and provisioning state |
+All implemented in Phase 7.
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/platform/provisioning-jobs` | P:`platform.provisioning.read` | `status` (PENDING, RUNNING, AWAITING_CALLBACK, SUCCEEDED, FAILED, CANCELLED), `operation` (PROVISION, DEPROVISION), `companyId`, `productId`, paging, `sort=createdAt\|updatedAt\|status` (default newest first) |
+| GET | `/platform/provisioning-jobs/{id}` | P:`platform.provisioning.read` | attempts, maxAttempts, nextAttemptAt, callbackDeadline, configVersionNo, lastHttpStatus, lastError |
+| POST | `/platform/provisioning-jobs/{id}/retry` | P:`platform.provisioning.manage` | FAILED → PENDING with a fresh set of attempts; only the latest job of a company/product (else 409); 422 otherwise |
+| POST | `/platform/provisioning-jobs/{id}/cancel` | P:`platform.provisioning.manage` | `{reason?}`; PENDING or AWAITING_CALLBACK only (422 otherwise) |
+| POST | `/service/provisioning/jobs/{jobId}/callback` | S | `{outcome: SUCCEEDED\|FAILED, message?}` → 204; a job of another product → 404; repeated success → 204; completed job → 409 |
+| GET | `/companies/{companyId}/products` | P:`platform.companies.read` or C:`company.products.launch` | Entitled ACTIVE products: `{productId, productCode, productName, entitlementStatus, validUntil, provisioningState, launchUrl, openInNewTab}`; `launchUrl` only when usable now |
+
+Product registration and update accept `serviceClientId` (unique; empty string clears it on PATCH).
 
 ### Billing
 

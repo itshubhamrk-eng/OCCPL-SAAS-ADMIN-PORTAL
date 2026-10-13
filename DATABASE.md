@@ -1,6 +1,6 @@
 # Database Design
 
-Status: Phase 6 — plans, subscriptions, entitlements and usage tables, plus `product`, `product_version`, `product_feature` (catalog) plus Phase 3–4 tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_settings`,
+Status: Phase 7 — provisioning tables (`provisioning_job`, `company_product_provisioning`), `product.service_client_id`, `audit_log.actor_client_id`; Phase 6 plans, subscriptions, entitlements and usage tables, plus `product`, `product_version`, `product_feature` (catalog) plus Phase 3–4 tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_settings`,
 `company_contact`, `company_status_history`, `company_membership`, `invitation`, `permission`, `role`,
 `role_permission`, `platform_role_assignment`, `membership_role`, `audit_log`, `notification` are created by Flyway (`db/migration/<module>/`); the rest of this design follows in later phases. MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
 `occpl_core`. Product services own separate schemas/databases.
@@ -79,7 +79,7 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 
 | Table | Key columns / constraints |
 |---|---|
-| `product` | id, `code` **UK** (immutable), name, description, `status` (DRAFT, ACTIVE, RETIRED), `app_url`, `api_base_url`, `api_audience` **UK**, `current_version_id` FK → product_version, created/updated by/at, version; IX(status, name), IX(name). Provisioning mode lives in the versioned configuration, not on the row. |
+| `product` | id, `code` **UK** (immutable), name, description, `status` (DRAFT, ACTIVE, RETIRED), `app_url`, `api_base_url`, `api_audience` **UK**, `service_client_id` **UK** (NULL allowed; Keycloak client the product uses to call Core), `current_version_id` FK → product_version, created/updated by/at, version; IX(status, name), IX(name). Provisioning mode lives in the versioned configuration, not on the row. |
 | `product_version` | id, product_id FK, `version_no` — **UK(product_id, version_no)**, `schema_version`, `config_json` JSON (canonical: keys sorted), `config_hash` CHAR(64) (SHA-256 of the canonical JSON, used to reject identical versions), `status` (DRAFT, PUBLISHED), notes, created_by/at, published_by/at. Content columns are never updated. |
 | `product_feature` | id, product_id FK, `code` — **UK(product_id, code)**, name, description, `type` (BOOLEAN, LIMIT), `unit` (SEATS, STORAGE_GB, RECORDS, API_CALLS, TRANSACTIONS, DOCUMENTS, MESSAGES, COUNT), `reset_period` (NONE, DAILY, MONTHLY, BILLING_PERIOD), `status` (ACTIVE, DEPRECATED), version; CHECK: BOOLEAN ⇒ no unit/period, LIMIT ⇒ both. |
 
@@ -111,9 +111,9 @@ Invoices and payment transactions arrive with billing (Razorpay).
 
 | Table | Key columns / constraints |
 |---|---|
-| `provisioning_job` | id, company_id, product_id, `action` (PROVISION, UPDATE, DEPROVISION), `status` (PENDING, IN_PROGRESS, AWAITING_CALLBACK, SUCCEEDED, FAILED_RETRYABLE, FAILED_PERMANENT, CANCELLED), `idempotency_key` UK, attempts, max_attempts, next_attempt_at, last_error_code, last_error_message (truncated, sanitized), locked_by, locked_until, version — IX(status, next_attempt_at) |
-| `outbox_event` | id, aggregate_type, aggregate_id, event_type, payload JSON, occurred_at, published_at NULL, attempts — IX(published_at, occurred_at) |
-| `audit_log` | id, occurred_at, actor_user_id, actor_type (USER, SERVICE, SYSTEM), company_id NULL, action (e.g. `company.suspended`), target_type, target_id, outcome, correlation_id, ip_hash, details JSON (no secrets/tokens) — IX(company_id, occurred_at), IX(actor_user_id, occurred_at), IX(target_type, target_id); append-only (app DB user has no UPDATE/DELETE grant on this table) |
+| `provisioning_job` (implemented) | id (also the `Idempotency-Key` sent to the product), company_id, product_id, `operation` (PROVISION, DEPROVISION), `status` (PENDING, RUNNING, AWAITING_CALLBACK, SUCCEEDED, FAILED, CANCELLED), attempts, max_attempts, next_attempt_at, `locked_until` (lease while RUNNING), callback_deadline, config_version_no, last_http_status, last_error (≤ 1000 chars, no secrets), created/updated/completed_at, version — IX(status, next_attempt_at), IX(status, locked_until), IX(status, callback_deadline), IX(company_id, product_id, created_at), IX(created_at) |
+| `company_product_provisioning` (implemented) | **PK(company_id, product_id)**, `state` (PROVISIONING, PROVISIONED, FAILED, DEPROVISION_SCHEDULED, DEPROVISIONING, DEPROVISIONED), last_job_id, provisioned_at, deprovision_at, updated_at, version |
+| `audit_log` | id, occurred_at, actor_user_id, `actor_client_id` (SERVICE actors, Phase 7), actor_type (USER, SERVICE, SYSTEM), company_id NULL, action (e.g. `company.suspended`), target_type, target_id, outcome, correlation_id, ip_hash, details JSON (no secrets/tokens) — IX(company_id, occurred_at), IX(actor_user_id, occurred_at), IX(target_type, target_id); append-only (app DB user has no UPDATE/DELETE grant on this table) |
 | `notification` | id, company_id NULL, template, recipient_email, subject, body_text/body_html (cleared after sending or permanent failure), status (QUEUED, SENT, FAILED), attempts, next_attempt_at, last_error, sent_at — IX(status, next_attempt_at); claimed with `FOR UPDATE SKIP LOCKED` |
 | `idempotency_key` | key, scope, request_hash, response_status, response_body, created_at, expires_at — for idempotent POST APIs |
 | `shedlock` | standard ShedLock table for single-runner scheduled jobs |

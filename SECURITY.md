@@ -17,8 +17,11 @@ arrive in Phase 3.
   user's sessions to Super Admin via the IdP admin API for forced logout.
 - **Core API**: OAuth2 resource server; validates signature (JWKS, cached with rotation), `iss`,
   `aud=occpl-core`, `exp`/`nbf` (≤ 60 s clock skew), `azp` in allowlist.
-- **Service-to-service**: confidential clients with client-credentials; per-product audience;
-  scopes `entitlements:read`, `usage:write`, `provisioning:callback`.
+- **Service-to-service** (implemented, Phase 7): confidential clients with client-credentials and
+  per-direction audiences — Core → products with `occpl-core-services` (audience = each product's
+  `apiAudience`), product → Core with the product's own client (audience `occpl-core`). Authorization
+  is by client identity rather than scopes: Core maps the token's `client_id` to exactly one product
+  (`serviceClientId`) and limits it to that product's data.
 - **Invitations**: Core creates the IdP user (disabled credentials) via the Keycloak Admin API
   using a dedicated least-privilege service account (`manage-users` on the realm only), then
   sends an invitation link containing a single-use random token (only its SHA-256 hash is
@@ -177,6 +180,24 @@ the need.
 - Entitlement decisions always apply company status (suspended/deactivated → no access) and read
   current data from the database, so suspension takes effect immediately.
 - Usage limits are enforced atomically on the server; idempotency keys prevent double counting on retries.
+
+### Implemented in Phase 7 (verified)
+
+- Service tokens (claim `client_id`) get only the `SERVICE` authority, are accepted on
+  `/api/v1/service/**` only, and never create platform users; user tokens are refused on the
+  service API (tested both ways). A client not registered as an active product's `serviceClientId`
+  gets 403. The product is always derived from the token, so a product cannot read or change another
+  product's entitlements, usage or provisioning jobs (callback for a foreign job → 404).
+- Product services verify each user request with Core (user status, ACTIVE membership,
+  `company.products.launch`, company status, entitlement) and fail closed when Core is unreachable;
+  non-members get 404 from the product. The sample product accepts provisioning calls only from
+  Core's client and user API calls only from user tokens.
+- Provisioning requests carry a short-lived client-credentials token and the job id as idempotency
+  key; redirects are not followed; response bodies are truncated before storage; secrets never
+  appear in job rows, audit details or alert emails. Core's service client secret is supplied by
+  environment variable (`PROVISIONING_CLIENT_SECRET`).
+- Service actions are audited with actor type SERVICE and the client id (`audit_log.actor_client_id`).
+- Service clients have their own rate-limit bucket (`RATE_LIMIT_SERVICE_PER_MINUTE`, default 6000).
 
 ## 5. Secrets and data protection
 

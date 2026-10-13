@@ -1,6 +1,6 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 6 (Plans, subscriptions & entitlements) complete — awaiting approval for Phase 7 (Provisioning & sample product).**
+Status: **Phase 7 (Provisioning & sample product) complete — awaiting approval for Phase 8 (Frontend portals).**
 Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective
@@ -113,7 +113,7 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | D-6 | Confirm SLOs in §2 | Open — needed by Phase 9 |
 | D-7 | Company Admin self-serve purchases? | Open — default: Super Admin assigns plans |
 | D-8 | Self-registration vs invitation only | **Applied default:** invitation only (Phase 4) |
-| D-9 | Product launch model (subdomains + SSO vs path-based) | Open — needed by Phase 7 |
+| D-9 | Product launch model (subdomains + SSO vs path-based) | **Applied default (Phase 7):** both are supported without a code change — each product has its own `appUrl` (own host or subdomain) plus a `launch.path` template (`{companyId}`, `{companyCode}`); sign-in is SSO through Keycloak. Revisit if per-company subdomains are wanted. |
 | D-10 | Personal-data retention/export obligations (DPDP Act 2023, contracts) | Open — needed by Phase 9 |
 
 ## 6. Risks

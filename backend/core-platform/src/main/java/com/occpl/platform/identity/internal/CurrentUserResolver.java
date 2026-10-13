@@ -3,6 +3,7 @@ package com.occpl.platform.identity.internal;
 import com.occpl.platform.access.api.PlatformAccess;
 import com.occpl.platform.identity.api.CurrentUser;
 import com.occpl.platform.shared.security.JwtPrincipalResolver;
+import com.occpl.platform.shared.security.ServicePrincipal;
 import java.util.Set;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -14,9 +15,15 @@ import org.springframework.stereotype.Component;
  * Turns a validated JWT into a {@link CurrentUser}. Authorization data (roles, permissions, status)
  * is read from the database on every request rather than trusted from token claims, so changes take
  * effect immediately instead of at token expiry (SECURITY.md §3).
+ *
+ * <p>Client-credentials tokens (Keycloak adds the {@code client_id} claim to service-account tokens
+ * only) become a {@link ServicePrincipal} instead; no platform user is created for them. Which
+ * product a service client belongs to is decided by the integration module per request.
  */
 @Component
 class CurrentUserResolver implements JwtPrincipalResolver {
+
+    static final String SERVICE_CLIENT_CLAIM = "client_id";
 
     private final UserProvisioningService provisioning;
     private final PlatformAccess platformAccess;
@@ -31,6 +38,10 @@ class CurrentUserResolver implements JwtPrincipalResolver {
 
     @Override
     public AbstractAuthenticationToken resolve(Jwt jwt) {
+        String clientId = jwt.getClaimAsString(SERVICE_CLIENT_CLAIM);
+        if (clientId != null && !clientId.isBlank()) {
+            return new ServiceAuthentication(jwt, new ServicePrincipal(clientId));
+        }
         UserProvisioningService.ResolvedUser user = provisionUser(jwt);
         Set<String> roles = platformAccess.roleCodes(user.id());
         Set<String> permissions = roles.isEmpty() ? Set.of() : platformAccess.permissions(user.id());

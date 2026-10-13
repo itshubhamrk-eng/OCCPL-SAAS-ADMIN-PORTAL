@@ -43,6 +43,9 @@ public class Product {
     @Column(name = "api_audience", nullable = false)
     private String apiAudience;
 
+    @Column(name = "service_client_id")
+    private String serviceClientId;
+
     @Column(name = "current_version_id")
     private UUID currentVersionId;
 
@@ -65,8 +68,9 @@ public class Product {
     }
 
     Product(UUID id, String code, String name, String description, String appUrl, String apiBaseUrl,
-            String apiAudience, UUID actor, Instant now) {
+            String apiAudience, String serviceClientId, UUID actor, Instant now) {
         this.id = id;
+        this.serviceClientId = serviceClientId;
         this.code = code;
         this.name = name;
         this.description = description;
@@ -109,8 +113,9 @@ public class Product {
         return previous;
     }
 
-    void update(String name, String description, String appUrl, String apiBaseUrl, String apiAudience, UUID actor,
-            Instant now) {
+    void update(String name, String description, String appUrl, String apiBaseUrl, String apiAudience,
+            String serviceClientId, UUID actor, Instant now) {
+        this.serviceClientId = serviceClientId;
         this.name = name;
         this.description = description;
         this.appUrl = appUrl;
@@ -137,6 +142,7 @@ public class Product {
     String appUrl() { return appUrl; }
     String apiBaseUrl() { return apiBaseUrl; }
     String apiAudience() { return apiAudience; }
+    String serviceClientId() { return serviceClientId; }
     UUID currentVersionId() { return currentVersionId; }
     Instant createdAt() { return createdAt; }
     Instant updatedAt() { return updatedAt; }

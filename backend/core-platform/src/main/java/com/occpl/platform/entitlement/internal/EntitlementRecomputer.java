@@ -1,6 +1,7 @@
 package com.occpl.platform.entitlement.internal;
 
 import com.occpl.platform.entitlement.api.EntitlementStatus;
+import com.occpl.platform.entitlement.api.EntitlementsChanged;
 import com.occpl.platform.shared.id.UuidV7;
 import com.occpl.platform.subscription.api.SubscriptionChanged;
 import com.occpl.platform.subscription.api.SubscriptionGrants;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,11 +37,14 @@ class EntitlementRecomputer {
 
     private final SubscriptionGrants grants;
     private final EntitlementRepository entitlements;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    EntitlementRecomputer(SubscriptionGrants grants, EntitlementRepository entitlements, Clock clock) {
+    EntitlementRecomputer(SubscriptionGrants grants, EntitlementRepository entitlements,
+            ApplicationEventPublisher events, Clock clock) {
         this.grants = grants;
         this.entitlements = entitlements;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -65,6 +70,7 @@ class EntitlementRecomputer {
         }
         Map<UUID, CompanyProductEntitlement> existing = new HashMap<>();
         entitlements.findByCompanyId(companyId).forEach(e -> existing.put(e.productId(), e));
+        Set<UUID> before = Set.copyOf(existing.keySet());
 
         for (Map.Entry<UUID, List<Grant>> entry : byProduct.entrySet()) {
             UUID productId = entry.getKey();
@@ -81,6 +87,13 @@ class EntitlementRecomputer {
         }
         entitlements.deleteAll(existing.values());
         entitlements.flush();
+
+        Set<UUID> added = new HashSet<>(byProduct.keySet());
+        added.removeAll(before);
+        Set<UUID> removed = new HashSet<>(existing.keySet());
+        if (!added.isEmpty() || !removed.isEmpty()) {
+            events.publishEvent(new EntitlementsChanged(companyId, added, removed));
+        }
     }
 
     private static Set<CompanyProductEntitlement.Feature> mergeFeatures(UUID productId, List<Grant> contributing) {

@@ -1,5 +1,7 @@
 package com.occpl.platform.entitlement.api;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.OptionalLong;
 import java.util.UUID;
 
@@ -27,6 +29,12 @@ public interface Entitlements {
      * empty means no seat limit applies.
      */
     OptionalLong memberLimit(UUID companyId);
+
+    /** Every product the company holds an entitlement for (any status), without applying company status. */
+    List<ProductEntitlement> products(UUID companyId);
+
+    record ProductEntitlement(UUID productId, EntitlementStatus status, Instant validUntil) {
+    }
 
     enum Reason { OK, COMPANY_INACTIVE, NO_ENTITLEMENT, SUSPENDED, FEATURE_NOT_INCLUDED, LIMIT_REACHED }
 

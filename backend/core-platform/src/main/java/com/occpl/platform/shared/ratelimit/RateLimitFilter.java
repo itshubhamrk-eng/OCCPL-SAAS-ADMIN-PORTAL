@@ -3,6 +3,7 @@ package com.occpl.platform.shared.ratelimit;
 import com.occpl.platform.shared.error.ErrorCode;
 import com.occpl.platform.shared.error.Problems;
 import com.occpl.platform.shared.security.Actor;
+import com.occpl.platform.shared.security.ServicePrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +43,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         RateLimiter.Decision decision = Actor.current()
                 .map(actor -> limiter.tryConsume("rl:api:user:" + actor.userId(), properties.authenticatedPerMinute()))
+                .or(() -> ServicePrincipal.current().map(service -> limiter.tryConsume(
+                        "rl:api:service:" + service.clientId(), properties.servicePerMinute())))
                 .orElseGet(() -> limiter.tryConsume("rl:api:ip:" + request.getRemoteAddr(),
                         properties.anonymousPerMinute()));
         if (decision.remaining() >= 0) {

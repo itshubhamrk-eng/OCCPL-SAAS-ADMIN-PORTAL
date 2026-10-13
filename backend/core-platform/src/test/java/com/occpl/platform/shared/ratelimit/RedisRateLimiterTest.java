@@ -11,7 +11,7 @@ class RedisRateLimiterTest {
     @Test
     void failsOpenAndCountsErrorWhenRedisIsUnreachable() throws Exception {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        RateLimitProperties properties = new RateLimitProperties(true, "redis://127.0.0.1:1", 10, 10,
+        RateLimitProperties properties = new RateLimitProperties(true, "redis://127.0.0.1:1", 10, 10, 10,
                 Duration.ofMillis(200));
         RedisRateLimiter limiter = new RedisRateLimiter(properties, registry);
         try {

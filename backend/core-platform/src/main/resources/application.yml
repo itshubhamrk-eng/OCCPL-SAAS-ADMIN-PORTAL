@@ -120,8 +120,20 @@ occpl:
     grace-period: ${SUBSCRIPTION_GRACE_PERIOD:7d}
     suspended-expiry: ${SUBSCRIPTION_SUSPENDED_EXPIRY:90d}
     data-retention: ${SUBSCRIPTION_DATA_RETENTION:90d}
+  provisioning:
+    # Product tenants are removed after the data-retention period (D-5) once the entitlement ends.
+    deprovision-delay: ${SUBSCRIPTION_DATA_RETENTION:90d}
+    callback-timeout: ${PROVISIONING_CALLBACK_TIMEOUT:15m}
+    # Core's URL as reachable by product services (sent so ASYNC products know where to report completion).
+    callback-base-url: ${PROVISIONING_CALLBACK_BASE_URL:}
+    alert-recipients: ${PROVISIONING_ALERT_RECIPIENTS:}
+    # Core's own service client (client-credentials) used to call product provisioning endpoints.
+    token-uri: ${PROVISIONING_TOKEN_URI:${KEYCLOAK_BASE_URL:}/realms/${KEYCLOAK_REALM:occpl}/protocol/openid-connect/token}
+    client-id: ${PROVISIONING_CLIENT_ID:occpl-core-services}
+    client-secret: ${PROVISIONING_CLIENT_SECRET:}
   rate-limit:
     enabled: ${RATE_LIMIT_ENABLED:true}
     redis-url: ${REDIS_URL:redis://localhost:6379}
     authenticated-per-minute: ${RATE_LIMIT_USER_PER_MINUTE:600}
     anonymous-per-minute: ${RATE_LIMIT_ANONYMOUS_PER_MINUTE:60}
+    service-per-minute: ${RATE_LIMIT_SERVICE_PER_MINUTE:6000}

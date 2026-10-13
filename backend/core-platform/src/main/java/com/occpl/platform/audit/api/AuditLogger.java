@@ -6,6 +6,7 @@ package com.occpl.platform.audit.api;
  */
 public interface AuditLogger {
 
+    /** Actor = the signed-in user, or the product service for client-credentials requests. */
     void record(AuditEvent event);
 
     /** For background/system actions without an authenticated user. */

@@ -12,6 +12,9 @@ public interface UserDirectory {
     /** Batch lookup; unknown ids are absent from the result. */
     Map<UUID, UserSummary> findAll(Collection<UUID> userIds);
 
+    /** The user linked to this subject ({@code sub}) of the platform's identity provider. */
+    Optional<UserSummary> findBySubject(String subject);
+
     /**
      * Returns the user with this email, creating an INVITED user if none exists. Rejects disabled
      * users. Must run inside the caller's transaction.

@@ -1,6 +1,6 @@
 # Deployment
 
-Status: Local stack, Dockerfiles and CI implemented in Phase 2. Production deployment in Phase 10.
+Status: Local stack, Dockerfiles and CI implemented in Phase 2; sample product service added in Phase 7. Production deployment in Phase 10.
 
 ## 1. Environments
 
@@ -27,6 +27,7 @@ docker compose up --build
 #   Portal http://localhost:4200 · API http://localhost:8080 · Swagger http://localhost:8080/swagger-ui.html
 #   Health http://localhost:8081/actuator/health · Keycloak http://localhost:8180
 #   Mail inbox (captures every outgoing email) http://localhost:8025
+#   Sample product (Notes API) http://localhost:8090 · health http://localhost:8091/actuator/health
 
 # Or run the backend from source against the compose MySQL/Keycloak
 docker compose up -d mysql keycloak
@@ -38,8 +39,14 @@ SPRING_PROFILES_ACTIVE=local DB_USERNAME=occpl_app DB_PASSWORD=<app> \
 cd frontend/admin-portal && npm ci && npm start
 ```
 
+Upgrading an existing local stack to Phase 7: the sample product's database and accounts are
+created by `infra/docker/mysql/01-create-users.sh`, which MySQL runs only for a new volume, and the
+new Keycloak clients come from the realm import, which runs only for a new realm. Add the new
+`.env` entries (see `.env.example`) and recreate the stack with `docker compose down -v` (this deletes
+local data).
+
 Checks a contributor runs before pushing: `mvn verify` in `backend/` (needs Docker for
-Testcontainers) and `npm run format:check && npx ng lint && npm test && npx ng build` in
+Testcontainers; includes the Core ↔ sample product end-to-end test in `backend/e2e-tests`) and `npm run format:check && npx ng lint && npm test && npx ng build` in
 `frontend/admin-portal`.
 
 ### Core Platform configuration (environment variables)
@@ -68,10 +75,45 @@ Testcontainers) and `npm run format:check && npx ng lint && npm test && npx ng b
 | `MAIL_FROM` | no | Sender, default `OCCPL Innovations <no-reply@occpl.local>` |
 | `INVITATION_ACCEPT_URL` | yes (prod) | Portal page that accepts invitations (`?token=` appended); must be a valid redirect URI of the portal client in Keycloak |
 | `INVITATION_VALIDITY` | no (`7d`) | |
-| `SUBSCRIPTION_GRACE_PERIOD` / `SUBSCRIPTION_SUSPENDED_EXPIRY` / `SUBSCRIPTION_DATA_RETENTION` | no (`7d` / `90d` / `90d`) | Subscription lifecycle timing (decision D-5) |
+| `SUBSCRIPTION_GRACE_PERIOD` / `SUBSCRIPTION_SUSPENDED_EXPIRY` / `SUBSCRIPTION_DATA_RETENTION` | no (`7d` / `90d` / `90d`) | Subscription lifecycle timing (decision D-5); the retention period also delays deprovisioning in products |
+| `PROVISIONING_CLIENT_ID` / `PROVISIONING_CLIENT_SECRET` | yes (prod) | Core's service client `occpl-core-services` for calls to product services; without a secret, provisioning calls fail and are retried |
+| `PROVISIONING_TOKEN_URI` | no | Token endpoint; default `${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token` |
+| `PROVISIONING_CALLBACK_BASE_URL` | for ASYNC products | Core's URL as reachable by product services (sent as `callbackUrl`) |
+| `PROVISIONING_CALLBACK_TIMEOUT` | no (`15m`) | How long an ASYNC product may take to report completion |
+| `PROVISIONING_ALERT_RECIPIENTS` | yes (prod) | Comma-separated emails notified when a provisioning job fails permanently |
+| `RATE_LIMIT_SERVICE_PER_MINUTE` | no (6000) | Per product service client |
 
 Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
 (space-separated origins of the API and IdP).
+
+### Sample product configuration (environment variables)
+
+| Variable | Purpose |
+|---|---|
+| `DB_URL`, `DB_USERNAME`/`DB_PASSWORD`, `DB_MIGRATOR_USERNAME`/`DB_MIGRATOR_PASSWORD` | Its own database (`occpl_sample`) and least-privilege accounts |
+| `OIDC_ISSUER_URI`, `OIDC_AUDIENCE` (`product-sample`) | Token validation |
+| `PROVISIONING_CLIENT_ID` (`occpl-core-services`) | The only client allowed to provision |
+| `CORE_BASE_URL`, `CORE_TOKEN_URI`, `CORE_CLIENT_ID` (`product-sample-service`), `CORE_CLIENT_SECRET` | Calls to Core's service API |
+| `PORT` / `MANAGEMENT_PORT` | 8090 / 8091 |
+
+### Registering a product service
+
+1. In Keycloak (realm `occpl`): create the product's confidential client (service account, audience
+   mapper `occpl-core`), a client for its users (audience = the product's `apiAudience`), and add an
+   audience mapper for the product's `apiAudience` to `occpl-core-services`. The local realm import
+   contains these for the sample product.
+2. In Core: `POST /api/v1/products` with `apiAudience`, `apiBaseUrl` and `serviceClientId`; add
+   features; create and publish a configuration version with `provisioning` (and `launch`); activate.
+3. Assign a plan containing the product to a company; Core provisions the company within seconds
+   (job list: `GET /api/v1/platform/provisioning-jobs`).
+
+Sample product locally: register it with `appUrl` `http://localhost:8090` (browser) and
+`apiBaseUrl` `http://product-sample.localhost:8090` (compose network alias reachable from Core; plain
+HTTP is accepted only for localhost hosts), `apiAudience` `product-sample`, `serviceClientId`
+`product-sample-service`, a LIMIT feature `notes` (unit RECORDS, reset NONE) and configuration
+`{"schemaVersion":1,"launch":{"path":"/companies/{companyId}"},"provisioning":{"mode":"SYNC","path":"/provisioning/v1/tenants/{companyId}"}}`.
+The sample has no user interface yet; its API is `GET|POST /api/companies/{companyId}/notes` and
+`DELETE /api/companies/{companyId}/notes/{noteId}` with a user token from client `product-sample-web`.
 
 ### First Super Admin (one-time)
 

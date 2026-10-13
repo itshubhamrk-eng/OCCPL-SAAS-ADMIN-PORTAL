@@ -13,5 +13,7 @@
 
     <modules>
         <module>core-platform</module>
+        <module>product-sample</module>
+        <module>e2e-tests</module>
     </modules>
 </project>

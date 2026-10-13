@@ -153,6 +153,13 @@ public class EntitlementService implements Entitlements {
         return anySeatFeature ? OptionalLong.of(max) : OptionalLong.empty();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductEntitlement> products(UUID companyId) {
+        return entitlements.findByCompanyId(companyId).stream()
+                .map(e -> new ProductEntitlement(e.productId(), e.status(), e.validUntil())).toList();
+    }
+
     @Transactional(readOnly = true)
     public List<ProductEntitlementView> forCompany(UUID companyId) {
         return entitlements.findByCompanyId(companyId).stream().map(e -> {

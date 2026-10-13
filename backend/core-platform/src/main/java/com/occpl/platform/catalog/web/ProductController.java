@@ -40,10 +40,12 @@ class ProductController {
     @PostMapping
     @PreAuthorize("hasAuthority('platform.products.manage')")
     @Operation(summary = "Register a product (starts as DRAFT)",
-            description = "apiAudience defaults to 'product-<code>' and must match the product service's Keycloak client audience.")
+            description = "apiAudience defaults to 'product-<code>' and must match the product service's Keycloak client audience. "
+                    + "serviceClientId is the Keycloak client the product service uses to call the service API.")
     ResponseEntity<ProductView> register(@Valid @RequestBody CatalogRequests.RegisterProduct request) {
         ProductView product = catalog.register(request.code(), new ProductData(request.name().strip(),
-                request.description(), request.appUrl(), request.apiBaseUrl(), request.apiAudience()));
+                request.description(), request.appUrl(), request.apiBaseUrl(), request.apiAudience(),
+                request.serviceClientId()));
         return ResponseEntity.created(URI.create("/api/v1/products/" + product.id()))
                 .eTag(Etags.of(product.version())).body(product);
     }
@@ -78,7 +80,7 @@ class ProductController {
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody CatalogRequests.UpdateProduct request) {
         ProductView product = catalog.update(productId, new ProductData(request.name(), request.description(),
-                request.appUrl(), request.apiBaseUrl(), request.apiAudience()), ifMatch);
+                request.appUrl(), request.apiBaseUrl(), request.apiAudience(), request.serviceClientId()), ifMatch);
         return ResponseEntity.ok().eTag(Etags.of(product.version())).body(product);
     }
 

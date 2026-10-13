@@ -69,11 +69,14 @@ public class CatalogService implements ProductCatalog {
     }
 
     public record ProductView(UUID id, String code, String name, String description, ProductStatus status,
-            String appUrl, String apiBaseUrl, String apiAudience, Integer currentVersionNo, Instant createdAt,
+            String appUrl, String apiBaseUrl, String apiAudience, String serviceClientId, Integer currentVersionNo,
+            Instant createdAt,
             Instant updatedAt, long version) {
     }
 
-    public record ProductData(String name, String description, String appUrl, String apiBaseUrl, String apiAudience) {
+    /** {@code serviceClientId}: the product service's Keycloak client for calls to Core (optional). */
+    public record ProductData(String name, String description, String appUrl, String apiBaseUrl, String apiAudience,
+            String serviceClientId) {
     }
 
     public record VersionView(int versionNo, int schemaVersion, String status, boolean current, String notes,
@@ -96,12 +99,19 @@ public class CatalogService implements ProductCatalog {
         if (products.existsByApiAudience(audience)) {
             throw new ApiException(ErrorCode.CONFLICT, "API audience '" + audience + "' is used by another product.");
         }
+        String serviceClient = blankToNull(data.serviceClientId());
+        requireFreeServiceClient(serviceClient, null);
         UUID actor = CurrentUser.require().userId();
         Product product = products.save(new Product(UuidV7.generate(clock), code, data.name(), data.description(),
-                UrlRules.normalize(data.appUrl()), UrlRules.normalize(data.apiBaseUrl()), audience, actor,
-                clock.instant()));
-        audit.record(AuditEvent.success("product.registered", "product", product.id(), null,
-                Map.of("code", code, "apiAudience", audience)));
+                UrlRules.normalize(data.appUrl()), UrlRules.normalize(data.apiBaseUrl()), audience, serviceClient,
+                actor, clock.instant()));
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("code", code);
+        details.put("apiAudience", audience);
+        if (serviceClient != null) {
+            details.put("serviceClientId", serviceClient);
+        }
+        audit.record(AuditEvent.success("product.registered", "product", product.id(), null, details));
         return view(product);
     }
 
@@ -127,7 +137,12 @@ public class CatalogService implements ProductCatalog {
         String apiBaseUrl = changes.apiBaseUrl() == null ? product.apiBaseUrl()
                 : UrlRules.normalize(blankToNull(changes.apiBaseUrl()));
         String audience = changes.apiAudience() == null ? product.apiAudience() : changes.apiAudience();
+        String serviceClient = changes.serviceClientId() == null ? product.serviceClientId()
+                : blankToNull(changes.serviceClientId());
         requireValidUrls(appUrl, apiBaseUrl);
+        if (!Objects.equals(serviceClient, product.serviceClientId())) {
+            requireFreeServiceClient(serviceClient, productId);
+        }
         if (!audience.equals(product.apiAudience()) && products.existsByApiAudienceAndIdNot(audience, productId)) {
             throw new ApiException(ErrorCode.CONFLICT, "API audience '" + audience + "' is used by another product.");
         }
@@ -137,9 +152,10 @@ public class CatalogService implements ProductCatalog {
         diffField(diff, "appUrl", product.appUrl(), appUrl);
         diffField(diff, "apiBaseUrl", product.apiBaseUrl(), apiBaseUrl);
         diffField(diff, "apiAudience", product.apiAudience(), audience);
+        diffField(diff, "serviceClientId", product.serviceClientId(), serviceClient);
         if (!diff.isEmpty()) {
-            product.update(name, description, appUrl, apiBaseUrl, audience, CurrentUser.require().userId(),
-                    clock.instant());
+            product.update(name, description, appUrl, apiBaseUrl, audience, serviceClient,
+                    CurrentUser.require().userId(), clock.instant());
             products.flush();
             audit.record(AuditEvent.success("product.updated", "product", productId, null, diff));
         }
@@ -314,6 +330,12 @@ public class CatalogService implements ProductCatalog {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<ProductSummary> findByServiceClientId(String clientId) {
+        return clientId == null ? Optional.empty() : products.findByServiceClientId(clientId).map(this::summary);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<FeatureSummary> features(UUID productId) {
         return features.findByProduct(productId, null).stream().map(ProductFeature::toSummary).toList();
     }
@@ -341,6 +363,14 @@ public class CatalogService implements ProductCatalog {
         return features.findByIdAndProductId(featureId, productId).orElseThrow(() -> ApiException.notFound("Feature"));
     }
 
+    private void requireFreeServiceClient(String serviceClient, UUID productId) {
+        if (serviceClient != null && products.existsByServiceClientIdAndIdNot(serviceClient,
+                productId == null ? new UUID(0, 0) : productId)) {
+            throw new ApiException(ErrorCode.CONFLICT,
+                    "Service client '" + serviceClient + "' is used by another product.");
+        }
+    }
+
     private static void requireValidUrls(String appUrl, String apiBaseUrl) {
         List<FieldViolation> violations = UrlRules.checkAll(appUrl, apiBaseUrl);
         if (!violations.isEmpty()) {
@@ -355,12 +385,12 @@ public class CatalogService implements ProductCatalog {
 
     private ProductView view(Product p) {
         return new ProductView(p.id(), p.code(), p.name(), p.description(), p.status(), p.appUrl(), p.apiBaseUrl(),
-                p.apiAudience(), currentVersionNo(p), p.createdAt(), p.updatedAt(), p.version());
+                p.apiAudience(), p.serviceClientId(), currentVersionNo(p), p.createdAt(), p.updatedAt(), p.version());
     }
 
     private ProductSummary summary(Product p) {
         return new ProductSummary(p.id(), p.code(), p.name(), p.status(), p.appUrl(), p.apiBaseUrl(), p.apiAudience(),
-                currentVersionNo(p));
+                p.serviceClientId(), currentVersionNo(p));
     }
 
     private VersionView versionView(ProductVersion v, UUID currentVersionId, boolean withConfig) {

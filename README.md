@@ -3,7 +3,7 @@
 Central multi-product SaaS management platform for OCCPL Innovations (Core Platform + Super
 Admin / Company Admin portals).
 
-**Status:** Phase 6 (plans, subscriptions & entitlements) complete — awaiting approval for Phase 7 (provisioning & sample product).
+**Status:** Phase 7 (provisioning & sample product) complete — awaiting approval for Phase 8 (frontend portals).
 Status report: [docs/OCCPL-Phase-Plan-and-Status.pdf](docs/OCCPL-Phase-Plan-and-Status.pdf).
 
 Stack: Java 25 · Spring Boot 4.1 · Angular 22 · MySQL 9.7 · Keycloak 26.8 · Docker Compose.

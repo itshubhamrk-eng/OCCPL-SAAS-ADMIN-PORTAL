@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 7 — Provisioning & sample product (2026-10-13)
+- Service-to-service sign-in: client-credentials tokens become a service principal limited to the
+  new service API; products are linked to their Keycloak client (`serviceClientId`); service actions
+  are audited with the client id; separate rate limit for services.
+- Service API for products: access check for a company and user (membership, permission, company
+  status, entitlement), usage consume/release, provisioning callbacks.
+- Provisioning: jobs created with every entitlement change, multi-instance runner (SKIP LOCKED,
+  leases, HTTP outside transactions), SYNC/ASYNC/NONE modes, retries with exponential back-off,
+  permanent failures with alert email, metric and audit, manual retry/cancel, deprovisioning after
+  the 90-day retention period (cancelled if the company is entitled again), product launcher
+  `GET /api/v1/companies/{companyId}/products`.
+- Sample "Notes" product (`backend/product-sample`): own database, provisioning endpoints for
+  Core only, notes API authorised by Core with usage limits; Dockerfile and compose service.
+- Keycloak realm: clients `occpl-core-services`, `product-sample-service`, `product-sample-web`.
+- `backend/e2e-tests`: Keycloak + Core + sample product process + two databases, end to end.
+- Executable jars now use the `exec` classifier; core-platform publishes its test helpers as a test jar.
+- Tests: 73 unit/slice + 64 integration tests in Core, 2 sample-product integration tests,
+  1 end-to-end test.
+
 ### Phase 6 — Plans, subscriptions & entitlements (2026-10-13)
 - Plans: drafts with prices per currency, products and feature grants; publish (immutable),
   archive, copy.

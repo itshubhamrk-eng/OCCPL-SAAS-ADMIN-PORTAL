@@ -22,11 +22,16 @@ public class ProfileService implements UserDirectory {
 
     private final PlatformUserRepository users;
     private final UserProfileRepository profiles;
+    private final UserIdentityRepository identities;
+    private final IdentityProperties properties;
     private final Clock clock;
 
-    ProfileService(PlatformUserRepository users, UserProfileRepository profiles, Clock clock) {
+    ProfileService(PlatformUserRepository users, UserProfileRepository profiles, UserIdentityRepository identities,
+            IdentityProperties properties, Clock clock) {
         this.users = users;
         this.profiles = profiles;
+        this.identities = identities;
+        this.properties = properties;
         this.clock = clock;
     }
 
@@ -52,6 +57,16 @@ public class ProfileService implements UserDirectory {
         return users.findAllById(userIds).stream()
                 .map(u -> new UserSummary(u.id(), u.email(), names.get(u.id()), u.status()))
                 .collect(Collectors.toMap(UserSummary::id, Function.identity()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserSummary> findBySubject(String subject) {
+        if (subject == null || subject.isBlank()) {
+            return Optional.empty();
+        }
+        return identities.findByProviderAndSubject(properties.providerId(), subject)
+                .flatMap(identity -> find(identity.userId()));
     }
 
     @Override

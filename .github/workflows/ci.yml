@@ -26,8 +26,9 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      # Unit + slice tests, Spring Modulith boundary verification, and Testcontainers
-      # integration tests against MySQL 9.7 (Docker is available on GitHub-hosted runners).
+      # Unit + slice tests, Spring Modulith boundary verification, Testcontainers integration tests
+      # (MySQL 9.7, Keycloak 26.8.1, Redis) and the Core ↔ sample product end-to-end test
+      # (Docker is available on GitHub-hosted runners).
       - run: mvn -B -ntp verify
       - if: failure()
         uses: actions/upload-artifact@v4
@@ -68,6 +69,12 @@ jobs:
           context: backend/core-platform
           push: false
           tags: occpl/core-platform:${{ github.sha }}
+      - name: Build product-sample image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/product-sample
+          push: false
+          tags: occpl/product-sample:${{ github.sha }}
       - name: Build admin-portal image
         uses: docker/build-push-action@v6
         with:

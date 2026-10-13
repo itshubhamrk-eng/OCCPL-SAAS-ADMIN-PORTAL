@@ -127,19 +127,31 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
   Verified, including idempotent re-runs.
 - ☑ **C-11** Seat limits: ACTIVE + INVITED members may not exceed the largest SEATS limit of the
   company's accessible products; enforced on invitations and reactivation. Verified.
-- ☐ **S-7** Service-facing entitlement check and usage endpoints for product services (needs service
-  tokens; Phase 7).
+- ☑ **S-7** Service-facing entitlement check and usage endpoints for product services — done in
+  Phase 7 (`/api/v1/service/access`, `/api/v1/service/usage/*`).
 - ☐ **S-8** Payment-driven renewal and invoices (billing, Razorpay). Today renewal is recorded by an administrator.
 - ☐ **S-9** Per-product user assignment (seats per product instead of company-wide members).
 
 ## Phase 7 — Provisioning & sample product
 
-- ☐ **PR-1** Integration contract OpenAPI (`/backend/integration-contract`).
-- ☐ **PR-2** Outbox + provisioning job runner with backoff, max attempts, manual retry.
-  AC: tests for timeout, 5xx retry, 4xx permanent failure, duplicate delivery idempotent.
-- ☐ **PR-3** `product-sample` service: JWT validation, tenant verification via Core, idempotent
-  provisioning endpoint, own DB. AC: end-to-end test Core ↔ sample product in Testcontainers.
-- ☐ **PR-4** Provisioning failure notifications + metrics/alerts.
+- ☑ **PR-1** Integration contract: specified in ARCHITECTURE.md §7 and API_SPEC.md; the service API is
+  part of Core's OpenAPI document (tag "Service API"). Decision: no shared DTO module — products
+  share no code with Core and integrate over HTTP only.
+- ☑ **PR-2** Provisioning job runner: jobs created in the subscription change's transaction, SKIP
+  LOCKED claiming with leases, HTTP outside transactions, exponential back-off, max attempts, manual
+  retry/cancel, ASYNC callbacks with deadline, delayed deprovisioning (D-5 retention) with
+  cancellation on re-entitlement. Tests: timeout, 5xx/429 retry, 4xx permanent failure, callback
+  ownership and repetition, callback deadline, idempotent product endpoints.
+- ☑ **PR-3** `product-sample` (Notes): JWT validation (audience `product-sample`), provisioning only
+  from Core's client, idempotent PUT/DELETE, access verified with Core on every request, usage
+  consume/release, own database and migrations. End-to-end test `backend/e2e-tests` (Keycloak +
+  Core + sample product process + two databases).
+- ☑ **PR-4** Permanent provisioning failures: error log, `occpl.provisioning.jobs` metric
+  (outcome/operation/product), email to `PROVISIONING_ALERT_RECIPIENTS`, audit entry.
+- ☐ **PR-5** Product UPDATE operation (re-send configuration/settings to provisioned tenants when a
+  new configuration version is published) — not needed by the sample product.
+- ☐ **PR-6** Short-lived cache (≤ 30 s) of access checks in product services if load tests require it.
+- ☐ **PR-7** Alertmanager rule for `occpl_provisioning_jobs_total{outcome="failed"}` (Phase 10 monitoring).
 
 ## Phase 8 — Frontend portals
 

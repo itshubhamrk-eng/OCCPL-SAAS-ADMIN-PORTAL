@@ -39,7 +39,7 @@ observability, local stack). Decisions are recorded in `ADR/`.
 | `core-platform` (Spring Boot) | All platform modules below | `occpl_core` MySQL schema |
 | `admin-portal` (Angular, served by Nginx) | Super Admin + Company Admin UIs | none |
 | `keycloak` | Authentication, token issuance, MFA, password policy | own DB (Postgres or MySQL) |
-| `product-sample` (Spring Boot) | Reference product implementing the integration contract (Phase 7) | own schema |
+| `product-sample` (Spring Boot) | Reference "Notes" product implementing the integration contract (Phase 7, implemented) | own database `occpl_sample` |
 | Nginx | TLS termination, static assets, reverse proxy, security headers | — |
 | Redis | Entitlement cache, rate-limit buckets (added in Phase 3, ADR-0006) | ephemeral |
 
@@ -47,8 +47,8 @@ observability, local stack). Decisions are recorded in `ADR/`.
 
 ```
 /backend/core-platform        Maven project (Spring Boot)
-/backend/product-sample       Maven project (Phase 7)
-/backend/integration-contract OpenAPI spec + shared DTO module for product services (no logic)
+/backend/product-sample       Maven project: sample product service (Phase 7)
+/backend/e2e-tests            End-to-end tests: Keycloak + Core + sample product (Phase 7)
 /frontend/admin-portal        Angular workspace
 /infra/docker                 docker-compose.yml, Keycloak realm import, MySQL user bootstrap
 /.github                      CI workflow (GitHub Actions) and Dependabot
@@ -72,15 +72,16 @@ Package root: `com.occpl.platform`. Package-by-module; each module has:
 
 | # | Module | Owns | May depend on (`api` only) |
 |---|---|---|---|
-| 0 | `shared` | error model, paging, ids, clock, correlation id, security chain, rate limiting, `Actor`, `JwtPrincipalResolver` | — |
-| 1 | `identity` | users, IdP subject mapping, profiles, `CurrentUser` resolution, MFA policy, Super Admin bootstrap, platform role assignment API, Keycloak admin client | shared, access, audit |
+| 0 | `shared` | error model, paging, ids, clock, correlation id, security chain, rate limiting, `Actor`, `ServicePrincipal`, `JwtPrincipalResolver` | — |
+| 1 | `identity` | users, IdP subject mapping, profiles, `CurrentUser` / `ServicePrincipal` resolution, MFA policy, Super Admin bootstrap, platform role assignment API, Keycloak admin client | shared, access, audit |
 | 2 | `company` | company, settings (allowed email domains), contacts, lifecycle + history; publishes `CompanyCreated` | shared, identity, audit |
-| 3 | `membership` | memberships, invitations (delivery via Keycloak or email), `@tenant` company authorization, `TenantContext`, `GET /me` | shared, identity, company, access, audit, notification, entitlement (seat limit) |
+| 3 | `membership` | memberships, invitations (delivery via Keycloak or email), `@tenant` company authorization, `TenantContext`, `MembershipDirectory`, `GET /me` | shared, identity, company, access, audit, notification, entitlement (seat limit) |
 | 4 | `access` | permission catalogue, roles, platform and membership role assignments, permission resolution | shared |
 | 5 | `catalog` | products, immutable configuration versions (JSON Schema validated), features; `ProductCatalog` API | shared, identity, audit |
 | 6 | `subscription` | plans, company subscriptions, explicit state machine, history, timed sweeps; publishes `SubscriptionChanged`, exposes `SubscriptionGrants` | shared, identity, company, catalog, audit |
-| 7 | `entitlement` | entitlements recomputed on `SubscriptionChanged`, access checks, atomic usage counters, seat limit (`Entitlements` API) | shared, catalog, company, subscription |
-| 8 | `provisioning` | provisioning jobs, outbox dispatch, product-service clients | shared, catalog, company, entitlement, audit, notification |
+| 7 | `entitlement` | entitlements recomputed on `SubscriptionChanged`, access checks, atomic usage counters, seat limit (`Entitlements` API); publishes `EntitlementsChanged` | shared, catalog, company, subscription |
+| 8 | `provisioning` | provisioning jobs and runner, company provisioning state, product-service HTTP client, alerts, product launcher (`ProvisioningCallbacks` API) | shared, catalog, company, entitlement, audit, notification |
+| 8a | `integration` | service API for product services (`/api/v1/service/**`): access checks, usage, provisioning callbacks | shared, catalog, entitlement, identity, membership, provisioning |
 | 9 | `billing` | invoices, payment transactions, gateway port & webhooks | shared, subscription, audit |
 | 10 | `audit` | append-only audit log | shared |
 | 11 | `notification` | templates, outbound email, delivery records | shared |
@@ -118,7 +119,11 @@ contract and its tables move with it.
 4. `JwtPrincipalResolver` (identity module): map `(provider, sub)` → platform user (first login:
    link/create by verified email), reject disabled users, load platform roles/permissions from the
    database, withhold platform permissions unless the token's `amr` proves MFA → `CurrentUser`.
-5. `RateLimitFilter` (Redis token bucket) keyed by user id, or client IP when unauthenticated.
+   Client-credentials tokens (Keycloak adds `client_id` only to service-account tokens) become a
+   `ServicePrincipal` with the single authority `SERVICE`: such tokens may call `/api/v1/service/**`
+   only, and user tokens may never call it. The integration module maps the client to the product
+   whose `serviceClientId` matches (unknown/retired → 403).
+5. `RateLimitFilter` (Redis token bucket) keyed by user id, service client id, or client IP when unauthenticated.
 6. Method security. Platform: `@PreAuthorize("hasAuthority('platform.roles.manage')")`. Company:
    `@PreAuthorize("@tenant.check(#companyId, 'company.users.read', 'platform.companies.read')")` loads
    the caller's ACTIVE membership in the path's company (404 if none), checks company status and
@@ -128,25 +133,37 @@ contract and its tables move with it.
 
 ## 6. Asynchronous processing
 
-- **Transactional outbox** (`outbox_event` table) written in the same transaction as the state
-  change. A scheduled dispatcher (one active instance via DB lock / ShedLock) publishes events
-  in-process and drives `provisioning_job` execution.
-- Provisioning jobs: durable rows with status, attempt count, `next_attempt_at`, exponential
-  backoff with jitter, max attempts, then `FAILED_PERMANENT` + alert + Super Admin retry button.
+- **Same-transaction events**: domain events (`SubscriptionChanged` → `EntitlementsChanged`) are
+  handled synchronously in the publishing transaction; their durable effects are rows (entitlements,
+  `provisioning_job`, `notification`) that commit or roll back with the business change. This is the
+  transactional-outbox guarantee without a generic `outbox_event` table, which is not needed while
+  all consumers are in-process.
+- **Provisioning jobs** (implemented, Phase 7): `ProvisioningRunner` claims due jobs with
+  `FOR UPDATE SKIP LOCKED` and a lease (`locked_until` = HTTP timeout + 30 s), commits, calls the
+  product **outside** any transaction, then records the outcome under a row lock only if the job is
+  still in the claimed attempt. Expired leases (crashed instance) are reclaimed; product endpoints are
+  idempotent on the job id. Retryable failures (network, timeout, 5xx, 408, 429, 401) back off
+  exponentially (30 s doubling, max 1 h) up to the product's `maxAttempts`; 4xx fail at once. A
+  permanent failure sets FAILED, raises an alert (error log, `occpl.provisioning.jobs{outcome=failed}`
+  metric, email to `PROVISIONING_ALERT_RECIPIENTS`) and can be retried by platform staff.
 - Scheduled jobs: subscription renewals/expiry sweeps, trial expiry, PAST_DUE → SUSPENDED after
   grace, usage-counter period resets, invitation expiry. All idempotent and batch-paginated.
 - No Kafka/RabbitMQ initially (ADR-0004). Revisit if outbox throughput or fan-out to many
   product services becomes a measured bottleneck.
 
-## 7. Product integration contract (summary — full spec in Phase 7)
+## 7. Product integration contract (implemented in Phase 7)
+
+Reference implementation: `backend/product-sample`; verified end to end by `backend/e2e-tests`.
 
 | Concern | Contract |
 |---|---|
-| Service identity | Each product service is a Keycloak confidential client. Core → Product calls use client-credentials tokens with `aud=<product-api-audience>`; Product → Core calls use tokens with `aud=occpl-core` and scope `entitlements:read` / `usage:write`. mTLS optional in production. |
-| User calls to product | Browser obtains token via SSO; product validates `iss`, `aud`, signature; reads `sub`; resolves tenant from its URL/host or `X-Company-Id` and **verifies** it against Core's entitlement/membership API (cached ≤ 60 s). |
-| Tenant identification | `companyId` (UUID) + `productCode`; never trust a client-supplied tenant without verification. |
-| Provisioning | `PUT /provisioning/v1/tenants/{companyId}` (idempotent upsert, `Idempotency-Key` header), `DELETE` for deprovision, `GET` for status. Responses: 200/201 done, 202 accepted (async, product calls back `POST /api/v1/provisioning/callbacks`), 4xx permanent, 5xx/timeout retryable. |
-| Entitlement check | `GET /api/v1/entitlements/check?companyId=&productCode=&feature=` and `POST /api/v1/usage/consume` (atomic limit check). |
+| Service identity | Two confidential Keycloak clients per direction. **Core → product**: Core's client `occpl-core-services` (client credentials); each product adds an audience mapper for its `apiAudience` to that client, and the product accepts provisioning calls only from tokens whose `client_id` is `occpl-core-services`. **Product → Core**: the product's own client (e.g. `product-sample-service`) with an audience mapper for `occpl-core`; registered in the catalogue as the product's `serviceClientId`. Core derives the calling product from the token's `client_id`, never from the request. mTLS optional in production. |
+| User calls to product | Users sign in through a product client (e.g. `product-sample-web`, audience = the product's `apiAudience`). The product validates `iss`, `aud`, signature, reads `sub`, takes the company from its URL and **verifies** every request with `GET /api/v1/service/access?companyId&userSubject[&featureCode]` (user status, ACTIVE membership with `company.products.launch`, company status, entitlement). Fail closed when Core is unreachable. |
+| Tenant identification | `companyId` (UUID); `companyCode` is sent at provisioning for display and URLs. |
+| Provisioning | Configured per product version: `provisioning.mode` NONE / SYNC / ASYNC, `path` (may contain `{companyId}`, `{companyCode}`), `timeoutSeconds`, `maxAttempts`. `PUT {apiBaseUrl}{path}` with body `{jobId, companyId, companyCode, companyName, productCode, configVersion, async, callbackUrl}` and headers `Authorization`, `Idempotency-Key: <jobId>`; `DELETE {apiBaseUrl}{path}` to deprovision (404/410 = already gone). 2xx = done; ASYNC: 202 = accepted, the product then calls `POST /api/v1/service/provisioning/jobs/{jobId}/callback {outcome: SUCCEEDED|FAILED, message}` before the callback deadline (default 15 min). Other 4xx permanent; network errors, timeouts, 5xx, 408, 429, 401 retried. |
+| When | A PROVISION job is created when a company becomes entitled to a product (in the subscription change's transaction). When the entitlement ends, a DEPROVISION job is scheduled after the data-retention period (D-5, 90 days) and cancelled if the company is entitled again before then. |
+| Usage | `POST /api/v1/service/usage/consume` / `release` `{companyId, featureCode, quantity, idempotencyKey}`; atomic limit check (409 `LIMIT_EXCEEDED`); keys are idempotent per company and product. |
+| Launch | `GET /api/v1/companies/{companyId}/products` returns `launchUrl` = `appUrl` + `launch.path` once the tenant is PROVISIONED, the entitlement allows access and the company is active. |
 | Errors | RFC 9457 problem details with stable `code` values. |
 | Versioning | Path-versioned (`/v1`); additive changes only within a version; deprecation ≥ 6 months. |
 | Audit | Products send `X-Correlation-Id`; Core logs every provisioning call and result. |

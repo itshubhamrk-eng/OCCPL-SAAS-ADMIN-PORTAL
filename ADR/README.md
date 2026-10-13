@@ -9,3 +9,4 @@
 | [0005](0005-rest-problem-details.md) | Versioned REST + RFC 9457 errors | Accepted |
 | [0006](0006-redis-usage.md) | Redis for authz cache and rate limiting | Accepted |
 | [0007](0007-version-policy.md) | Version policy: latest stable, LTS where available | Accepted |
+| [0008](0008-product-integration-and-provisioning.md) | Product integration: client identity, DB-backed provisioning jobs | Accepted |

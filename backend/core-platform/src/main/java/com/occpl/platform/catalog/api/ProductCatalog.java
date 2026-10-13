@@ -11,6 +11,9 @@ public interface ProductCatalog {
 
     Optional<ProductSummary> findByCode(String code);
 
+    /** The product whose service calls Core with this Keycloak client (client-credentials tokens). */
+    Optional<ProductSummary> findByServiceClientId(String clientId);
+
     /** All features of the product, including deprecated ones. */
     List<FeatureSummary> features(UUID productId);
 
