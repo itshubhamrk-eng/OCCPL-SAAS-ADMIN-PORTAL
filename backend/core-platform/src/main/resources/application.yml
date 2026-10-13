@@ -115,6 +115,11 @@ occpl:
     accept-url: ${INVITATION_ACCEPT_URL:http://localhost:4200/invitations/accept}
     validity: ${INVITATION_VALIDITY:7d}
     portal-client-id: ${OIDC_PORTAL_CLIENT_ID:occpl-admin-portal}
+  subscriptions:
+    # Business decision D-5 (2026-10-13).
+    grace-period: ${SUBSCRIPTION_GRACE_PERIOD:7d}
+    suspended-expiry: ${SUBSCRIPTION_SUSPENDED_EXPIRY:90d}
+    data-retention: ${SUBSCRIPTION_DATA_RETENTION:90d}
   rate-limit:
     enabled: ${RATE_LIMIT_ENABLED:true}
     redis-url: ${REDIS_URL:redis://localhost:6379}

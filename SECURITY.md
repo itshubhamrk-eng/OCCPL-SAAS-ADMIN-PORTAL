@@ -169,6 +169,15 @@ the need.
 - Product URLs must use HTTPS (HTTP only for localhost) and may not embed credentials.
 - Catalogue management requires `platform.products.manage`; Platform Support has read-only access.
 
+### Implemented in Phase 6 (verified)
+
+- Subscriptions and plans can only be changed with platform permissions; company members can read
+  their own company's subscriptions and entitlements (`company.subscription.read`, `company.usage.read`)
+  and get 404 for other companies.
+- Entitlement decisions always apply company status (suspended/deactivated → no access) and read
+  current data from the database, so suspension takes effect immediately.
+- Usage limits are enforced atomically on the server; idempotency keys prevent double counting on retries.
+
 ## 5. Secrets and data protection
 
 - No secrets in Git. Local dev uses `.env` (gitignored) with dev-only values; staging/prod use

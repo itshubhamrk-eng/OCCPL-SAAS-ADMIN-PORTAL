@@ -1,5 +1,6 @@
 package com.occpl.platform.membership.internal;
 
+import com.occpl.platform.entitlement.api.Entitlements;
 import com.occpl.platform.identity.api.CurrentUser;
 import com.occpl.platform.membership.api.TenantContext;
 import com.occpl.platform.shared.error.ApiException;
@@ -17,15 +18,27 @@ import org.springframework.stereotype.Component;
  *       platform permission are not restricted.</li>
  *   <li><b>No self-changes:</b> members cannot change their own membership, avoiding accidental lock-out.</li>
  *   <li><b>Last admin:</b> a company keeps at least one ACTIVE Company Admin.</li>
+ *   <li><b>Seats:</b> ACTIVE + INVITED members may not exceed the plan's SEATS limit.</li>
  * </ul>
  */
 @Component
 class MembershipGuards {
 
     private final MembershipQueries queries;
+    private final Entitlements entitlements;
 
-    MembershipGuards(MembershipQueries queries) {
+    MembershipGuards(MembershipQueries queries, Entitlements entitlements) {
         this.queries = queries;
+        this.entitlements = entitlements;
+    }
+
+    /** Call before a membership starts occupying a seat (new invitation or reactivation). */
+    void requireFreeSeat(UUID companyId) {
+        java.util.OptionalLong limit = entitlements.memberLimit(companyId);
+        if (limit.isPresent() && queries.lockSeatsInUse(companyId) >= limit.getAsLong()) {
+            throw new ApiException(ErrorCode.LIMIT_EXCEEDED,
+                    "All " + limit.getAsLong() + " seats of the company's plan are in use.");
+        }
     }
 
     /** Throws unless the caller may grant {@code newPermissions} to someone currently holding {@code currentPermissions}. */

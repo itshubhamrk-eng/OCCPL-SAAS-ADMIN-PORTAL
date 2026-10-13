@@ -88,6 +88,9 @@ public class InvitationService {
         UserSummary user = users.findOrCreateInvited(normalized);
         Instant now = clock.instant();
         CompanyMembership membership = memberships.findByCompanyIdAndUserId(companyId, user.id()).orElse(null);
+        if (membership == null || membership.status() == MembershipStatus.DEACTIVATED) {
+            guards.requireFreeSeat(companyId);
+        }
         if (membership == null) {
             membership = memberships.save(new CompanyMembership(UuidV7.generate(clock), companyId, user.id(), now));
         } else {

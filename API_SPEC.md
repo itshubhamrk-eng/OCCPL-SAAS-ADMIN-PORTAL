@@ -132,36 +132,39 @@ Configuration (schema version 1) example:
 }
 ```
 
-### Plans
+### Plans (implemented)
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| POST/GET | `/plans` | P:`platform.plans.manage`/read | Create / list |
-| GET/PATCH | `/plans/{planId}` | P | Details / update DRAFT plan |
-| POST | `/plans/{planId}/publish` · `/archive` | P:`platform.plans.manage` | Lifecycle (ACTIVE plans immutable except archive; changes = new plan) |
-| PUT | `/plans/{planId}/prices` · `/products` · `/features` | P:`platform.plans.manage` | Configure prices, products, feature limits |
+| POST | `/plans` | P:`platform.plans.manage` | `{code, plan: {name, description?, billingPeriod (MONTHLY\|QUARTERLY\|HALF_YEARLY\|ANNUAL), trialDays, prices[{currency, amountMinor}], products[{productId, features[{code, enabled?, limit?}]}]}}` → DRAFT |
+| GET | `/plans` · `/plans/{planId}` | P:`platform.plans.read` | List (`status`, `q`, paging, `sort`) / detail with resolved products and features |
+| PUT | `/plans/{planId}` | P:`platform.plans.manage` | Replace a DRAFT's content (409 otherwise) |
+| POST | `/plans/{planId}/publish` · `/archive` | P:`platform.plans.manage` | Freeze (needs a price, active products and features) / stop new assignments |
+| POST | `/plans/{planId}/copy` | P:`platform.plans.manage` | `{code, name?}` → new DRAFT with the same content |
 
-### Subscriptions
+### Subscriptions (implemented)
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| POST | `/companies/{companyId}/subscriptions` | P:`platform.subscriptions.manage` | Assign plan (TRIAL or pending payment/ACTIVE) |
-| GET | `/companies/{companyId}/subscriptions` | P or C:`company.subscription.read` | List |
-| GET | `/companies/{companyId}/subscriptions/{id}` | P or C:`company.subscription.read` | Detail + history |
-| POST | `…/subscriptions/{id}/change-plan` | P:`platform.subscriptions.manage` | Upgrade (immediate) / downgrade (scheduled) |
-| POST | `…/subscriptions/{id}/cancel` | P:`platform.subscriptions.manage` | `{ "mode": "IMMEDIATE" \| "PERIOD_END", "reason": … }` |
-| POST | `…/subscriptions/{id}/renew` · `/reactivate` | P:`platform.subscriptions.manage` | Manual renewal / reactivation |
-| GET | `/platform/subscriptions` | P:`platform.subscriptions.read` | Cross-company listing (status, renewal window) |
+| POST | `/companies/{companyId}/subscriptions` | P:`platform.subscriptions.manage` | `{planId, currency, startTrial}` → TRIAL or ACTIVE |
+| GET | `/companies/{companyId}/subscriptions` · `/{id}` | P:`platform.subscriptions.read` or C:`company.subscription.read` | List / detail with history, `graceUntil`, `dataRetentionUntil` |
+| POST | `…/subscriptions/{id}/activate` | P:`platform.subscriptions.manage` | TRIAL → ACTIVE (first paid period starts) |
+| POST | `…/subscriptions/{id}/renew` | P:`platform.subscriptions.manage` | Next period paid: ACTIVE/PAST_DUE/SUSPENDED → ACTIVE; applies scheduled downgrade |
+| POST | `…/subscriptions/{id}/change-plan` | P:`platform.subscriptions.manage` | `{planId}`: upgrade now / downgrade at period end |
+| POST | `…/subscriptions/{id}/cancel` | P:`platform.subscriptions.manage` | `{mode: IMMEDIATE\|PERIOD_END, reason?}` |
+| POST | `…/subscriptions/{id}/resume` · `/suspend` | P:`platform.subscriptions.manage` | Revoke a scheduled cancellation / manual suspension |
+| GET | `/platform/subscriptions` | P:`platform.subscriptions.read` | `status`, `companyId`, `planId`, paging, `sort=createdAt\|currentPeriodEnd\|status` |
+
+Invalid transitions return 422 `INVALID_STATE_TRANSITION`. Timed transitions run automatically
+(grace period 7 days, suspended expiry 90 days, data retention 90 days — configurable).
 
 ### Entitlements & usage
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/companies/{companyId}/entitlements` | P or C:`company.usage.read` | Products, features, limits, current usage |
-| GET | `/entitlements/check?companyId&productCode&featureCode&userSub` | S:`entitlements:read` | Product-service check (membership + entitlement + company status) |
-| POST | `/usage/consume` | S:`usage:write` | Atomic consume with idempotency key → 200 or 409 `LIMIT_EXCEEDED` |
-| POST | `/usage/release` | S:`usage:write` | Release stock usage (e.g. records deleted) |
-| POST | `/companies/{companyId}/entitlements/recalculate` | P:`platform.subscriptions.manage` | Force recompute (ops) |
+| GET | `/companies/{companyId}/entitlements` | P:`platform.subscriptions.read` or C:`company.usage.read` | Products with access status, feature limits and current usage — implemented |
+| GET | `/entitlements/check?companyId&productCode&featureCode` | S:`entitlements:read` | Product-service check — Phase 7 (logic implemented in `Entitlements.check`) |
+| POST | `/usage/consume` · `/usage/release` | S:`usage:write` | `{companyId, productCode, featureCode, quantity, idempotencyKey}` — Phase 7 (logic implemented and tested) |
 
 ### Provisioning
 

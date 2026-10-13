@@ -104,17 +104,33 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 6 — Plans, subscriptions & entitlements
 
-- ☐ **S-1** Plans, prices, plan products/features, publish/archive. AC: ACTIVE plans immutable.
-- ☐ **S-2** Subscription assignment + state machine + history. AC: table-driven tests cover every
-  allowed and forbidden transition in DATABASE.md §5.
-- ☐ **S-3** Upgrade/downgrade/cancel/renew rules. AC: upgrade immediate, downgrade scheduled,
-  history recorded.
-- ☐ **S-4** Entitlement recompute (event-driven) + check API + cache with eviction. AC: max-of
-  limits across subscriptions; suspended company denies access within TTL.
-- ☐ **S-5** Usage consume/release with atomic limits and idempotency. AC: concurrent test (N
-  threads) never exceeds limit; replayed key does not double count.
-- ☐ **S-6** Scheduled sweeps (trial expiry, renewals, grace → suspend, expiry) with ShedLock.
-  AC: idempotent re-runs; only one instance executes.
+- ☑ **S-1** Plans: draft with prices per ISO 4217 currency, products and feature grants (on/off,
+  limits; omitted limit = unlimited), validated against the catalogue; publish requires a price and
+  active products/features; ACTIVE plans are immutable (copy to change); archive. Verified (`SubscriptionsAndEntitlementsIT`).
+- ☑ **S-2** Subscriptions: assign (trial or first paid period; one live subscription per company and
+  plan), explicit state machine with history and audit. Verified: `SubscriptionStateMachineTest`
+  covers all 36 status/event combinations plus terminal states.
+- ☑ **S-3** Upgrade (price ≥ current) immediate; downgrade scheduled and applied at renewal; renew
+  (ACTIVE/PAST_DUE continue from the old period end, SUSPENDED restarts now); cancel immediately or at
+  period end; resume. Verified, including the full history sequence.
+- ☑ **S-4** Entitlements recomputed in the same transaction as every subscription change (best
+  status ACTIVE > GRACE > SUSPENDED; largest limit wins, unlimited beats any number); access checks
+  apply company status. *Changed from plan:* no Redis cache — decisions read the database each time,
+  so changes apply immediately; a cache will be added only if load tests require it.
+- ☑ **S-5** Usage consume/release: limit enforced in one conditional UPDATE, idempotency key unique
+  per company, releases never go below zero. Verified: 120 concurrent consumers against a limit of
+  50 → exactly 50 succeed and 50 usage records; replayed keys are not counted twice.
+- ☑ **S-6** Scheduled sweeps every 5 minutes: trial expiry, period end → PAST_DUE (or EXPIRED if
+  cancelling), PAST_DUE beyond the 7-day grace → SUSPENDED, SUSPENDED for 90 days → EXPIRED; data kept
+  90 days after cancellation/expiry (`dataRetentionUntil`). *Changed from plan:* no ShedLock — each
+  subscription is handled under a row lock and re-checked, so several instances can run safely.
+  Verified, including idempotent re-runs.
+- ☑ **C-11** Seat limits: ACTIVE + INVITED members may not exceed the largest SEATS limit of the
+  company's accessible products; enforced on invitations and reactivation. Verified.
+- ☐ **S-7** Service-facing entitlement check and usage endpoints for product services (needs service
+  tokens; Phase 7).
+- ☐ **S-8** Payment-driven renewal and invoices (billing, Razorpay). Today renewal is recorded by an administrator.
+- ☐ **S-9** Per-product user assignment (seats per product instead of company-wide members).
 
 ## Phase 7 — Provisioning & sample product
 

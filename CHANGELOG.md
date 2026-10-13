@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 6 — Plans, subscriptions & entitlements (2026-10-13)
+- Plans: drafts with prices per currency, products and feature grants; publish (immutable),
+  archive, copy.
+- Subscriptions: assign (trial or paid), explicit state machine, activate, renew, upgrade now /
+  downgrade at period end, cancel now or at period end, resume, suspend; history and audit;
+  automatic sweeps for trial expiry, past due, 7-day grace → suspended, 90-day suspension → expired,
+  90-day data retention date.
+- Entitlements recomputed with every subscription change; access checks apply company status;
+  atomic, idempotent usage counters; seat limits on invitations and reactivation.
+- Tests: 69 unit/slice (incl. all 36 state-machine combinations) + 58 integration tests (incl. a
+  120-thread concurrency test of usage limits).
+
 ### Phase 5 — Product catalogue (2026-10-13)
 - Products: register (DRAFT), search, get, PATCH with ETag (code immutable, unique API audience,
   HTTPS-only URLs), activate (requires published configuration) / retire / reinstate, audited.

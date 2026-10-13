@@ -95,6 +95,15 @@ class MembershipQueries {
                 .optional();
     }
 
+    /** Members occupying a seat (ACTIVE or INVITED); FOR UPDATE serialises concurrent invitations. */
+    long lockSeatsInUse(UUID companyId) {
+        return jdbc.sql("""
+                        select count(*) from company_membership
+                        where company_id = UUID_TO_BIN(:companyId) and status in ('ACTIVE', 'INVITED')
+                        for update""")
+                .param("companyId", companyId.toString()).query(Long.class).single();
+    }
+
     /**
      * ACTIVE memberships holding the system COMPANY_ADMIN role, locked FOR UPDATE so concurrent
      * removals of two admins cannot both succeed.

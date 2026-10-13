@@ -92,6 +92,8 @@ public class MembershipService {
         guards.requireWithinOwnPermissions(access(membershipId).permissions(), Set.of());
         if (action != Action.REACTIVATE) {
             guards.requireNotLastAdmin(companyId, membershipId);
+        } else {
+            guards.requireFreeSeat(companyId);
         }
         Instant now = clock.instant();
         MembershipStatus previous = membership.status();

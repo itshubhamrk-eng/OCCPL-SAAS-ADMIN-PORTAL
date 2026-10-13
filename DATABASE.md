@@ -1,6 +1,6 @@
 # Database Design
 
-Status: Phase 5 — tables `product`, `product_version`, `product_feature` (catalog) plus Phase 3–4 tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_settings`,
+Status: Phase 6 — plans, subscriptions, entitlements and usage tables, plus `product`, `product_version`, `product_feature` (catalog) plus Phase 3–4 tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_settings`,
 `company_contact`, `company_status_history`, `company_membership`, `invitation`, `permission`, `role`,
 `role_permission`, `platform_role_assignment`, `membership_role`, `audit_log`, `notification` are created by Flyway (`db/migration/<module>/`); the rest of this design follows in later phases. MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
 `occpl_core`. Product services own separate schemas/databases.
@@ -85,28 +85,27 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 
 Product service credentials are **not** stored here; they live in Keycloak / secret manager.
 
-### Plans & subscriptions
+### Plans & subscriptions (implemented)
 
 | Table | Key columns / constraints |
 |---|---|
-| `subscription_plan` | id, `code` UK, name, `status` (DRAFT, ACTIVE, ARCHIVED), `billing_period` (MONTHLY, QUARTERLY, ANNUAL, CUSTOM), `period_months`, `trial_days`, `public` bool, version |
-| `plan_price` | id, plan_id FK, currency, amount_minor, effective_from, effective_to — UK(plan_id, currency, effective_from) |
-| `plan_product` | plan_id FK, product_id FK — PK |
-| `plan_feature` | id, plan_id FK, product_id FK, feature_id FK, `enabled`, `limit_value` BIGINT NULL (NULL=unlimited), `reset_period` — UK(plan_id, feature_id) |
-| `company_subscription` | id, company_id FK, plan_id FK, `status` (TRIAL, ACTIVE, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED), `price_snapshot_minor`, currency, `current_period_start`, `current_period_end`, `trial_end`, `renewal_at`, `cancel_at_period_end` bool, cancelled_at, `pending_plan_id` (scheduled downgrade), version — IX(company_id, status), IX(status, current_period_end) for sweeps; at most one non-terminal subscription per (company, plan) enforced by generated-column UK |
-| `subscription_history` | id, subscription_id FK, event (CREATED, ACTIVATED, RENEWED, UPGRADED, DOWNGRADE_SCHEDULED, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED, REACTIVATED), from_status, to_status, from_plan_id, to_plan_id, actor, reason, occurred_at |
-| `subscription_invoice` | id, subscription_id FK, company_id, number UK, period_start, period_end, amount_minor, tax_minor, currency, `status` (DRAFT, OPEN, PAID, VOID, UNCOLLECTIBLE), gateway_invoice_id UK, issued_at, due_at |
-| `payment_transaction` | id, invoice_id FK, company_id, gateway, `gateway_payment_id` UK(gateway, gateway_payment_id), amount_minor, currency, `status` (CREATED, AUTHORIZED, CAPTURED, FAILED, REFUNDED), failure_code, raw_event_id |
-| `payment_webhook_event` | id, gateway, `gateway_event_id` **UK(gateway, gateway_event_id)** (idempotency), signature_verified, payload_hash, received_at, processed_at, status |
+| `subscription_plan` | id, `code` **UK**, name, description, `status` (DRAFT, ACTIVE, ARCHIVED), `billing_period` (MONTHLY, QUARTERLY, HALF_YEARLY, ANNUAL), `trial_days` 0–365, published_at, version |
+| `plan_price` | **PK(plan_id, currency)**, amount_minor ≥ 0 |
+| `plan_product` | **PK(plan_id, product_id)** |
+| `plan_feature` | **PK(plan_id, feature_id)**, product_id, `enabled`, `limit_value` (NULL = unlimited) |
+| `company_subscription` | id, company_id, plan_id, `status` (TRIAL, ACTIVE, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED), currency, `price_minor` (snapshot), billing_period, current_period_start/end, trial_end, cancel_at_period_end, pending_plan_id (scheduled downgrade), status_changed_at, cancelled_at, ended_at, `data_retention_until`, version; generated `live_key` = company+plan while live → **UK** (one live subscription per company and plan); IX(company_id, status), IX(status, current_period_end), IX(status, trial_end), IX(status, status_changed_at) for sweeps |
+| `subscription_history` | id, subscription_id, event, from/to status, from/to plan, actor_user_id (NULL = system), reason, occurred_at |
 
-### Entitlements & usage
+Invoices and payment transactions arrive with billing (Razorpay).
+
+### Entitlements & usage (implemented)
 
 | Table | Key columns / constraints |
 |---|---|
-| `company_product_entitlement` | id, company_id FK, product_id FK, `status` (ACTIVE, GRACE, SUSPENDED, REVOKED), source_subscription_ids (derived; recomputable), valid_from, valid_until, computed_at, version — **UK(company_id, product_id)** |
-| `entitlement_feature` | id, entitlement_id FK, feature_id FK, enabled, limit_value NULL, reset_period — UK(entitlement_id, feature_id) |
-| `usage_counter` | id, company_id, feature_id, `period_start`, `period_end`, `used` BIGINT, version — **UK(company_id, feature_id, period_start)** |
-| `usage_record` | id, company_id, product_id, feature_id, quantity, `idempotency_key` UK(company_id, idempotency_key), occurred_at, recorded_at — append-only, partition candidate |
+| `company_product_entitlement` | id, company_id, product_id — **UK(company_id, product_id)**, `status` (ACTIVE, GRACE, SUSPENDED), valid_until, computed_at. Derived; fully recomputed per company on every subscription change. |
+| `entitlement_feature` | **PK(entitlement_id, feature_id)**, enabled, `limit_value` (NULL = unlimited), `period_anchor` (BILLING_PERIOD window start) |
+| `usage_counter` | **PK(company_id, feature_id, period_start)**, `used` ≥ 0; stock features use period_start 1970-01-01 |
+| `usage_record` | id, company_id, feature_id, quantity (negative = release), `idempotency_key` — **UK(company_id, idempotency_key)**, period_start, used_after, recorded_at |
 
 ### Platform operations
 

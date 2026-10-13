@@ -68,6 +68,7 @@ Testcontainers) and `npm run format:check && npx ng lint && npm test && npx ng b
 | `MAIL_FROM` | no | Sender, default `OCCPL Innovations <no-reply@occpl.local>` |
 | `INVITATION_ACCEPT_URL` | yes (prod) | Portal page that accepts invitations (`?token=` appended); must be a valid redirect URI of the portal client in Keycloak |
 | `INVITATION_VALIDITY` | no (`7d`) | |
+| `SUBSCRIPTION_GRACE_PERIOD` / `SUBSCRIPTION_SUSPENDED_EXPIRY` / `SUBSCRIPTION_DATA_RETENTION` | no (`7d` / `90d` / `90d`) | Subscription lifecycle timing (decision D-5) |
 
 Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
 (space-separated origins of the API and IdP).

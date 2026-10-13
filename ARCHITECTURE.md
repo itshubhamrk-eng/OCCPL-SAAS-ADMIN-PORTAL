@@ -75,11 +75,11 @@ Package root: `com.occpl.platform`. Package-by-module; each module has:
 | 0 | `shared` | error model, paging, ids, clock, correlation id, security chain, rate limiting, `Actor`, `JwtPrincipalResolver` | — |
 | 1 | `identity` | users, IdP subject mapping, profiles, `CurrentUser` resolution, MFA policy, Super Admin bootstrap, platform role assignment API, Keycloak admin client | shared, access, audit |
 | 2 | `company` | company, settings (allowed email domains), contacts, lifecycle + history; publishes `CompanyCreated` | shared, identity, audit |
-| 3 | `membership` | memberships, invitations (delivery via Keycloak or email), `@tenant` company authorization, `TenantContext`, `GET /me` | shared, identity, company, access, audit, notification (entitlement for seat checks in Phase 6) |
+| 3 | `membership` | memberships, invitations (delivery via Keycloak or email), `@tenant` company authorization, `TenantContext`, `GET /me` | shared, identity, company, access, audit, notification, entitlement (seat limit) |
 | 4 | `access` | permission catalogue, roles, platform and membership role assignments, permission resolution | shared |
 | 5 | `catalog` | products, immutable configuration versions (JSON Schema validated), features; `ProductCatalog` API | shared, identity, audit |
-| 6 | `subscription` | plans, plan features/limits, company subscriptions, history, state machine | shared, company, catalog, audit |
-| 7 | `entitlement` | computed company-product entitlements, limits, usage counters | shared, catalog, subscription (events + read api) |
+| 6 | `subscription` | plans, company subscriptions, explicit state machine, history, timed sweeps; publishes `SubscriptionChanged`, exposes `SubscriptionGrants` | shared, identity, company, catalog, audit |
+| 7 | `entitlement` | entitlements recomputed on `SubscriptionChanged`, access checks, atomic usage counters, seat limit (`Entitlements` API) | shared, catalog, company, subscription |
 | 8 | `provisioning` | provisioning jobs, outbox dispatch, product-service clients | shared, catalog, company, entitlement, audit, notification |
 | 9 | `billing` | invoices, payment transactions, gateway port & webhooks | shared, subscription, audit |
 | 10 | `audit` | append-only audit log | shared |
