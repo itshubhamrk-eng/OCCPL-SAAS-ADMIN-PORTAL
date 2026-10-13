@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 3 — Identity & access (2026-10-13)
+- Flyway migrations for users, identities, profiles, companies, memberships, permissions, roles,
+  role assignments and the audit log; seeded catalogue of 28 permissions and 5 system roles.
+- Identity: JWT → platform user mapping (verified-email linking, takeover protection, disabled and
+  unverified accounts rejected with specific error codes), first Super Admin bootstrap, MFA policy
+  based on the `amr` claim, platform role API (`/api/v1/platform/roles`,
+  `/api/v1/platform/users/{id}/roles`) with last-Super-Admin protection, `PUT /api/v1/me/profile`,
+  Keycloak Admin REST client using the `occpl-core-admin` service account.
+- Membership: `@tenant.check` company authorization (cross-tenant → 404, suspended company
+  read-only), `TenantContext`, `GET /api/v1/me`. Access: `GET /api/v1/permissions`.
+- Audit module (`AuditLogger`, same-transaction writes). Redis rate limiting (Bucket4j, fail-open).
+- Keycloak realm: service-account client, AMR mapper, `occpl browser` flow with authentication
+  references; Swagger UI sign-in through Keycloak for development.
+- Docker Compose: Redis, Keycloak admin secret, bootstrap admin, Swagger OAuth.
+- Tests: 23 unit/slice + 26 integration tests (MySQL 9.7, Keycloak 26.8.1, Redis 8.10), including
+  tenant isolation and MFA enrolment through Keycloak's login pages.
+- Fixed during verification: native-query UUID projection, Swagger UI blocked by the API CSP.
+
 ### Phase 2 — Foundation (2026-10-13)
 - Versions: Java 25 LTS, Spring Boot 4.1.1, Angular 22.2, MySQL 9.7 LTS, Keycloak 26.8.1 (ADR-0007).
 - `backend/core-platform`: Spring Boot modular monolith skeleton with the `shared` module

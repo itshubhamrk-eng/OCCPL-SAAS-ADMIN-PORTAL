@@ -1,7 +1,11 @@
 package com.occpl.platform.shared.security;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
+import com.occpl.platform.shared.ratelimit.RateLimitFilter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +17,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -45,21 +50,42 @@ class SecurityConfiguration {
         return http.build();
     }
 
+    /**
+     * OpenAPI JSON and Swagger UI (development/staging only: {@code API_DOCS_ENABLED}). Swagger UI needs
+     * scripts, styles and its OAuth2 redirect page, so these paths get their own, looser CSP; the API
+     * itself keeps {@code default-src 'none'}.
+     */
     @Bean
     @Order(2)
-    SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, JsonMapper jsonMapper, Environment environment) throws Exception {
-        ProblemDetailsAuthenticationHandlers handlers = new ProblemDetailsAuthenticationHandlers(jsonMapper);
-        boolean apiDocsEnabled = environment.getProperty("springdoc.api-docs.enabled", Boolean.class, true);
+    @ConditionalOnBooleanProperty(name = "springdoc.api-docs.enabled", matchIfMissing = true)
+    SecurityFilterChain apiDocsSecurityFilterChain(HttpSecurity http, Environment environment) throws Exception {
+        String issuer = environment.getProperty("occpl.openapi.oidc-issuer", "");
+        String idpOrigin = issuer.isBlank() ? "" : " " + URI.create(issuer).resolve("/").toString().replaceAll("/$", "");
+        http.securityMatcher(API_DOC_PATHS)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; "
+                                + "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+                                + "img-src 'self' data:; connect-src 'self'" + idpOrigin + "; "
+                                + "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"))
+                        .frameOptions(frame -> frame.deny()));
+        return http.build();
+    }
 
-        http.authorizeHttpRequests(auth -> {
-                    if (apiDocsEnabled) {
-                        auth.requestMatchers(API_DOC_PATHS).permitAll();
-                    }
-                    auth.requestMatchers("/error").permitAll();
-                    auth.anyRequest().authenticated();
-                })
+    @Bean
+    @Order(3)
+    SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, JsonMapper jsonMapper,
+            ObjectProvider<JwtPrincipalResolver> principalResolver,
+            ObjectProvider<RateLimitFilter> rateLimitFilter) throws Exception {
+        ProblemDetailsAuthenticationHandlers handlers = new ProblemDetailsAuthenticationHandlers(jsonMapper);
+        http.authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(Customizer.withDefaults())
+                        // The identity module supplies a converter that maps the token to a platform user.
+                        .jwt(jwt -> principalResolver.ifAvailable(r -> jwt.jwtAuthenticationConverter(r::resolve)))
                         .authenticationEntryPoint(handlers)
                         .accessDeniedHandler(handlers))
                 .exceptionHandling(e -> e.authenticationEntryPoint(handlers).accessDeniedHandler(handlers))
@@ -73,6 +99,7 @@ class SecurityConfiguration {
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true)
                                 .maxAgeInSeconds(Duration.ofDays(365).toSeconds()))
                         .frameOptions(frame -> frame.deny()));
+        rateLimitFilter.ifAvailable(filter -> http.addFilterAfter(filter, BearerTokenAuthenticationFilter.class));
         return http.build();
     }
 

@@ -55,8 +55,33 @@ Testcontainers) and `npm run format:check && npx ng lint && npm test && npx ng b
 | `CORS_ALLOWED_ORIGINS` | no (none) | Comma-separated portal origins |
 | `API_DOCS_ENABLED` | no (`false`) | OpenAPI/Swagger UI; keep `false` in production |
 
+| `KEYCLOAK_BASE_URL` / `KEYCLOAK_REALM` | yes (prod) | Keycloak Admin REST API (internal URL) |
+| `KEYCLOAK_ADMIN_CLIENT_ID` / `KEYCLOAK_ADMIN_CLIENT_SECRET` | yes (prod) | Service account `occpl-core-admin`; both URL and secret must be set or IdP admin features are disabled |
+| `MFA_PLATFORM_REQUIRED` | no (`true`) | Withhold platform permissions without MFA; never disable in production |
+| `BOOTSTRAP_SUPER_ADMIN_EMAIL` | first setup only | See "First Super Admin" below |
+| `REDIS_URL` | yes (prod) | Rate limiting store |
+| `RATE_LIMIT_ENABLED` | no (`true`) | |
+| `RATE_LIMIT_USER_PER_MINUTE` / `RATE_LIMIT_ANONYMOUS_PER_MINUTE` | no (600 / 60) | |
+| `OPENAPI_OIDC_ISSUER` | no | Browser-facing realm URL; enables "Authorize" in Swagger UI (non-production) |
+
 Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
 (space-separated origins of the API and IdP).
+
+### First Super Admin (one-time)
+
+1. Set `BOOTSTRAP_SUPER_ADMIN_EMAIL` on the Core Platform and restart it.
+2. In the Keycloak admin console (realm `occpl`) create that user with first/last name, mark the
+   email as verified and set a password (or send the user an "update password" email).
+3. The user signs in (portal or Swagger UI). Core grants SUPER_ADMIN, writes an audit entry and
+   Keycloak asks the user to set up an authenticator app at the next login. Platform permissions
+   apply only after signing in with the authenticator code.
+4. Remove `BOOTSTRAP_SUPER_ADMIN_EMAIL`. Further Super Admins are assigned through
+   `PUT /api/v1/platform/users/{userId}/roles`.
+
+### Trying the API locally
+
+Open http://localhost:8080/swagger-ui.html → **Authorize** → *keycloak (OAuth2, authorizationCode)*
+→ tick `openid` → sign in. The local realm allows this redirect only for development.
 
 ## 2. Initial production topology
 

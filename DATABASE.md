@@ -1,6 +1,8 @@
 # Database Design
 
-Status: Phase 1 design (no tables created yet — first migrations arrive in Phase 3). MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
+Status: Phase 3 — tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_membership`,
+`permission`, `role`, `role_permission`, `platform_role_assignment`, `membership_role`, `audit_log` are
+created by Flyway (`db/migration/<module>/`); the rest of this design follows in later phases. MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
 `occpl_core`. Product services own separate schemas/databases.
 
 ## 1. Conventions
@@ -53,14 +55,14 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 
 | Table | Key columns / constraints |
 |---|---|
-| `user` | id, `email` (normalized lower-case) **UK**, `status` (INVITED, ACTIVE, DISABLED), `last_login_at`, version |
-| `user_identity` | id, user_id FK, `provider` (e.g. `keycloak`), `subject` — **UK(provider, subject)** |
+| `platform_user` | id, `email` (normalized lower-case) **UK**, `status` (INVITED, ACTIVE, DISABLED), `last_login_at` (refreshed at most every 15 min), version. Named `platform_user` because USER is a MySQL keyword. |
+| `user_identity` | id, user_id FK, `provider` (e.g. `keycloak`), `subject` — **UK(provider, subject)**, **UK(user_id, provider)** (one subject per provider: prevents account takeover by a second IdP account with the same email) |
 | `user_profile` | user_id PK/FK, display_name, phone, locale, timezone |
 | `company_membership` | id, company_id FK, user_id FK, `status` (INVITED, ACTIVE, SUSPENDED, DEACTIVATED), joined_at, version — **UK(company_id, user_id)**, IX(user_id, status) |
 | `invitation` | id, company_id FK, email, membership_id FK, `token_hash` (SHA-256, never raw token) UK, `status` (PENDING, ACCEPTED, REVOKED, EXPIRED), expires_at, invited_by — partial uniqueness of one PENDING per (company, email) enforced via generated column `pending_key` = IF(status='PENDING', CONCAT(company_id,email), NULL) **UK** |
-| `permission` | id, `code` UK (e.g. `company.users.manage`), `scope` (PLATFORM, COMPANY), description — seeded by migrations, not user-editable |
+| `permission` | `code` PK (e.g. `company.users.manage`), `scope` (PLATFORM, COMPANY), description — seeded by the repeatable migration, not user-editable |
 | `role` | id, `code`, `scope`, `company_id` NULL (system) / FK (custom), `system` bool — **UK(company_id_key, code)** using generated column to treat NULL as global |
-| `role_permission` | role_id FK, permission_id FK — PK(role_id, permission_id) |
+| `role_permission` | role_id FK, permission_code FK — PK(role_id, permission_code) |
 | `membership_role` | membership_id FK, role_id FK — PK; app rule: role must be COMPANY scope and system or same company |
 | `platform_role_assignment` | user_id FK, role_id FK (PLATFORM scope) — PK |
 

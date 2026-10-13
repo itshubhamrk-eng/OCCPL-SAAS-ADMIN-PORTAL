@@ -10,3 +10,6 @@ logging:
   structured:
     format:
       console: ""
+occpl:
+  rate-limit:
+    enabled: false

@@ -22,6 +22,13 @@ springdoc:
     enabled: true
 
 occpl:
+  openapi:
+    oidc-issuer: ${OPENAPI_OIDC_ISSUER:http://localhost:8180/realms/occpl}
+  identity:
+    keycloak:
+      base-url: ${KEYCLOAK_BASE_URL:http://localhost:8180}
+  rate-limit:
+    redis-url: ${REDIS_URL:redis://localhost:6379}
   security:
     cors:
       allowed-origins: http://localhost:4200

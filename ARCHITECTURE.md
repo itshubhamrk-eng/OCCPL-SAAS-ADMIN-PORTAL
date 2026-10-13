@@ -72,11 +72,11 @@ Package root: `com.occpl.platform`. Package-by-module; each module has:
 
 | # | Module | Owns | May depend on (`api` only) |
 |---|---|---|---|
-| 0 | `shared` | error model, paging, ids, clock, correlation id, `TenantContext` type | — |
-| 1 | `identity` | user ↔ IdP subject mapping, IdP admin client, current-principal resolution | shared |
-| 2 | `company` | company, settings, contacts, lifecycle | shared, audit |
-| 3 | `membership` | memberships, invitations, user profiles | shared, identity, company, access, entitlement (seat checks), audit, notification |
-| 4 | `access` | roles, permissions, role-permission, membership-role, authorization decisions | shared |
+| 0 | `shared` | error model, paging, ids, clock, correlation id, security chain, rate limiting, `Actor`, `JwtPrincipalResolver` | — |
+| 1 | `identity` | users, IdP subject mapping, profiles, `CurrentUser` resolution, MFA policy, Super Admin bootstrap, platform role assignment API, Keycloak admin client | shared, access, audit |
+| 2 | `company` | company, settings, contacts, lifecycle (Phase 3: core record + `CompanyDirectory`) | shared, audit |
+| 3 | `membership` | memberships, invitations, `@tenant` company authorization, `TenantContext`, `GET /me` | shared, identity, company, access, entitlement (seat checks), audit, notification |
+| 4 | `access` | permission catalogue, roles, platform and membership role assignments, permission resolution | shared |
 | 5 | `catalog` | products, product versions/config, features | shared, audit |
 | 6 | `subscription` | plans, plan features/limits, company subscriptions, history, state machine | shared, company, catalog, audit |
 | 7 | `entitlement` | computed company-product entitlements, limits, usage counters | shared, catalog, subscription (events + read api) |
@@ -111,13 +111,15 @@ contract and its tables move with it.
 1. Nginx: TLS, security headers, coarse per-IP rate limit, forwards `X-Request-Id`.
 2. `CorrelationIdFilter`: accept/generate correlation id, put in MDC and response header.
 3. Spring Security resource server: validate JWT signature (JWKS), `iss`, `aud`, `exp`, `nbf`.
-4. `PrincipalResolver`: map `sub` → platform `User` (cached briefly); reject if user disabled.
-5. Rate limiter (Redis token bucket) keyed by user + route class.
-6. Tenant resolution for `/api/v1/companies/{companyId}/**` routes: load ACTIVE membership of
-   the current user in `companyId` (or platform permission for Super Admin); build
-   `TenantContext` (companyId, membershipId, effective permissions).
-7. Method security: `@PreAuthorize("@authz.has('company.users.manage')")` evaluated against
-   `TenantContext`. Services additionally scope every repository query by `companyId`.
+4. `JwtPrincipalResolver` (identity module): map `(provider, sub)` → platform user (first login:
+   link/create by verified email), reject disabled users, load platform roles/permissions from the
+   database, withhold platform permissions unless the token's `amr` proves MFA → `CurrentUser`.
+5. `RateLimitFilter` (Redis token bucket) keyed by user id, or client IP when unauthenticated.
+6. Method security. Platform: `@PreAuthorize("hasAuthority('platform.roles.manage')")`. Company:
+   `@PreAuthorize("@tenant.check(#companyId, 'company.users.read', 'platform.companies.read')")` loads
+   the caller's ACTIVE membership in the path's company (404 if none), checks company status and
+   permission, and stores `TenantContext` (companyId, membershipId, permissions) for the request.
+   Services additionally scope every repository query by `companyId`.
 8. Global exception handler → RFC 9457 problem details (see API_SPEC.md §2).
 
 ## 6. Asynchronous processing

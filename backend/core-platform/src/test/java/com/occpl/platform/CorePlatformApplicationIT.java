@@ -2,6 +2,7 @@ package com.occpl.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.occpl.platform.support.MySqlTestDatabase;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -10,24 +11,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mysql.MySQLContainer;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 /** Boots the full application against a real MySQL to verify Flyway, JPA validation and probes. */
-@Testcontainers
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
         properties = {"server.port=0", "management.server.port=0"})
 class CorePlatformApplicationIT {
 
-    @Container
-    @ServiceConnection
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:9.7");
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        MySqlTestDatabase.register(registry);
+    }
 
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -39,10 +38,22 @@ class CorePlatformApplicationIT {
 
     @Test
     void flywayHasInitialisedTheSchema() {
-        Integer historyTables = jdbc.queryForObject(
-                "select count(*) from information_schema.tables where table_name = 'flyway_schema_history'",
-                Integer.class);
-        assertThat(historyTables).isEqualTo(1);
+        Integer applied = jdbc.queryForObject(
+                "select count(*) from flyway_schema_history where success = 1", Integer.class);
+        assertThat(applied).isGreaterThanOrEqualTo(6);
+    }
+
+    @Test
+    void seedsPermissionCatalogueAndSystemRoles() {
+        assertThat(jdbc.queryForObject("select count(*) from permission", Integer.class)).isEqualTo(28);
+        assertThat(jdbc.queryForList("select code from role where system_role order by code", String.class))
+                .containsExactly("COMPANY_ADMIN", "COMPANY_MANAGER", "COMPANY_USER", "PLATFORM_SUPPORT", "SUPER_ADMIN");
+        assertThat(jdbc.queryForObject("select count(*) from role_permission rp join role r on r.id = rp.role_id "
+                + "where r.code = 'PLATFORM_SUPPORT' and rp.permission_code not like '%.read'", Integer.class))
+                .isZero();
+        assertThat(jdbc.queryForObject("select count(*) from role_permission rp join role r on r.id = rp.role_id "
+                + "join permission p on p.code = rp.permission_code where r.scope <> p.scope", Integer.class))
+                .as("roles only contain permissions of their own scope").isZero();
     }
 
     @Test

@@ -87,10 +87,12 @@ The permission catalogue is seeded by migrations; API_SPEC.md references these c
 
 ### Freshness of authorization data
 
-JWTs carry identity only (`sub`, `email`, platform-role hint at most). Memberships, roles,
-company status, subscription status and entitlements are read from Core per request and
-cached for ≤ 30 s in Redis with explicit eviction on change events. A suspended company or
-membership therefore loses access within the cache TTL, not at token expiry.
+JWTs carry identity only (`sub`, `email`, `email_verified`, `amr`). User status, platform roles,
+memberships, company status (and later subscription status and entitlements) are read from the
+Core database on every request — currently without a cache, using indexed lookups — so a disabled
+user, suspended membership or suspended company loses access on the next request, not at token
+expiry. A Redis cache (≤ 30 s TTL, evicted on change events) will be added only if load tests show
+the need.
 
 ## 4. Web and API protection
 
@@ -119,6 +121,28 @@ membership therefore loses access within the cache TTL, not at token expiry.
 - Portal Nginx: strict CSP (`script-src 'self'`, no inline scripts — Angular critical-CSS inlining
   is disabled for this reason), `frame-ancestors 'none'`, `nosniff`, no caching of `index.html` /
   `config.json`, unprivileged container user.
+
+### Implemented in Phase 3 (verified)
+
+- First-login rules, account-status errors and identity-takeover protection (see BACKLOG I-2).
+- MFA for platform staff: Keycloak's browser flow (`occpl browser`) records Authentication Method
+  References and the portal client emits the `amr` claim. Core grants platform permissions only when
+  `amr` contains `otp` (configurable: `occpl.identity.mfa.accepted-amr`). When platform roles are
+  granted, Core asks Keycloak (service account `occpl-core-admin`, realm-management
+  `manage-users`/`view-users`/`query-users` only) to require authenticator setup. Verified end to end
+  with real Keycloak login pages: password-only token → `mfaRequired: true`, no permissions; after
+  enrolment and an OTP login → permissions granted.
+- First Super Admin: `BOOTSTRAP_SUPER_ADMIN_EMAIL` grants SUPER_ADMIN on first login with that
+  verified email **only while no Super Admin exists**; audited as `platform.super_admin.bootstrapped`.
+  Clear the variable after initial setup.
+- Company authorization via `@tenant.check`; cross-tenant ids return 404 with a body identical to a
+  non-existent company. Suspended (and pending) companies allow only `*.read` permissions.
+- Audit rows for role changes are written in the same transaction (`audit_log`). The application DB
+  account still has UPDATE/DELETE on `audit_log` (database-wide grant); table-level revocation is
+  scheduled for Phase 10 (DEPLOYMENT.md).
+- Rate limiting fails open when Redis is unavailable; requests with an invalid token are rejected
+  by the bearer filter before the rate limiter, so the Nginx per-IP limit is the control for
+  invalid-token floods.
 
 ## 5. Secrets and data protection
 

@@ -31,17 +31,28 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 3 — Identity & access
 
-- ◐ **I-1** Resource-server JWT validation (iss/aud/exp) against Keycloak. Configured in Phase 2
-  and checked manually end-to-end; remaining AC: automated tests with signed tokens for invalid
-  issuer/audience/expired token → 401.
-- ☐ **I-2** User mapping (`user`, `user_identity`), `GET /me`. AC: first authenticated call
-  links invited user by verified email; unverified email not linked.
-- ☐ **I-3** Permissions/roles seed + `access` module decision service + `TenantContext`
-  resolution. AC: unit tests for decision matrix; integration test that a user without
-  membership gets 404 on company routes.
-- ☐ **I-4** Keycloak admin client (create user, required actions, disable). AC: Testcontainers
-  Keycloak integration test.
-- ☐ **I-5** Rate limiting (Redis bucket). AC: 429 + `Retry-After` after threshold in test.
+- ◐ **I-1** Resource-server JWT validation against Keycloak. Verified by `KeycloakIdentityIT` with
+  real Keycloak tokens: valid token accepted; token without the `occpl-core` audience and token from
+  another realm (issuer) → 401. *Remaining:* a dedicated expired-token test (expiry is enforced by
+  Spring Security's default timestamp validator, 60 s skew, but not covered by our own test).
+- ☑ **I-2** User mapping (`platform_user`, `user_identity`, `user_profile`), `GET /me`,
+  `PUT /me/profile`. Verified (`TenantIsolationIT`): verified email creates or links (invited user
+  activated); unverified → 403 `EMAIL_NOT_VERIFIED`; email already linked to another subject →
+  403 `IDENTITY_CONFLICT`; disabled → 403 `ACCOUNT_DISABLED`; 6 concurrent first logins → 1 user.
+- ☑ **I-3** Permission catalogue (28) and system roles seeded; platform authorities;
+  `@tenant.check(...)` company authorization with `TenantContext`; first Super Admin bootstrap;
+  platform role API with last-Super-Admin protection and audit; MFA required for platform
+  permissions. Verified: 15 tenant-isolation tests (cross-tenant 404 indistinguishable from
+  missing, 403 outside role, suspended/deactivated states, platform staff with/without MFA) and the
+  full MFA enrolment flow through Keycloak's login pages (`KeycloakIdentityIT`).
+- ☑ **I-4** Keycloak admin client (create user, find, required actions, credentials, enable/disable,
+  logout, actions email) using the `occpl-core-admin` service account. Verified against Keycloak
+  26.8.1 except `sendActionsEmail`, which needs SMTP (exercised with invitations in Phase 4).
+- ☑ **I-5** Redis rate limiting (Bucket4j): per user and per IP, 429 + `Retry-After` +
+  `RATE_LIMITED`; fails open when Redis is down (`occpl.ratelimit.errors` metric). Verified by
+  `RateLimitIT` (real Redis) and `RedisRateLimiterTest`.
+- ☑ **I-6** Swagger UI sign-in through Keycloak for non-production environments; separate CSP for
+  documentation pages. Verified in the Docker stack with headless Chromium (no console errors).
 
 ## Phase 4 — Company & membership management
 

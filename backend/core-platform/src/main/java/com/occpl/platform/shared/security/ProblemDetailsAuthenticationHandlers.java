@@ -32,6 +32,11 @@ class ProblemDetailsAuthenticationHandlers implements AuthenticationEntryPoint, 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException {
+        if (authException instanceof AccountAccessException accountException) {
+            write(response, Problems.of(accountException.code(), accountException.getMessage(),
+                    request.getRequestURI()));
+            return;
+        }
         bearerEntryPoint.commence(request, response, authException);
         write(response, Problems.of(ErrorCode.UNAUTHENTICATED, "Authentication is required.",
                 request.getRequestURI()));

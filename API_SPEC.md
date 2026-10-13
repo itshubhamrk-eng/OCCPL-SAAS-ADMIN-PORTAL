@@ -41,7 +41,9 @@ implemented yet.
 
 Stable `code` values: `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `CONFLICT`,
 `DUPLICATE_MEMBERSHIP`, `INVITATION_PENDING`, `LAST_ADMIN`, `INVALID_STATE_TRANSITION`,
-`LIMIT_EXCEEDED`, `ENTITLEMENT_REQUIRED`, `PRECONDITION_FAILED`, `RATE_LIMITED`,
+`LIMIT_EXCEEDED`, `ENTITLEMENT_REQUIRED`, `PRECONDITION_FAILED`, `RATE_LIMITED`, `UNAUTHENTICATED`,
+`ACCOUNT_DISABLED`, `EMAIL_NOT_VERIFIED`, `IDENTITY_CONFLICT`, `COMPANY_SUSPENDED`, `METHOD_NOT_ALLOWED`,
+`UNSUPPORTED_MEDIA_TYPE`,
 `IDEMPOTENCY_KEY_REUSED`, `INTERNAL_ERROR`.
 
 ## 3. Endpoint inventory
@@ -53,8 +55,8 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/me` | Me | Profile, platform permissions, memberships (company, roles, permissions) |
-| PATCH | `/me/profile` | Me | Update own profile |
+| GET | `/me` | Me | Profile, platform roles/permissions/`mfaRequired`, active memberships (company, roles, permissions) — implemented |
+| PUT | `/me/profile` | Me | Replace own profile (displayName, phone E.164, locale, IANA time zone) — implemented |
 | POST | `/invitations/{token}/accept` | Me (token-bound) | Accept invitation; links identity to membership |
 
 ### Companies
@@ -91,7 +93,8 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 | GET | `/permissions?scope=COMPANY` | Me | Permission catalogue |
 | GET | `/companies/{companyId}/roles` | C:`company.users.read` | System + custom roles |
 | POST/PUT/DELETE | `/companies/{companyId}/roles[/{roleId}]` | C:`company.roles.manage` | Custom roles (COMPANY permissions only) |
-| GET/PUT | `/platform/users/{userId}/roles` | P:`platform.roles.manage` | Platform role assignment |
+| GET/PUT | `/platform/users/{userId}/roles` | P:`platform.roles.manage` | Platform role assignment; last SUPER_ADMIN cannot be removed (409 `LAST_ADMIN`) — implemented |
+| GET | `/platform/roles` | P:`platform.roles.manage` | Platform roles with permissions — implemented |
 
 ### Product catalogue
 
@@ -169,7 +172,23 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 `/actuator/health/liveness`, `/actuator/health/readiness`, `/actuator/prometheus` (internal
 network only), `/v3/api-docs`, `/swagger-ui` (disabled in production).
 
-## 4. Example: create company
+## 4. Example: current user
+
+```http
+GET /api/v1/me
+Authorization: Bearer <access token>
+→ 200
+{ "id": "01a1…", "email": "admin@occpl.local", "displayName": "Platform Admin",
+  "platform": { "roles": ["SUPER_ADMIN"], "permissions": [], "mfaRequired": true },
+  "memberships": [ { "membershipId": "…", "companyId": "…", "companyCode": "acme", "companyName": "Acme",
+                     "companyStatus": "ACTIVE", "roles": ["COMPANY_ADMIN"], "permissions": ["company.users.manage", "…"] } ] }
+```
+
+`permissions` lists only what is granted for this token: platform permissions are empty and
+`mfaRequired` is true when the user holds platform roles but signed in without an authenticator app.
+Rate-limited responses carry `X-RateLimit-Remaining`; 429 adds `Retry-After`.
+
+## 5. Example: create company
 
 ```http
 POST /api/v1/companies
