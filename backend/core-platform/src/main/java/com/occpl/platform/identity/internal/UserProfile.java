@@ -49,6 +49,10 @@ class UserProfile {
         this.updatedAt = now;
     }
 
+    UUID userId() {
+        return userId;
+    }
+
     String displayName() {
         return displayName;
     }

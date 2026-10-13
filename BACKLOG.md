@@ -56,13 +56,32 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 4 — Company & membership management
 
-- ☐ **C-1** Company CRUD + lifecycle + search/pagination + audit. AC: validation, duplicate
-  code → 409, invalid transition → 422, audit rows written.
-- ☐ **C-2** Invitations (create, resend, revoke, accept, expiry job). AC: one pending invitation
-  per (company, email); token hashed; expired token rejected.
-- ☐ **C-3** Membership lifecycle + role assignment (no escalation, last-admin rule). AC: negative
-  tests for escalation and last-admin removal.
-- ☐ **C-4** Company settings & contacts. AC: Company Admin can edit allowed fields only.
+- ☑ **C-1** Companies: create (with primary contact and initial Company Admin invitation in one
+  transaction), search (code/name prefix, status, country, sort allowlist, paging), get, PATCH with
+  ETag/If-Match (company admins: display name only), activate/suspend/deactivate with reasons,
+  status history and audit. Verified (`CompanyAndMembershipIT`): validation 400, duplicate code 409,
+  invalid transition 422, stale If-Match 412, field restrictions 403, audit rows.
+- ☑ **C-2** Invitations: create, list, resend (new token, old one invalid), revoke, accept, expiry
+  job; one pending invitation per membership (DB unique key); token stored as SHA-256 only, sent in
+  the request body; expired → 410. Delivery: new users get Keycloak's account-setup email (verifies
+  the address) that returns to the accept link; existing users get the platform invitation email.
+  Verified end to end with real Keycloak and SMTP (`KeycloakInvitationIT`) and with mocks
+  (wrong user → 404, idempotent repeat, expired, resent, revoked).
+- ☑ **C-3** Members: list/search/filter/sort, detail, suspend/reactivate/deactivate, replace roles.
+  Rules: no escalation beyond the actor's own permissions, no self-changes, last active Company
+  Admin protected (row locks). Verified by negative tests for each rule.
+- ☑ **C-4** Company settings (time zone, locale, allowed invitation email domains) and contacts
+  (PRIMARY/BILLING/TECHNICAL; primary cannot be removed), ETag on settings.
+- ☑ **C-5** Platform users: keyset list with email prefix search, detail with platform roles,
+  disable/enable synchronised to Keycloak (account disabled + sessions ended), user's memberships.
+- ☑ **C-6** Audit log API: platform search and company-scoped trail, keyset cursor, filters.
+- ☑ **C-7** Notification module: transactional email outbox, SMTP dispatcher (`SKIP LOCKED`, back-off,
+  max attempts, bodies cleared after sending). Verified with GreenMail (`NotificationDispatcherIT`).
+- ☐ **C-8** Custom company roles (`/companies/{id}/roles` POST/PUT/DELETE, `company.roles.manage`).
+  Data model and assignment already support company-specific roles.
+- ☐ **C-9** Branded Keycloak email theme (the account-setup email currently uses Keycloak's default text).
+- ☐ **C-10** `Idempotency-Key` support for POST endpoints (duplicates are already rejected by unique keys).
+- ☐ **C-11** Seat limits on invitations (needs entitlements, Phase 6).
 
 ## Phase 5 — Product catalogue
 

@@ -144,6 +144,22 @@ the need.
   by the bearer filter before the rate limiter, so the Nginx per-IP limit is the control for
   invalid-token floods.
 
+### Implemented in Phase 4 (verified)
+
+- Company administration rules enforced server-side and covered by negative tests: a member can only
+  grant, change, suspend or remove access within their own permissions (a manager cannot create,
+  demote or suspend an admin); members cannot change their own membership; the last active Company
+  Admin cannot be suspended, deactivated or demoted (row-locked check); company admins can change
+  the display name but not the legal identity; invitations can be restricted to company email domains.
+- Invitation tokens: 256-bit random, stored only as SHA-256, valid 7 days, rotated on resend,
+  accepted only by the signed-in user the invitation was addressed to (otherwise 404), submitted in
+  the request body (not the URL). New users prove email ownership through Keycloak's account-setup
+  link before they can sign in. The accept URL carries the token as a query parameter; the portal
+  must not log it (Phase 8: disable access logging for `/invitations/` in the portal's Nginx).
+- Platform user disable takes effect on the next request in Core and is mirrored to Keycloak
+  (account disabled, sessions ended); Super Admins and one's own account cannot be disabled.
+- Email bodies (which can contain invitation links) are deleted from the outbox once sent.
+
 ## 5. Secrets and data protection
 
 - No secrets in Git. Local dev uses `.env` (gitignored) with dev-only values; staging/prod use

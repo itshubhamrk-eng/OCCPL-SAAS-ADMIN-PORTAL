@@ -2,6 +2,7 @@
 #   cp .env.example .env   # then edit passwords
 #   docker compose up --build
 # Portal: http://localhost:4200  API docs: http://localhost:8080/swagger-ui.html  Keycloak: http://localhost:8180
+# Mail inbox (all outgoing email is captured): http://localhost:8025
 name: occpl
 
 services:
@@ -31,6 +32,20 @@ services:
       - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.31.5
+    environment:
+      MP_UI_BIND_ADDR: 0.0.0.0:8025
+      MP_SMTP_BIND_ADDR: 0.0.0.0:1025
+    ports:
+      - "127.0.0.1:8025:8025"   # web inbox
+      - "127.0.0.1:1025:1025"   # SMTP
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -66,6 +81,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_healthy
     environment:
       DB_URL: jdbc:mysql://mysql:3306/occpl_core
       DB_USERNAME: occpl_app
@@ -82,6 +99,9 @@ services:
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
       BOOTSTRAP_SUPER_ADMIN_EMAIL: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:-}
       REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      INVITATION_ACCEPT_URL: http://localhost:4200/invitations/accept
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:8081:8081"

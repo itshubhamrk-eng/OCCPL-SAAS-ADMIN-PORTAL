@@ -18,6 +18,12 @@ interface RoleRepository extends JpaRepository<Role, UUID> {
     @Query("select r from Role r where r.scope = 'PLATFORM' and r.code in :codes")
     List<Role> findPlatformRolesByCode(Collection<String> codes);
 
+    @EntityGraph(attributePaths = "permissions")
+    @Query("""
+            select r from Role r where r.scope = 'COMPANY' and (r.companyId is null or r.companyId = :companyId)
+            order by r.systemRole desc, r.code""")
+    List<Role> findAssignable(UUID companyId);
+
     @Query("select r from Role r where r.scope = 'PLATFORM' and r.code = :code")
     Optional<Role> findPlatformRole(String code);
 }

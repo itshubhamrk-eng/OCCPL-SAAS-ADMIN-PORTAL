@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 4 — Company & membership management (2026-10-13)
+- Companies: create (with settings, primary contact and initial Company Admin invitation in one
+  transaction), search, get, PATCH with ETag/If-Match, activate/suspend/deactivate with status
+  history, settings (allowed invitation domains) and contacts; all changes audited.
+- Invitations: create, list, resend, revoke, accept, scheduled expiry; hashed tokens; delivery via
+  Keycloak account-setup email (new users) or the platform invitation email (existing users).
+- Members: list/search/filter/sort, detail, suspend/reactivate/deactivate, role replacement with
+  no-escalation, no-self-change and last-admin rules.
+- Platform users: keyset list, detail, disable/enable synchronised to Keycloak, user memberships.
+- Audit log API (platform and company scoped, keyset cursor).
+- Notification module: transactional email outbox with SMTP dispatcher, retries and body clearing.
+- Docker Compose: Mailpit inbox at http://localhost:8025; Keycloak SMTP for local development.
+- Tests: 23 unit/slice + 44 integration tests, including an end-to-end invitation through real
+  Keycloak and SMTP. Fixed during verification: comma-separated `sort` parameters were split by Spring.
+
 ### Phase 3 — Identity & access (2026-10-13)
 - Flyway migrations for users, identities, profiles, companies, memberships, permissions, roles,
   role assignments and the audit log; seeded catalogue of 28 permissions and 5 system roles.

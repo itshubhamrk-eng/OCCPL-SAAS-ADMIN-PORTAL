@@ -11,5 +11,7 @@ logging:
     format:
       console: ""
 occpl:
+  scheduling:
+    enabled: false
   rate-limit:
     enabled: false

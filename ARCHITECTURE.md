@@ -74,8 +74,8 @@ Package root: `com.occpl.platform`. Package-by-module; each module has:
 |---|---|---|---|
 | 0 | `shared` | error model, paging, ids, clock, correlation id, security chain, rate limiting, `Actor`, `JwtPrincipalResolver` | — |
 | 1 | `identity` | users, IdP subject mapping, profiles, `CurrentUser` resolution, MFA policy, Super Admin bootstrap, platform role assignment API, Keycloak admin client | shared, access, audit |
-| 2 | `company` | company, settings, contacts, lifecycle (Phase 3: core record + `CompanyDirectory`) | shared, audit |
-| 3 | `membership` | memberships, invitations, `@tenant` company authorization, `TenantContext`, `GET /me` | shared, identity, company, access, entitlement (seat checks), audit, notification |
+| 2 | `company` | company, settings (allowed email domains), contacts, lifecycle + history; publishes `CompanyCreated` | shared, identity, audit |
+| 3 | `membership` | memberships, invitations (delivery via Keycloak or email), `@tenant` company authorization, `TenantContext`, `GET /me` | shared, identity, company, access, audit, notification (entitlement for seat checks in Phase 6) |
 | 4 | `access` | permission catalogue, roles, platform and membership role assignments, permission resolution | shared |
 | 5 | `catalog` | products, product versions/config, features | shared, audit |
 | 6 | `subscription` | plans, plan features/limits, company subscriptions, history, state machine | shared, company, catalog, audit |
@@ -99,6 +99,10 @@ internal to the module. `shared` is an OPEN module used by all others (`@Modulit
    facades, never shared repositories or cross-module JPA associations. Cross-module references
    are stored as UUID columns (FKs allowed in the database, no `@ManyToOne` across modules).
 4. `audit` and `notification` are leaf modules; everything may call them, they call nothing.
+   *Documented exception:* read-only listing/search SQL may join another module's tables when an
+   API call would need unbounded id fan-out (`MembershipQueries`: member search by email/name and
+   the last-admin count). Such queries never write foreign tables and must be replaced by an API or
+   read model if a module is extracted.
 5. Controllers never return entities; mapping happens in `web` (MapStruct or hand-written).
 6. Product-specific logic is forbidden in Core. Product variability lives in validated
    configuration (catalog) and in the product service.

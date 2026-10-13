@@ -69,6 +69,27 @@ class PlatformUser {
         return status;
     }
 
+    Instant lastLoginAt() {
+        return lastLoginAt;
+    }
+
+    Instant createdAt() {
+        return createdAt;
+    }
+
+    void disable(Instant now) {
+        status = UserStatus.DISABLED;
+        updatedAt = now;
+    }
+
+    /** Re-enables a disabled user: ACTIVE if they have signed in before, otherwise INVITED. */
+    void enable(boolean hasIdentity, Instant now) {
+        if (status == UserStatus.DISABLED) {
+            status = hasIdentity ? UserStatus.ACTIVE : UserStatus.INVITED;
+            updatedAt = now;
+        }
+    }
+
     void activate(Instant now) {
         if (status == UserStatus.INVITED) {
             status = UserStatus.ACTIVE;

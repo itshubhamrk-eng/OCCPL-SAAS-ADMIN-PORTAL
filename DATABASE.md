@@ -1,8 +1,8 @@
 # Database Design
 
-Status: Phase 3 — tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_membership`,
-`permission`, `role`, `role_permission`, `platform_role_assignment`, `membership_role`, `audit_log` are
-created by Flyway (`db/migration/<module>/`); the rest of this design follows in later phases. MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
+Status: Phase 4 — tables `platform_user`, `user_identity`, `user_profile`, `company`, `company_settings`,
+`company_contact`, `company_status_history`, `company_membership`, `invitation`, `permission`, `role`,
+`role_permission`, `platform_role_assignment`, `membership_role`, `audit_log`, `notification` are created by Flyway (`db/migration/<module>/`); the rest of this design follows in later phases. MySQL 9.7 LTS, InnoDB, `utf8mb4` / `utf8mb4_0900_ai_ci`, one schema
 `occpl_core`. Product services own separate schemas/databases.
 
 ## 1. Conventions
@@ -59,7 +59,7 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 | `user_identity` | id, user_id FK, `provider` (e.g. `keycloak`), `subject` — **UK(provider, subject)**, **UK(user_id, provider)** (one subject per provider: prevents account takeover by a second IdP account with the same email) |
 | `user_profile` | user_id PK/FK, display_name, phone, locale, timezone |
 | `company_membership` | id, company_id FK, user_id FK, `status` (INVITED, ACTIVE, SUSPENDED, DEACTIVATED), joined_at, version — **UK(company_id, user_id)**, IX(user_id, status) |
-| `invitation` | id, company_id FK, email, membership_id FK, `token_hash` (SHA-256, never raw token) UK, `status` (PENDING, ACCEPTED, REVOKED, EXPIRED), expires_at, invited_by — partial uniqueness of one PENDING per (company, email) enforced via generated column `pending_key` = IF(status='PENDING', CONCAT(company_id,email), NULL) **UK** |
+| `invitation` | id, company_id FK, membership_id FK, email, `token_hash` CHAR(64) (SHA-256, never the raw token) **UK**, `status` (PENDING, ACCEPTED, REVOKED, EXPIRED), expires_at, invited_by, accepted_at, version — one PENDING per membership via generated column `pending_key` = IF(status='PENDING', membership_id, NULL) **UK**; IX(company_id, status, created_at), IX(status, expires_at) |
 | `permission` | `code` PK (e.g. `company.users.manage`), `scope` (PLATFORM, COMPANY), description — seeded by the repeatable migration, not user-editable |
 | `role` | id, `code`, `scope`, `company_id` NULL (system) / FK (custom), `system` bool — **UK(company_id_key, code)** using generated column to treat NULL as global |
 | `role_permission` | role_id FK, permission_code FK — PK(role_id, permission_code) |
@@ -71,8 +71,8 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 | Table | Key columns / constraints |
 |---|---|
 | `company` | id, `code` (slug) UK, legal_name, display_name, `status` (PENDING, ACTIVE, SUSPENDED, DEACTIVATED), country, tax_id, version; IX(status, created_at), IX(display_name) |
-| `company_settings` | company_id PK/FK, timezone, locale, branding_logo_url, `allowed_email_domains`, version |
-| `company_contact` | id, company_id FK, type (PRIMARY, BILLING, TECHNICAL), name, email, phone |
+| `company_settings` | company_id PK/FK, time_zone, locale, `allowed_email_domains` (comma-separated, empty = any), updated_by, version (branding later) |
+| `company_contact` | id, company_id FK, type (PRIMARY, BILLING, TECHNICAL) — **UK(company_id, type)**, name, email, phone, version |
 | `company_status_history` | id, company_id, from_status, to_status, reason, changed_by, changed_at |
 
 ### Catalog
@@ -115,7 +115,7 @@ Product service credentials are **not** stored here; they live in Keycloak / sec
 | `provisioning_job` | id, company_id, product_id, `action` (PROVISION, UPDATE, DEPROVISION), `status` (PENDING, IN_PROGRESS, AWAITING_CALLBACK, SUCCEEDED, FAILED_RETRYABLE, FAILED_PERMANENT, CANCELLED), `idempotency_key` UK, attempts, max_attempts, next_attempt_at, last_error_code, last_error_message (truncated, sanitized), locked_by, locked_until, version — IX(status, next_attempt_at) |
 | `outbox_event` | id, aggregate_type, aggregate_id, event_type, payload JSON, occurred_at, published_at NULL, attempts — IX(published_at, occurred_at) |
 | `audit_log` | id, occurred_at, actor_user_id, actor_type (USER, SERVICE, SYSTEM), company_id NULL, action (e.g. `company.suspended`), target_type, target_id, outcome, correlation_id, ip_hash, details JSON (no secrets/tokens) — IX(company_id, occurred_at), IX(actor_user_id, occurred_at), IX(target_type, target_id); append-only (app DB user has no UPDATE/DELETE grant on this table) |
-| `notification` | id, company_id NULL, recipient_user_id NULL, recipient_email, template_code, channel, status (QUEUED, SENT, FAILED), attempts, sent_at, error |
+| `notification` | id, company_id NULL, template, recipient_email, subject, body_text/body_html (cleared after sending or permanent failure), status (QUEUED, SENT, FAILED), attempts, next_attempt_at, last_error, sent_at — IX(status, next_attempt_at); claimed with `FOR UPDATE SKIP LOCKED` |
 | `idempotency_key` | key, scope, request_hash, response_status, response_body, created_at, expires_at — for idempotent POST APIs |
 | `shedlock` | standard ShedLock table for single-runner scheduled jobs |
 

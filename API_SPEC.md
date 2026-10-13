@@ -59,32 +59,37 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 | PUT | `/me/profile` | Me | Replace own profile (displayName, phone E.164, locale, IANA time zone) — implemented |
 | POST | `/invitations/{token}/accept` | Me (token-bound) | Accept invitation; links identity to membership |
 
-### Companies
+### Companies (implemented)
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| POST | `/companies` | P:`platform.companies.manage` | Create company + initial Company Admin invitation (+ optional subscriptions) |
-| GET | `/companies` | P:`platform.companies.read` | Search/filter/paginate |
-| GET | `/companies/{companyId}` | P or C:`company.profile.read` | Details |
-| PATCH | `/companies/{companyId}` | P or C:`company.profile.manage` (limited fields) | Update |
-| POST | `/companies/{companyId}/activate` · `/suspend` · `/deactivate` | P:`platform.companies.manage` | Lifecycle (reason required) |
-| GET/PUT | `/companies/{companyId}/settings` | C:`company.profile.read/manage` | Settings |
-| GET/POST/PUT/DELETE | `/companies/{companyId}/contacts[/{id}]` | C:`company.profile.manage` | Contacts |
+| POST | `/companies` | P:`platform.companies.manage` | Create company, settings, primary contact and the initial Company Admin invitation (one transaction) |
+| GET | `/companies` | P:`platform.companies.read` | `q` (code/name prefix), `status`, `country`, `page`, `size`, `sort=createdAt\|displayName\|code\|status,(asc\|desc)` |
+| GET | `/companies/{companyId}` | P:`platform.companies.read` or C:`company.profile.read` | Details + `ETag` |
+| PATCH | `/companies/{companyId}` | P:`platform.companies.manage` or C:`company.profile.manage` | Omitted fields unchanged; company admins may change `displayName` only; optional `If-Match` |
+| POST | `/companies/{companyId}/activate` · `/suspend` · `/deactivate` | P:`platform.companies.manage` | Lifecycle; `{"reason"}` required for suspend/deactivate; 422 on invalid transition |
+| GET | `/companies/{companyId}/status-history` | P or C:`company.profile.read` | Lifecycle history, newest first |
+| GET/PUT | `/companies/{companyId}/settings` | read: `company.profile.read`; write: `company.profile.manage` (or platform) | `timeZone`, `locale`, `allowedEmailDomains` (restricts invitations); `ETag`/`If-Match` |
+| GET | `/companies/{companyId}/contacts` | P or C:`company.profile.read` | Contacts |
+| PUT/DELETE | `/companies/{companyId}/contacts/{PRIMARY\|BILLING\|TECHNICAL}` | P or C:`company.profile.manage` | Upsert / remove (PRIMARY cannot be removed) |
 
-### Users & memberships
+### Users & memberships (implemented)
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/users` | P:`platform.users.read` | Platform user search (keyset) |
+| GET | `/users` | P:`platform.users.read` | Keyset list: `after` (cursor), `size` ≤ 100, `status`, `q` (email prefix) → `{items, nextCursor}` |
+| GET | `/users/{userId}` | P:`platform.users.read` | Detail incl. platform roles |
 | GET | `/users/{userId}/memberships` | P:`platform.users.read` | User's memberships across companies |
-| POST | `/users/{userId}/disable` · `/enable` | P:`platform.users.manage` | Platform-wide disable (also disables at IdP) |
-| GET | `/companies/{companyId}/memberships` | C:`company.users.read` | List members (filter by status/role/q) |
-| POST | `/companies/{companyId}/invitations` | C:`company.users.manage` | Invite user (seat check, duplicate check) |
-| GET | `/companies/{companyId}/invitations` | C:`company.users.read` | List invitations |
-| POST | `/companies/{companyId}/invitations/{id}/resend` · `/revoke` | C:`company.users.manage` | Resend (rotates token) / revoke |
-| GET | `/companies/{companyId}/memberships/{id}` | C:`company.users.read` | Member detail |
-| POST | `/companies/{companyId}/memberships/{id}/suspend` · `/reactivate` · `/deactivate` | C:`company.users.manage` | Membership lifecycle (last-admin rule) |
-| PUT | `/companies/{companyId}/memberships/{id}/roles` | C:`company.roles.assign` | Replace role set (no escalation) |
+| POST | `/users/{userId}/disable` · `/enable` | P:`platform.users.manage` | Platform-wide; disable also disables the Keycloak account and ends sessions; not for self or a Super Admin |
+| GET | `/companies/{companyId}/memberships` | P:`platform.companies.read` or C:`company.users.read` | `status`, `role`, `q` (email/name prefix), paging, `sort=createdAt\|email\|displayName\|status\|joinedAt` |
+| GET | `/companies/{companyId}/memberships/{id}` | same | Member detail |
+| GET | `/companies/{companyId}/roles` | same | Assignable roles with permissions |
+| POST | `/companies/{companyId}/memberships/{id}/suspend` · `/reactivate` · `/deactivate` | P:`platform.companies.manage` or C:`company.users.manage` | Lifecycle; no self-changes; last admin protected (409 `LAST_ADMIN`); no acting on members with more permissions (403) |
+| PUT | `/companies/{companyId}/memberships/{id}/roles` | P:`platform.companies.manage` or C:`company.roles.assign` | Replace roles; only roles within the actor's own permissions |
+| POST | `/companies/{companyId}/invitations` | P:`platform.companies.manage` or C:`company.users.manage` | `{email, roles[], firstName?, lastName?}`; 409 `INVITATION_PENDING` / `DUPLICATE_MEMBERSHIP`; 400 if the domain is not allowed |
+| GET | `/companies/{companyId}/invitations` | P:`platform.companies.read` or C:`company.users.read` | `status`, paging, `sort` |
+| POST | `/companies/{companyId}/invitations/{id}/resend` · `/revoke` | P:`platform.companies.manage` or C:`company.users.manage` | Resend issues a new link and extends expiry; revoke deactivates the pending membership |
+| POST | `/invitations/accept` | Me | `{token}` in the body; 404 unknown/revoked/other user's; 410 `INVITATION_EXPIRED`; repeat is idempotent |
 
 ### Roles & permissions
 
@@ -161,8 +166,8 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/audit-logs` | P:`platform.audit.read` | Keyset search (actor, company, action, target, date range) |
-| GET | `/companies/{companyId}/audit-logs` | C:`company.audit.read` | Company-scoped audit trail |
+| GET | `/audit-logs` | P:`platform.audit.read` | Keyset search: `companyId`, `actorUserId`, `action` (prefix), `targetType`, `targetId`, `from`, `to`, `cursor`, `size` — implemented |
+| GET | `/companies/{companyId}/audit-logs` | P:`platform.audit.read` or C:`company.audit.read` | Company-scoped audit trail — implemented |
 | GET | `/platform/reports/overview` | P:`platform.reports.read` | Companies by status, active subscriptions, MRR estimate, provisioning failures |
 | GET | `/companies/{companyId}/dashboard` | C:`company.profile.read` | Company dashboard aggregates |
 | GET/PUT | `/platform/settings` | P:`platform.settings.manage` | Platform settings (non-secret) |
@@ -192,22 +197,22 @@ Rate-limited responses carry `X-RateLimit-Remaining`; 429 adds `Retry-After`.
 
 ```http
 POST /api/v1/companies
-Idempotency-Key: 7b1e…
 {
-  "code": "acme-industries",
+  "code": "acme",
   "legalName": "Acme Industries Pvt Ltd",
   "displayName": "Acme",
   "country": "IN",
-  "primaryContact": { "name": "R. Sharma", "email": "admin@acme.example" },
-  "initialAdminEmail": "admin@acme.example",
-  "subscriptions": [ { "planId": "0191…", "startTrial": true } ]
+  "timeZone": "Asia/Kolkata",
+  "primaryContact": { "name": "R. Sharma", "email": "owner@acme.example" },
+  "initialAdmin": { "email": "admin@acme.example", "firstName": "Riya", "lastName": "Sharma" }
 }
-→ 201 Created, Location: /api/v1/companies/0192…
-{ "id": "0192…", "code": "acme-industries", "status": "ACTIVE", "version": 0,
-  "initialAdminInvitation": { "id": "…", "status": "PENDING" },
-  "subscriptions": [ { "id": "…", "status": "TRIAL" } ],
-  "provisioning": [ { "productCode": "inventory", "jobStatus": "PENDING" } ] }
+→ 201 Created, Location: /api/v1/companies/01a1…, ETag: "0"
+{ "id": "01a1…", "code": "acme", "legalName": "Acme Industries Pvt Ltd", "displayName": "Acme",
+  "status": "ACTIVE", "country": "IN", "taxId": null, "createdAt": "…", "updatedAt": "…", "version": 0 }
 ```
+
+The initial admin's invitation is listed at `GET /companies/{id}/invitations`. Subscriptions are
+added in Phase 6. `Idempotency-Key` is planned (BACKLOG C-10); duplicate codes are already 409.
 
 Company creation, admin membership/invitation, subscriptions, entitlements and outbox events
 commit in one transaction; provisioning calls happen asynchronously after commit.

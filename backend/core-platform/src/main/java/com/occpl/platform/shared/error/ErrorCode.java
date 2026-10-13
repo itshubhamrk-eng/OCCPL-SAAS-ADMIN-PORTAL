@@ -22,6 +22,7 @@ public enum ErrorCode {
     LIMIT_EXCEEDED(HttpStatus.CONFLICT, "Usage limit exceeded"),
     IDEMPOTENCY_KEY_REUSED(HttpStatus.CONFLICT, "Idempotency key reused with a different request"),
     PRECONDITION_FAILED(HttpStatus.PRECONDITION_FAILED, "Resource was modified"),
+    INVITATION_EXPIRED(HttpStatus.GONE, "Invitation expired"),
     INVALID_STATE_TRANSITION(HttpStatus.UNPROCESSABLE_CONTENT, "Invalid state transition"),
     ENTITLEMENT_REQUIRED(HttpStatus.FORBIDDEN, "Product or feature not included in subscription"),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "Too many requests"),

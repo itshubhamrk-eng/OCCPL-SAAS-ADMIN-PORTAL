@@ -34,15 +34,17 @@ class AccessService implements AccessCatalog, PlatformAccess, CompanyAccess {
     private final RoleRepository roles;
     private final PlatformRoleAssignmentRepository platformAssignments;
     private final MembershipRoleRepository membershipRoles;
+    private final MembershipRoleAssignmentRepository membershipRoleAssignments;
     private final Clock clock;
 
     AccessService(PermissionRepository permissions, RoleRepository roles,
             PlatformRoleAssignmentRepository platformAssignments, MembershipRoleRepository membershipRoles,
-            Clock clock) {
+            MembershipRoleAssignmentRepository membershipRoleAssignments, Clock clock) {
         this.permissions = permissions;
         this.roles = roles;
         this.platformAssignments = platformAssignments;
         this.membershipRoles = membershipRoles;
+        this.membershipRoleAssignments = membershipRoleAssignments;
         this.clock = clock;
     }
 
@@ -106,6 +108,45 @@ class AccessService implements AccessCatalog, PlatformAccess, CompanyAccess {
                     new PlatformRoleAssignment(userId, requested.get(code).id(), clock.instant(), assignedBy));
         }
         return new PlatformRoleChange(added, removed, new TreeSet<>(roleCodes));
+    }
+
+    @Override
+    public List<RoleView> assignableRoles(UUID companyId) {
+        return roles.findAssignable(companyId).stream().map(Role::toView).toList();
+    }
+
+    @Override
+    public Set<String> permissionsOf(UUID companyId, Set<String> roleCodes) {
+        return resolveAssignable(companyId, roleCodes).values().stream()
+                .flatMap(r -> r.toView().permissions().stream())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public MembershipAccess replaceMembershipRoles(UUID companyId, UUID membershipId, Set<String> roleCodes,
+            UUID assignedBy) {
+        Map<String, Role> requested = resolveAssignable(companyId, roleCodes);
+        membershipRoleAssignments.deleteByMembershipId(membershipId);
+        membershipRoleAssignments.flush();
+        for (Role role : requested.values()) {
+            membershipRoleAssignments.save(new MembershipRoleAssignment(membershipId, role.id(), clock.instant(),
+                    assignedBy));
+        }
+        return new MembershipAccess(Set.copyOf(requested.keySet()), permissionsOf(companyId, roleCodes));
+    }
+
+    private Map<String, Role> resolveAssignable(UUID companyId, Set<String> roleCodes) {
+        Map<String, Role> assignable = roles.findAssignable(companyId).stream()
+                .collect(Collectors.toMap(Role::code, Function.identity()));
+        Set<String> unknown = new TreeSet<>(roleCodes);
+        unknown.removeAll(assignable.keySet());
+        if (!unknown.isEmpty()) {
+            throw ApiException.validation("Unknown company role(s): " + String.join(", ", unknown) + ".");
+        }
+        Map<String, Role> result = new HashMap<>();
+        roleCodes.forEach(code -> result.put(code, assignable.get(code)));
+        return result;
     }
 
     @Override

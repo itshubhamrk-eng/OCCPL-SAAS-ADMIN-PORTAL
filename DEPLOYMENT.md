@@ -26,6 +26,7 @@ cd infra/docker && cp .env.example .env   # edit the passwords
 docker compose up --build
 #   Portal http://localhost:4200 · API http://localhost:8080 · Swagger http://localhost:8080/swagger-ui.html
 #   Health http://localhost:8081/actuator/health · Keycloak http://localhost:8180
+#   Mail inbox (captures every outgoing email) http://localhost:8025
 
 # Or run the backend from source against the compose MySQL/Keycloak
 docker compose up -d mysql keycloak
@@ -63,6 +64,10 @@ Testcontainers) and `npm run format:check && npx ng lint && npm test && npx ng b
 | `RATE_LIMIT_ENABLED` | no (`true`) | |
 | `RATE_LIMIT_USER_PER_MINUTE` / `RATE_LIMIT_ANONYMOUS_PER_MINUTE` | no (600 / 60) | |
 | `OPENAPI_OIDC_ISSUER` | no | Browser-facing realm URL; enables "Authorize" in Swagger UI (non-production) |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_AUTH` / `SMTP_STARTTLS` | yes (prod) | Outgoing email (invitations); use TLS and credentials in production |
+| `MAIL_FROM` | no | Sender, default `OCCPL Innovations <no-reply@occpl.local>` |
+| `INVITATION_ACCEPT_URL` | yes (prod) | Portal page that accepts invitations (`?token=` appended); must be a valid redirect URI of the portal client in Keycloak |
+| `INVITATION_VALIDITY` | no (`7d`) | |
 
 Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
 (space-separated origins of the API and IdP).
@@ -77,6 +82,10 @@ Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CO
    apply only after signing in with the authenticator code.
 4. Remove `BOOTSTRAP_SUPER_ADMIN_EMAIL`. Further Super Admins are assigned through
    `PUT /api/v1/platform/users/{userId}/roles`.
+
+Keycloak itself must have SMTP configured in every environment (realm settings → Email); the
+local realm import points it at Mailpit. Production: configure the provider's SMTP host and
+credentials in the realm, not in the realm import file.
 
 ### Trying the API locally
 

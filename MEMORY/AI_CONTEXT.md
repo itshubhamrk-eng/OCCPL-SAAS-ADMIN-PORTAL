@@ -5,8 +5,9 @@ users/memberships, roles/permissions, product catalogue, plans, subscriptions, e
 provisioning, billing integration (Razorpay), audit, notifications. Products are separate services
 that own their data. Core contains no product business logic.
 
-**Current phase**: Phase 3 (Identity & access) done 2026-10-13; **wait for approval before Phase 4**
-(Company & membership management: BACKLOG C-1…C-4). Open from Phase 3: dedicated expired-token test (I-1).
+**Current phase**: Phase 4 (Company & membership management) done 2026-10-13; **wait for approval
+before Phase 5** (Product catalogue: BACKLOG PC-1…PC-3). Open follow-ups: I-1 expired-token test,
+C-8 custom roles, C-9 Keycloak email theme, C-10 Idempotency-Key, C-11 seat limits (Phase 6).
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,
@@ -27,7 +28,14 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
 - UUID v7 `BINARY(16)`, UTC `DATETIME(6)`, `version` optimistic lock, Flyway only,
   `ddl-auto=validate`, expand/contract migrations, migrator vs DML-only app DB user.
 - Errors: throw `ApiException(ErrorCode, detail)`; never return entities; paging via `PageRequests`.
-- Module deps: identity→access,audit; membership→identity,access,company; access/company/audit→shared only.
+- Module deps: identity→access,audit; company→identity,audit; membership→identity,access,company,audit,notification;
+  access/audit/notification→shared only. `MembershipQueries` is the documented read-only cross-module SQL exception.
+- List endpoints take `SortParams` (raw `sort` values) — a plain `List<String> sort` gets split at commas.
+- Background jobs: `@Scheduled`, multi-instance safe (SKIP LOCKED / idempotent UPDATE); disabled in tests
+  (`occpl.scheduling.enabled=false`) — call `NotificationDispatcher.dispatchDue()` / `InvitationService.expireOverdue()`.
+- Invitation tokens: SHA-256 stored; new users → Keycloak execute-actions email (redirect to accept URL),
+  existing users → `Notifications.enqueue` email. Tests capture tokens from the IdP mock or the notification row.
+- Shared test containers: `MySqlTestDatabase`, `KeycloakTestServer` (GreenMail on host port 3025).
 - Current user: `CurrentUser.require()` (identity api); audit actor via `shared.security.Actor`.
 - Company endpoints: `@PreAuthorize("@tenant.check(#companyId, '<company perm>', '<platform perm>')")`,
   then `TenantContext.current()`. Platform endpoints: `hasAuthority('<platform perm>')`.

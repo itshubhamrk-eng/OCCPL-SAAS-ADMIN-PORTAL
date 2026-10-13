@@ -86,6 +86,45 @@ final class KeycloakLoginFlow {
         return m.group(1);
     }
 
+    /**
+     * Opens a Keycloak "required actions" email link, sets {@code newPassword} and returns the URL the
+     * user is finally sent to (the redirect_uri given when the email was requested).
+     */
+    String completeActionsEmail(String link, String newPassword) throws Exception {
+        HttpResponse<String> response = send(HttpRequest.newBuilder(URI.create(link)).GET().build());
+        for (int step = 0; step < 8; step++) {
+            if (response.statusCode() / 100 == 3) {
+                URI target = response.uri().resolve(response.headers().firstValue("Location").orElseThrow());
+                if (target.toString().startsWith("http://localhost:4200")) {
+                    return target.toString();
+                }
+                response = send(withCookies(HttpRequest.newBuilder(target)).GET().build());
+                continue;
+            }
+            String html = response.body();
+            if (html.contains("kc-passwd-update-form")) {
+                response = send(withCookies(HttpRequest.newBuilder(URI.create(formAction(html, "kc-passwd-update-form"))))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(form(Map.of("password-new", newPassword,
+                                "password-confirm", newPassword)))).build());
+                continue;
+            }
+            Matcher proceed = Pattern.compile("href=\"([^\"]+)\"[^>]*>[^<]{0,20}?(Click here to proceed|Back to Application)",
+                    Pattern.CASE_INSENSITIVE).matcher(html);
+            if (proceed.find()) {
+                URI target = response.uri().resolve(unescape(proceed.group(1)));
+                if (target.toString().startsWith("http://localhost:4200")) {
+                    return target.toString();
+                }
+                response = send(withCookies(HttpRequest.newBuilder(target)).GET().build());
+                continue;
+            }
+            java.nio.file.Files.writeString(java.nio.file.Path.of("target/keycloak-unexpected-page.html"), html);
+            throw new IllegalStateException("Unexpected Keycloak page: " + snippet(html));
+        }
+        throw new IllegalStateException("Required actions did not complete");
+    }
+
     /** Blocks until the next 30-second OTP window, because a code cannot be reused within its window. */
     static void awaitNextOtpWindow() throws InterruptedException {
         long now = System.currentTimeMillis();

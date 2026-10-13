@@ -3,6 +3,7 @@ package com.occpl.platform.company.internal;
 import com.occpl.platform.company.api.CompanyDirectory;
 import com.occpl.platform.company.api.CompanySummary;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 class JpaCompanyDirectory implements CompanyDirectory {
 
     private final CompanyRepository repository;
+    private final CompanySettingsRepository settings;
 
-    JpaCompanyDirectory(CompanyRepository repository) {
+    JpaCompanyDirectory(CompanyRepository repository, CompanySettingsRepository settings) {
         this.repository = repository;
+        this.settings = settings;
     }
 
     @Override
@@ -34,5 +37,10 @@ class JpaCompanyDirectory implements CompanyDirectory {
         return repository.findAllById(companyIds).stream()
                 .map(Company::toSummary)
                 .collect(Collectors.toMap(CompanySummary::id, Function.identity()));
+    }
+
+    @Override
+    public List<String> allowedEmailDomains(UUID companyId) {
+        return settings.findById(companyId).map(CompanySettings::allowedEmailDomains).orElse(List.of());
     }
 }

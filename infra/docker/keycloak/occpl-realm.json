@@ -187,5 +187,11 @@
         "default.reference.maxAge": "36000"
       }
     }
-  ]
+  ],
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "no-reply@occpl.local",
+    "fromDisplayName": "OCCPL Sign-in"
+  }
 }

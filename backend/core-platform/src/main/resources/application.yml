@@ -29,6 +29,17 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   security:
     oauth2:
       resourceserver:
@@ -45,6 +56,10 @@ server:
     include-message: never
 
 management:
+  health:
+    mail:
+      # SMTP outages are handled by retries; they must not fail readiness or the overall health.
+      enabled: false
   server:
     port: 8081
   endpoints:
@@ -93,6 +108,13 @@ occpl:
   openapi:
     # Browser-facing realm URL; enables "Authorize" with Keycloak in Swagger UI (non-production only).
     oidc-issuer: ${OPENAPI_OIDC_ISSUER:}
+  notifications:
+    from: ${MAIL_FROM:OCCPL Innovations <no-reply@occpl.local>}
+  invitations:
+    # Portal page that completes an invitation; the token is appended as ?token=…
+    accept-url: ${INVITATION_ACCEPT_URL:http://localhost:4200/invitations/accept}
+    validity: ${INVITATION_VALIDITY:7d}
+    portal-client-id: ${OIDC_PORTAL_CLIENT_ID:occpl-admin-portal}
   rate-limit:
     enabled: ${RATE_LIMIT_ENABLED:true}
     redis-url: ${REDIS_URL:redis://localhost:6379}

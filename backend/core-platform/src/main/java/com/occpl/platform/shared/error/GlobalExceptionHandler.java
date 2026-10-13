@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -50,6 +51,13 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ResponseEntity<ProblemDetail> handleOptimisticLock(HttpServletRequest request) {
         return respond(Problems.of(ErrorCode.PRECONDITION_FAILED,
                 "The resource was modified by another request. Reload and retry.", request.getRequestURI()));
+    }
+
+    /** A unique or foreign-key constraint rejected the change (e.g. a concurrent duplicate). */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ProblemDetail> handleDataIntegrity(HttpServletRequest request) {
+        return respond(Problems.of(ErrorCode.CONFLICT, "The request conflicts with existing data.",
+                request.getRequestURI()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

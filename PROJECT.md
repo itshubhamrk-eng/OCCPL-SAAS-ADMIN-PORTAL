@@ -1,6 +1,6 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 3 (Identity & access) complete — awaiting approval for Phase 4 (Company & membership management).**
+Status: **Phase 4 (Company & membership management) complete — awaiting approval for Phase 5 (Product catalogue).**
 Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective
@@ -112,7 +112,7 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | D-5 | Grace period, retention after cancel/expiry | **Deferred:** decided when subscriptions are implemented (Phase 6); must be configurable |
 | D-6 | Confirm SLOs in §2 | Open — needed by Phase 9 |
 | D-7 | Company Admin self-serve purchases? | Open — default: Super Admin assigns plans |
-| D-8 | Self-registration vs invitation only | Open — default: invitation only |
+| D-8 | Self-registration vs invitation only | **Applied default:** invitation only (Phase 4) |
 | D-9 | Product launch model (subdomains + SSO vs path-based) | Open — needed by Phase 7 |
 | D-10 | Personal-data retention/export obligations (DPDP Act 2023, contracts) | Open — needed by Phase 9 |
 

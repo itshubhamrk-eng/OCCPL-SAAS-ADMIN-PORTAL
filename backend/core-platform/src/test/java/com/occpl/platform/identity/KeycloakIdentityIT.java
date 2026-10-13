@@ -5,20 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.occpl.platform.identity.api.IdentityProviderAdmin;
 import com.occpl.platform.identity.api.IdentityProviderAdmin.IdpUser;
 import com.occpl.platform.identity.api.IdentityProviderAdmin.RequiredAction;
+import com.occpl.platform.support.KeycloakTestServer;
 import com.occpl.platform.support.MySqlTestDatabase;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,9 +22,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.utility.MountableFile;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -44,32 +35,15 @@ import tools.jackson.databind.json.JsonMapper;
         properties = {"server.port=0", "management.server.port=0"})
 class KeycloakIdentityIT {
 
-    private static final String ADMIN_CLIENT_SECRET = "integration-test-secret";
     private static final String BOOTSTRAP_EMAIL = "root@occpl.test";
-    private static final String PASSWORD = "Integration-Test-Passw0rd!";
-
-    @SuppressWarnings("resource")
-    static final GenericContainer<?> KEYCLOAK = new GenericContainer<>("keycloak/keycloak:26.8.1")
-            .withCommand("start-dev", "--import-realm")
-            .withEnv("KC_BOOTSTRAP_ADMIN_USERNAME", "admin")
-            .withEnv("KC_BOOTSTRAP_ADMIN_PASSWORD", "admin")
-            .withEnv("KC_HEALTH_ENABLED", "true")
-            .withEnv("KEYCLOAK_ADMIN_CLIENT_SECRET", ADMIN_CLIENT_SECRET)
-            .withCopyFileToContainer(MountableFile.forHostPath(Path.of("../../infra/docker/keycloak/occpl-realm.json")),
-                    "/opt/keycloak/data/import/occpl-realm.json")
-            .withExposedPorts(8080, 9000)
-            .waitingFor(Wait.forHttp("/health/ready").forPort(9000).withStartupTimeout(Duration.ofMinutes(3)));
-
-    static {
-        KEYCLOAK.start();
-    }
+    private static final String PASSWORD = KeycloakTestServer.PASSWORD;
 
     static String baseUrl() {
-        return "http://localhost:" + KEYCLOAK.getMappedPort(8080);
+        return KeycloakTestServer.baseUrl();
     }
 
     static String realmUrl() {
-        return baseUrl() + "/realms/occpl";
+        return KeycloakTestServer.realmUrl();
     }
 
     @DynamicPropertySource
@@ -77,7 +51,7 @@ class KeycloakIdentityIT {
         MySqlTestDatabase.register(registry);
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", KeycloakIdentityIT::realmUrl);
         registry.add("occpl.identity.keycloak.base-url", KeycloakIdentityIT::baseUrl);
-        registry.add("occpl.identity.keycloak.client-secret", () -> ADMIN_CLIENT_SECRET);
+        registry.add("occpl.identity.keycloak.client-secret", () -> KeycloakTestServer.ADMIN_CLIENT_SECRET);
         registry.add("occpl.identity.bootstrap-super-admin-email", () -> BOOTSTRAP_EMAIL);
     }
 
@@ -92,17 +66,6 @@ class KeycloakIdentityIT {
 
     @Autowired
     JdbcTemplate jdbc;
-
-    @BeforeAll
-    static void createTestClients() throws Exception {
-        // Password-grant clients exist only for tests; the realm itself allows no password grant.
-        createClient(Map.of("clientId", "it-direct", "publicClient", true, "directAccessGrantsEnabled", true,
-                "standardFlowEnabled", false, "protocolMappers", List.of(Map.of("name", "aud",
-                        "protocol", "openid-connect", "protocolMapper", "oidc-audience-mapper",
-                        "config", Map.of("included.custom.audience", "occpl-core", "access.token.claim", "true")))));
-        createClient(Map.of("clientId", "it-noaud", "publicClient", true, "directAccessGrantsEnabled", true,
-                "standardFlowEnabled", false));
-    }
 
     @Test
     void adminClientManagesUsersThroughServiceAccount() {
@@ -175,44 +138,16 @@ class KeycloakIdentityIT {
     /** Creates an enabled user with verified email and a password, via the Core admin client and master admin. */
     private String readyUser(String email) throws Exception {
         String subject = idp.createUser(email, "Test", "User", Set.of());
-        String admin = masterAdminToken();
-        send("PUT", baseUrl() + "/admin/realms/occpl/users/" + subject, admin, "{\"emailVerified\":true}");
-        send("PUT", baseUrl() + "/admin/realms/occpl/users/" + subject + "/reset-password", admin,
-                "{\"type\":\"password\",\"value\":\"" + PASSWORD + "\",\"temporary\":false}");
+        KeycloakTestServer.makeReady(subject);
         return subject;
     }
 
     private static String passwordGrant(String clientId, String username) throws Exception {
-        return token(realmUrl(), "grant_type=password&client_id=" + clientId + "&username="
-                + URLEncoder.encode(username, StandardCharsets.UTF_8) + "&password="
-                + URLEncoder.encode(PASSWORD, StandardCharsets.UTF_8));
+        return KeycloakTestServer.passwordGrant(clientId, username);
     }
 
     private static String masterAdminToken() throws Exception {
-        return token(baseUrl() + "/realms/master", "grant_type=password&client_id=admin-cli&username=admin&password=admin");
-    }
-
-    private static String token(String realm, String form) throws Exception {
-        HttpResponse<String> response = HTTP.send(HttpRequest.newBuilder(URI.create(realm + "/protocol/openid-connect/token"))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(form)).build(), HttpResponse.BodyHandlers.ofString());
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        return JSON.readTree(response.body()).get("access_token").asString();
-    }
-
-    private static void createClient(Map<String, Object> client) throws Exception {
-        HttpResponse<String> response = send("POST", baseUrl() + "/admin/realms/occpl/clients", masterAdminToken(),
-                JSON.writeValueAsString(client));
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(201);
-    }
-
-    private static HttpResponse<String> send(String method, String url, String bearer, String json) throws Exception {
-        HttpResponse<String> response = HTTP.send(HttpRequest.newBuilder(URI.create(url))
-                .header("Authorization", "Bearer " + bearer).header("Content-Type", "application/json")
-                .method(method, json == null ? HttpRequest.BodyPublishers.noBody()
-                        : HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
-        assertThat(response.statusCode() / 100).as(method + " " + url + ": " + response.body()).isEqualTo(2);
-        return response;
+        return KeycloakTestServer.masterAdminToken();
     }
 
     private HttpResponse<String> api(String method, String path, String bearer, String json) throws Exception {
