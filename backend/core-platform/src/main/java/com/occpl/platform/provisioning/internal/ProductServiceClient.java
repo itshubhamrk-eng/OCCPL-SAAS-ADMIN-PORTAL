@@ -32,7 +32,9 @@ class ProductServiceClient {
         this.jsonMapper = jsonMapper;
     }
 
-    record Call(UUID jobId, ProvisioningJob.Operation operation, URI uri, Map<String, Object> body, Duration timeout) {
+    /** @param audience the product's API audience; the service token is limited to it */
+    record Call(UUID jobId, ProvisioningJob.Operation operation, URI uri, Map<String, Object> body, Duration timeout,
+            String audience) {
     }
 
     /** {@code status} is null when no HTTP response was received; {@code error} explains failures. */
@@ -51,7 +53,7 @@ class ProductServiceClient {
     Result execute(Call call) {
         String token;
         try {
-            token = tokens.token();
+            token = tokens.token(call.audience());
         } catch (ServiceTokenProvider.TokenUnavailableException e) {
             return new Result(null, e.getMessage());
         }
@@ -69,7 +71,7 @@ class ProductServiceClient {
             HttpResponse<String> response = http.send(request.build(), HttpResponse.BodyHandlers.ofString());
             int status = response.statusCode();
             if (status == 401) {
-                tokens.invalidate();
+                tokens.invalidate(call.audience());
             }
             if (status >= 200 && status < 300) {
                 return new Result(status, null);

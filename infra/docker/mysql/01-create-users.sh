@@ -14,5 +14,11 @@ CREATE USER IF NOT EXISTS 'sample_migrator'@'%' IDENTIFIED BY '${SAMPLE_DB_MIGRA
 CREATE USER IF NOT EXISTS 'sample_app'@'%' IDENTIFIED BY '${SAMPLE_DB_APP_PASSWORD}';
 GRANT ALL PRIVILEGES ON occpl_sample.* TO 'sample_migrator'@'%';
 GRANT SELECT, INSERT, UPDATE, DELETE ON occpl_sample.* TO 'sample_app'@'%';
+
+-- Backups (infra/backup): consistent dumps and binary-log streaming, no write access.
+CREATE USER IF NOT EXISTS 'occpl_backup'@'%' IDENTIFIED BY '${DB_BACKUP_PASSWORD}';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES ON occpl_core.* TO 'occpl_backup'@'%';
+GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES ON occpl_sample.* TO 'occpl_backup'@'%';
+GRANT RELOAD, PROCESS, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO 'occpl_backup'@'%';
 FLUSH PRIVILEGES;
 SQL

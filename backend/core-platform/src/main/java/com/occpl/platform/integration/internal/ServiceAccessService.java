@@ -53,6 +53,12 @@ public class ServiceAccessService {
     public AccessCheck check(ProductSummary product, UUID companyId, String userSubject, String featureCode) {
         UUID userId = null;
         Set<String> roles = Set.of();
+        // Entitlement first: a product learns nothing about the members of companies that do not use it.
+        AccessDecision decision = entitlements.check(companyId, product.code(), featureCode);
+        if (decision.reason() == Entitlements.Reason.COMPANY_INACTIVE
+                || decision.reason() == Entitlements.Reason.NO_ENTITLEMENT) {
+            return denied(Reason.valueOf(decision.reason().name()), product, companyId, null, roles);
+        }
         if (userSubject != null && !userSubject.isBlank()) {
             Optional<UserSummary> user = users.findBySubject(userSubject);
             if (user.isEmpty()) {
@@ -71,7 +77,6 @@ public class ServiceAccessService {
                 return denied(Reason.NOT_PERMITTED, product, companyId, userId, roles);
             }
         }
-        AccessDecision decision = entitlements.check(companyId, product.code(), featureCode);
         return new AccessCheck(decision.allowed(), Reason.valueOf(decision.reason().name()), product.code(),
                 companyId, userId, roles, decision.status(), decision.limit(), decision.used(), decision.remaining());
     }

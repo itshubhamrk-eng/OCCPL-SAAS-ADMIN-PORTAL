@@ -9,14 +9,17 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Access tokens for Core's own service client ({@code occpl-core-services}, client-credentials
- * grant). Keycloak adds each product's audience through audience mappers on that client, so one
- * cached token serves every product.
+ * grant), one per product: the token is requested with {@code scope=<product apiAudience>}, an
+ * optional client scope that adds only that product's audience. A product therefore cannot replay
+ * the token it receives against another product (SECURITY.md §4). Tokens are cached per audience.
  */
 @Component
 class ServiceTokenProvider {
@@ -28,8 +31,10 @@ class ServiceTokenProvider {
     private final Clock clock;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
-    private volatile String token;
-    private volatile Instant expiry = Instant.EPOCH;
+    private record Cached(String token, Instant expiry) {
+    }
+
+    private final Map<String, Cached> cache = new ConcurrentHashMap<>();
 
     ServiceTokenProvider(ProvisioningProperties properties, JsonMapper jsonMapper, Clock clock) {
         this.properties = properties;
@@ -50,16 +55,20 @@ class ServiceTokenProvider {
                 && properties.clientSecret() != null && !properties.clientSecret().isBlank();
     }
 
-    synchronized String token() throws TokenUnavailableException {
-        if (token != null && clock.instant().isBefore(expiry.minus(REFRESH_MARGIN))) {
-            return token;
+    /** A token for the product with this API audience ({@code null}: no product scope requested). */
+    String token(String audience) throws TokenUnavailableException {
+        String key = audience == null ? "" : audience;
+        Cached cached = cache.get(key);
+        if (cached != null && clock.instant().isBefore(cached.expiry().minus(REFRESH_MARGIN))) {
+            return cached.token();
         }
         if (!configured()) {
             throw new TokenUnavailableException("Service credentials are not configured "
                     + "(PROVISIONING_TOKEN_URI / PROVISIONING_CLIENT_SECRET).");
         }
         String form = "grant_type=client_credentials&client_id=" + encode(properties.clientId())
-                + "&client_secret=" + encode(properties.clientSecret());
+                + "&client_secret=" + encode(properties.clientSecret())
+                + (audience == null ? "" : "&scope=" + encode(audience));
         try {
             HttpResponse<String> response = http.send(HttpRequest.newBuilder(URI.create(properties.tokenUri()))
                     .timeout(Duration.ofSeconds(10))
@@ -73,9 +82,8 @@ class ServiceTokenProvider {
             if (accessToken == null) {
                 throw new TokenUnavailableException("Token endpoint returned no access_token.");
             }
-            token = accessToken;
-            expiry = clock.instant().plusSeconds(body.path("expires_in").asLong(60));
-            return token;
+            cache.put(key, new Cached(accessToken, clock.instant().plusSeconds(body.path("expires_in").asLong(60))));
+            return accessToken;
         } catch (java.io.IOException e) {
             throw new TokenUnavailableException("Token endpoint unreachable: " + e.getMessage());
         } catch (InterruptedException e) {
@@ -84,10 +92,9 @@ class ServiceTokenProvider {
         }
     }
 
-    /** Forgets the cached token (e.g. after a product answered 401). */
-    synchronized void invalidate() {
-        token = null;
-        expiry = Instant.EPOCH;
+    /** Forgets the cached token for this audience (e.g. after the product answered 401). */
+    void invalidate(String audience) {
+        cache.remove(audience == null ? "" : audience);
     }
 
     private static String encode(String value) {

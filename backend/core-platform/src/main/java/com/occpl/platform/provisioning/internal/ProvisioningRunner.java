@@ -127,7 +127,7 @@ public class ProvisioningRunner {
                 + ProductSettings.expand(settings.provisioningPath(), job.companyId(), company.get().code()));
         return Optional.of(new Claimed(job.id(), job.attempts(), settings.mode(),
                 new Call(job.id(), job.operation(), uri, body(job, product.get(), company.get(), settings),
-                        settings.timeout())));
+                        settings.timeout(), product.get().apiAudience())));
     }
 
     private Map<String, Object> body(ProvisioningJob job, ProductSummary product, CompanySummary company,

@@ -42,6 +42,7 @@ public final class ProductServiceStub implements AutoCloseable {
     private final List<Request> requests = new CopyOnWriteArrayList<>();
     private final Map<String, Deque<Response>> scripts = new ConcurrentHashMap<>();
     private volatile int tokenRequests;
+    private final List<String> tokenRequestBodies = new CopyOnWriteArrayList<>();
 
     public ProductServiceStub() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -71,11 +72,17 @@ public final class ProductServiceStub implements AutoCloseable {
         return tokenRequests;
     }
 
+    /** Form bodies of the token requests (e.g. to check the requested {@code scope}). */
+    public List<String> tokenRequestBodies() {
+        return List.copyOf(tokenRequestBodies);
+    }
+
     private void handle(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         if (path.equals("/token")) {
             tokenRequests++;
+            tokenRequestBodies.add(body);
             boolean ok = body.contains("grant_type=client_credentials") && body.contains("client_secret=test-secret");
             respond(exchange, ok ? 200 : 401, ok ? "{\"access_token\":\"" + TOKEN + "\",\"expires_in\":300}" : "{}");
             return;

@@ -37,7 +37,7 @@ public class PaymentEvents {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentEvents.class);
 
-    public enum Outcome { PROCESSED, DUPLICATE, IGNORED, UNKNOWN_INVOICE }
+    public enum Outcome { PROCESSED, DUPLICATE, IGNORED, UNKNOWN_INVOICE, AMOUNT_MISMATCH }
 
     private final InvoiceRepository invoices;
     private final PaymentTransactionRepository payments;
@@ -133,6 +133,14 @@ public class PaymentEvents {
         }
         switch (state) {
             case "paid" -> {
+                if (amountPaidMinor < invoice.amountMinor()) {
+                    // Never extend a subscription for less than the invoiced amount, whatever the event says.
+                    log.warn("Invoice {} reported paid with {} of {}; left unpaid for staff review", invoice.id(),
+                            amountPaidMinor, invoice.amountMinor());
+                    invoiceService.auditInvoice("billing.payment_mismatch", invoice,
+                            Map.of("amountPaidMinor", amountPaidMinor, "amountMinor", invoice.amountMinor()));
+                    return Outcome.AMOUNT_MISMATCH;
+                }
                 if (invoice.markPaid(amountPaidMinor, paidAt, now)) {
                     PaymentResult result = subscriptions.applyPayment(invoice.subscriptionId(), invoice.periodStart());
                     invoice.paymentApplied(result);

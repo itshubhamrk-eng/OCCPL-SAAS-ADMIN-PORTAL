@@ -336,8 +336,23 @@ class SubscriptionsAndEntitlementsIT {
         signIn("owner", false);
         data.membership(company, data.userIdByEmail(email("owner")), "ACTIVE", TestData.COMPANY_ADMIN_ROLE);
 
-        invite(company, "first").andExpect(status().isCreated());
+        JsonNode first = body(invite(company, "first").andExpect(status().isCreated()));
         invite(company, "second").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("LIMIT_EXCEEDED"));
+
+        // Deactivating an invited member frees the seat and revokes the pending invitation, so neither
+        // accepting nor re-sending it can bring the member back on top of the new one.
+        String companyPath = "/api/v1/companies/" + company;
+        perform(post(companyPath + "/memberships/" + first.get("membershipId").asString() + "/deactivate"), "owner", "{}")
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select status from invitation where id = UUID_TO_BIN(?)", String.class,
+                first.get("id").asString())).isEqualTo("REVOKED");
+        invite(company, "second").andExpect(status().isCreated());
+        perform(post(companyPath + "/invitations/" + first.get("id").asString() + "/resend"), "owner", null)
+                .andExpect(status().isUnprocessableContent());
+        // An expired invitation of a deactivated member can be re-sent only if a seat is free.
+        jdbc.update("update invitation set status = 'EXPIRED' where id = UUID_TO_BIN(?)", first.get("id").asString());
+        perform(post(companyPath + "/invitations/" + first.get("id").asString() + "/resend"), "owner", null)
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("LIMIT_EXCEEDED"));
 
         signIn("parked", false);
         String parked = data.membership(company, data.userIdByEmail(email("parked")), "SUSPENDED",

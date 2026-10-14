@@ -55,15 +55,21 @@ public class TenantAuthorization {
         CurrentUser user = CurrentUser.require();
 
         if (platformPermission != null && user.hasPlatformPermission(platformPermission)) {
-            companies.find(companyId).orElseThrow(() -> ApiException.notFound("Company"));
+            if (CompanyPathGuard.verified(companyId).isEmpty()) {
+                companies.find(companyId).orElseThrow(() -> ApiException.notFound("Company"));
+            }
             TenantContext.set(new TenantContext(companyId, null, Set.of()));
             return true;
         }
 
-        CompanyMembership membership = memberships.findByCompanyIdAndUserId(companyId, user.userId())
-                .filter(m -> m.status() == MembershipStatus.ACTIVE)
-                .orElseThrow(() -> ApiException.notFound("Company"));
-        CompanySummary company = companies.find(companyId)
+        CompanyPathGuard.Verified verified = CompanyPathGuard.verified(companyId)
+                .filter(v -> v.membership() != null && v.membership().userId().equals(user.userId()))
+                .orElse(null);
+        CompanyMembership membership = verified != null ? verified.membership()
+                : memberships.findByCompanyIdAndUserId(companyId, user.userId())
+                        .filter(m -> m.status() == MembershipStatus.ACTIVE)
+                        .orElseThrow(() -> ApiException.notFound("Company"));
+        CompanySummary company = verified != null ? verified.company() : companies.find(companyId)
                 .filter(c -> c.status() != CompanyStatus.DEACTIVATED)
                 .orElseThrow(() -> ApiException.notFound("Company"));
         if ((company.status() == CompanyStatus.SUSPENDED || company.status() == CompanyStatus.PENDING)

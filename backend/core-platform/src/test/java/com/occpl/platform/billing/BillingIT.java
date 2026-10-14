@@ -270,6 +270,22 @@ class BillingIT {
     }
 
     @Test
+    void underpaidInvoicesAreNotPaidAndOversizedWebhooksAreRefused() throws Exception {
+        UUID company = companyWithContact("bu");
+        String sub = subscribe(company, plan, false);
+        JsonNode invoice = body(createInvoice(company, sub));
+        Instant periodEnd = periodEnd(sub);
+        String underpaid = paidEvent(invoice.get("gatewayInvoiceId").asString(), 100, "pay_u_" + run);
+        webhook(underpaid, "evt_under_" + run, sign(underpaid)).andExpect(jsonPath("$.outcome").value("AMOUNT_MISMATCH"));
+        assertThat(invoiceStatus(invoice)).isEqualTo("ISSUED");
+        assertThat(periodEnd(sub)).isEqualTo(periodEnd);
+        assertThat(audits("billing.payment_mismatch", company)).isEqualTo(1);
+
+        String huge = "{\"event\":\"invoice.paid\",\"pad\":\"" + "x".repeat(70 * 1024) + "\"}";
+        webhook(huge, "evt_huge_" + run, sign(huge)).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void renewalInvoicesAreCreatedAheadOfThePeriodEndOnce() throws Exception {
         UUID company = companyWithContact("bs");
         String due = subscribe(company, plan, false);

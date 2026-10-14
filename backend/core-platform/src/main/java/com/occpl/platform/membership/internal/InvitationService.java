@@ -100,6 +100,8 @@ public class InvitationService {
                 case SUSPENDED -> throw new ApiException(ErrorCode.CONFLICT,
                         "This user's membership is suspended; reactivate it instead.");
                 case INVITED, DEACTIVATED -> {
+                    // The roles are replaced: the caller must hold what the member has now, too.
+                    guards.requireWithinOwnPermissions(rolesOf(membership.id()).permissions(), Set.of());
                     if (invitations.findFirstByMembershipIdAndStatus(membership.id(), Invitation.Status.PENDING)
                             .filter(i -> !i.isExpired(now)).isPresent()) {
                         throw new ApiException(ErrorCode.INVITATION_PENDING,
@@ -134,6 +136,9 @@ public class InvitationService {
         Set<String> roles = rolesOf(membership.id()).roleCodes();
         guards.requireWithinOwnPermissions(rolesOf(membership.id()).permissions(), Set.of());
         Instant now = clock.instant();
+        if (membership.status() == MembershipStatus.DEACTIVATED) {
+            guards.requireFreeSeat(companyId); // re-sending brings a deactivated member back
+        }
         if (membership.status() != MembershipStatus.INVITED) {
             membership.reinvite(now);
         }

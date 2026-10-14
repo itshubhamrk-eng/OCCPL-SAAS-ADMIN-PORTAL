@@ -11,6 +11,8 @@ logging:
     format:
       console: ""
 occpl:
+  catalog:
+    allow-local-urls: true # product stubs run on 127.0.0.1
   scheduling:
     enabled: false
   rate-limit:

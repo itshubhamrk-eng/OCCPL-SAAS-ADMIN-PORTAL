@@ -77,6 +77,7 @@ class CoreAndSampleProductE2EIT {
         registry.add("occpl.provisioning.token-uri",
                 () -> KeycloakTestServer.realmUrl() + "/protocol/openid-connect/token");
         registry.add("occpl.provisioning.client-secret", () -> KeycloakTestServer.CORE_SERVICES_CLIENT_SECRET);
+        registry.add("occpl.catalog.allow-local-urls", () -> "true"); // the sample product runs on 127.0.0.1
     }
 
     @AfterAll

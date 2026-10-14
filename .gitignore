@@ -16,3 +16,6 @@ coverage/
 # Local secrets — never commit
 .env
 *.env.local
+
+# Load-test tokens (load-tests/setup.py)
+load-tests/tokens.json

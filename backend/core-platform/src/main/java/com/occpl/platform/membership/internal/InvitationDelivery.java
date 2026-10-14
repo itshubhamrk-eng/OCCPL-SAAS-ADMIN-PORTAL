@@ -79,7 +79,9 @@ class InvitationDelivery {
             }
         } catch (RuntimeException e) {
             meters.counter("occpl.invitations.delivery_failures").increment();
-            log.error("Failed to deliver invitation {}; it can be re-sent", event.invitationId(), e);
+            // Not the exception itself: client errors may quote the request URL, which carries the invitation token.
+            log.error("Failed to deliver invitation {} ({}); it can be re-sent", event.invitationId(),
+                    e.getClass().getName());
         }
     }
 

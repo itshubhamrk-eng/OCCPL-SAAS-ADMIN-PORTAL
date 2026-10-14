@@ -16,6 +16,7 @@ services:
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set in .env}
       SAMPLE_DB_MIGRATOR_PASSWORD: ${SAMPLE_DB_MIGRATOR_PASSWORD:?set in .env}
       SAMPLE_DB_APP_PASSWORD: ${SAMPLE_DB_APP_PASSWORD:?set in .env}
+      DB_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?set in .env}
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
     ports:
       - "127.0.0.1:3306:3306"
@@ -109,6 +110,8 @@ services:
       INVITATION_ACCEPT_URL: http://localhost:4200/invitations/accept
       PROVISIONING_CLIENT_SECRET: ${PROVISIONING_CLIENT_SECRET}
       PROVISIONING_CALLBACK_BASE_URL: http://core-platform:8080
+      # Local development: lets the sample product be registered at http://product-sample.localhost:8090.
+      CATALOG_ALLOW_LOCAL_URLS: "true"
       PROVISIONING_ALERT_RECIPIENTS: ${PROVISIONING_ALERT_RECIPIENTS:-}
       # Billing stays disabled until both keys are set (use Razorpay test-mode keys locally).
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}

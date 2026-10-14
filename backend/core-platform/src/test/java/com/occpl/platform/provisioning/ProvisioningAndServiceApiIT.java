@@ -182,6 +182,8 @@ class ProvisioningAndServiceApiIT {
         assertThat(call.method()).isEqualTo("PUT");
         assertThat(call.path()).isEqualTo("/provisioning/v1/tenants/" + company);
         assertThat(call.header("Authorization")).isEqualTo("Bearer " + ProductServiceStub.TOKEN);
+        // The token was requested for this product's audience only, so it cannot be replayed at other products.
+        assertThat(stub.tokenRequestBodies()).anyMatch(b -> b.contains("scope=" + product.code + "-api"));
         assertThat(call.header("Idempotency-Key")).isEqualTo(job.get("id").asString());
         JsonNode body = json.readTree(call.body());
         assertThat(body.get("companyCode").asString()).isEqualTo("pa-" + run);
@@ -369,7 +371,8 @@ class ProvisioningAndServiceApiIT {
         String clientId = "svc-" + code;
         String id = body(perform(post("/api/v1/products"), "root", "{\"code\":\"" + code + "\",\"name\":\"" + code
                 + "\",\"appUrl\":\"https://" + code + ".occpl.test\",\"apiBaseUrl\":\"" + stub.baseUrl()
-                + "\",\"serviceClientId\":\"" + clientId + "\"}").andExpect(status().isCreated())
+                + "\",\"apiAudience\":\"" + code + "-api\",\"serviceClientId\":\"" + clientId + "\"}")
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.serviceClientId").value(clientId))).get("id").asString();
         String base = "/api/v1/products/" + id;
         perform(post(base + "/features"), "root", "{\"code\":\"notes\",\"name\":\"Notes\",\"type\":\"LIMIT\",\"unit\":\"RECORDS\",\"resetPeriod\":\"NONE\"}");

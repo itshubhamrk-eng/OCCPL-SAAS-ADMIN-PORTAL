@@ -31,16 +31,19 @@ public class MembershipService {
     private final CompanyAccess companyAccess;
     private final CompanyDirectory companies;
     private final MembershipGuards guards;
+    private final InvitationRepository invitations;
     private final AuditLogger audit;
     private final Clock clock;
 
     MembershipService(CompanyMembershipRepository memberships, MembershipQueries queries, CompanyAccess companyAccess,
-            CompanyDirectory companies, MembershipGuards guards, AuditLogger audit, Clock clock) {
+            CompanyDirectory companies, MembershipGuards guards, InvitationRepository invitations, AuditLogger audit,
+            Clock clock) {
         this.memberships = memberships;
         this.queries = queries;
         this.companyAccess = companyAccess;
         this.companies = companies;
         this.guards = guards;
+        this.invitations = invitations;
         this.audit = audit;
         this.clock = clock;
     }
@@ -100,7 +103,12 @@ public class MembershipService {
         switch (action) {
             case SUSPEND -> membership.suspend(now);
             case REACTIVATE -> membership.reactivate(now);
-            case DEACTIVATE -> membership.deactivate(now);
+            case DEACTIVATE -> {
+                membership.deactivate(now);
+                // A pending invitation must not bring the seat back later (accept or re-send).
+                invitations.findFirstByMembershipIdAndStatus(membershipId, Invitation.Status.PENDING)
+                        .ifPresent(invitation -> invitation.revoke(now));
+            }
         }
         memberships.flush();
         Map<String, Object> details = new HashMap<>();

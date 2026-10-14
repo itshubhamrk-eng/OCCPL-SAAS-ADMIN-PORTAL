@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -56,8 +57,13 @@ public class CatalogService implements ProductCatalog {
     private final JsonMapper canonicalMapper;
     private final Clock clock;
 
+    /** Development only: plain-HTTP and local product URLs (UrlRules). */
+    private final boolean allowLocalUrls;
+
     CatalogService(ProductRepository products, ProductVersionRepository versions, ProductFeatureRepository features,
-            ProductConfigValidator validator, AuditLogger audit, JsonMapper jsonMapper, Clock clock) {
+            ProductConfigValidator validator, AuditLogger audit, JsonMapper jsonMapper, Clock clock,
+            @Value("${occpl.catalog.allow-local-urls:false}") boolean allowLocalUrls) {
+        this.allowLocalUrls = allowLocalUrls;
         this.products = products;
         this.versions = versions;
         this.features = features;
@@ -371,8 +377,8 @@ public class CatalogService implements ProductCatalog {
         }
     }
 
-    private static void requireValidUrls(String appUrl, String apiBaseUrl) {
-        List<FieldViolation> violations = UrlRules.checkAll(appUrl, apiBaseUrl);
+    private void requireValidUrls(String appUrl, String apiBaseUrl) {
+        List<FieldViolation> violations = UrlRules.checkAll(appUrl, apiBaseUrl, allowLocalUrls);
         if (!violations.isEmpty()) {
             throw new ValidationException("One or more fields are invalid.", violations);
         }
