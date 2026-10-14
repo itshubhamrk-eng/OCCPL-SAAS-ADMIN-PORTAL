@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://api.occpl.com/schemas/product-config/v1",
+  "$id": "https://api.occplsoftech.com/schemas/product-config/v1",
   "title": "OCCPL product configuration, schema version 1",
   "description": "Integration settings of a product service. Never put secrets here: service credentials live in Keycloak and the secret store.",
   "type": "object",

@@ -31,7 +31,7 @@ public enum ErrorCode {
     BILLING_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "Billing is not configured"),
     SERVICE_BUSY(HttpStatus.SERVICE_UNAVAILABLE, "Service busy");
 
-    private static final String TYPE_BASE = "https://api.occpl.com/problems/";
+    private static final String TYPE_BASE = "https://api.occplsoftech.com/problems/";
 
     private final HttpStatus status;
     private final String title;

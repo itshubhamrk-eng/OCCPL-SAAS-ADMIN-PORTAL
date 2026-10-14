@@ -92,7 +92,7 @@ class ApiSecurityAndErrorHandlingTest {
         mvc.perform(get("/api/v1/probe/missing").with(jwt()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
-                .andExpect(jsonPath("$.type").value("https://api.occpl.com/problems/not-found"))
+                .andExpect(jsonPath("$.type").value("https://api.occplsoftech.com/problems/not-found"))
                 .andExpect(jsonPath("$.instance").value("/api/v1/probe/missing"));
     }
 

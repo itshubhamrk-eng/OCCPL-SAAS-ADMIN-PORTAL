@@ -81,7 +81,7 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
   Data model and assignment already support company-specific roles.
 - ☐ **C-9** Branded Keycloak email theme (the account-setup email currently uses Keycloak's default text).
 - ☐ **C-10** `Idempotency-Key` support for POST endpoints (duplicates are already rejected by unique keys).
-- ☐ **C-11** Seat limits on invitations (needs entitlements, Phase 6).
+- ☑ **C-11** Seat limits on invitations — done in Phase 6 (see there; hardened in Phase 9).
 
 ## Phase 5 — Product catalogue
 

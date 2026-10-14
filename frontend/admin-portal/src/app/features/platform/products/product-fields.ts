@@ -18,7 +18,7 @@ import { FieldError } from '../../../shared/forms/field-error';
         <input
           id="p-appUrl"
           formControlName="appUrl"
-          placeholder="https://notes.occpl.com"
+          placeholder="https://notes.occplsoftech.com"
           aria-describedby="p-appUrl-hint p-appUrl-error"
         />
         <span class="hint" id="p-appUrl-hint"

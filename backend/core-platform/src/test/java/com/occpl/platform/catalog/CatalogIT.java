@@ -179,7 +179,7 @@ class CatalogIT {
                 Integer.class, id)).isGreaterThanOrEqualTo(9);
 
         perform(get("/api/v1/products/config-schema"), "support", null).andExpect(status().isOk())
-                .andExpect(jsonPath("$.$id").value("https://api.occpl.com/schemas/product-config/v1"));
+                .andExpect(jsonPath("$.$id").value("https://api.occplsoftech.com/schemas/product-config/v1"));
     }
 
     @Test

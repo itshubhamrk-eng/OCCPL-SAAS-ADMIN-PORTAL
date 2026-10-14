@@ -28,7 +28,7 @@ OpenAPI document (`/v3/api-docs`, Swagger UI in non-production).
 
 ```json
 {
-  "type": "https://api.occpl.com/problems/validation-error",
+  "type": "https://api.occplsoftech.com/problems/validation-error",
   "title": "Validation failed",
   "status": 400,
   "code": "VALIDATION_ERROR",

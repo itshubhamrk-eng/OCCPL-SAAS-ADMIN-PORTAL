@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Production domain (2026-10-14)
+- Decision D-12: `occplsoftech.com`; hostname plan in DEPLOYMENT.md §2. Problem-detail `type` URIs
+  and the product-configuration schema `$id` now use `https://api.occplsoftech.com/` (previously a
+  placeholder domain not owned by OCCPL; changed before any client depends on them).
+
 ### Phase 9 — Hardening (2026-10-14)
 - Tenant isolation: endpoint-inventory test over every request mapping; deny-by-default guard for
   company paths before the body is read (another company's endpoints always answer 404).

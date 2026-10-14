@@ -114,7 +114,8 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | D-7 | Company Admin self-serve purchases? | Open — default: Super Admin assigns plans |
 | D-8 | Self-registration vs invitation only | **Applied default:** invitation only (Phase 4) |
 | D-9 | Product launch model (subdomains + SSO vs path-based) | **Applied default (Phase 7):** both are supported without a code change — each product has its own `appUrl` (own host or subdomain) plus a `launch.path` template (`{companyId}`, `{companyCode}`); sign-in is SSO through Keycloak. Revisit if per-company subdomains are wanted. |
-| D-10 | Personal-data retention/export obligations (DPDP Act 2023, contracts) | Open — needed by Phase 9 |
+| D-10 | Personal-data retention/export obligations (DPDP Act 2023, contracts) | Open — needed before launch (BACKLOG H-7) |
+| D-12 | Production domain | **Decided (2026-10-14):** `occplsoftech.com` — hostnames in DEPLOYMENT.md §2 (admin., api., auth., products as subdomains, staging under `*.staging.`). Hosting provider, managed vs self-run MySQL/Keycloak, registry and email provider still open (Phase 10). |
 | D-11 | GST on invoices: are plan prices tax-inclusive or exclusive, which GST rate/HSN-SAC code, and is the company's GSTIN printed on invoices? | **Open — needed before live payments.** Today the plan price is sent to Razorpay as the line amount with no tax fields; the company's tax id is stored but not sent. |
 
 ## 6. Risks

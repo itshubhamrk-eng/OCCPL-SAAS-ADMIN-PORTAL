@@ -67,6 +67,6 @@ class ProductConfigValidatorTest {
 
     @Test
     void publishesTheSchemaDocument() {
-        assertThat(validator.schemaJson()).contains("\"$id\": \"https://api.occpl.com/schemas/product-config/v1\"");
+        assertThat(validator.schemaJson()).contains("\"$id\": \"https://api.occplsoftech.com/schemas/product-config/v1\"");
     }
 }

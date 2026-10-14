@@ -177,6 +177,23 @@ Internet → LB / Nginx (TLS, static portal, reverse proxy) ─┬─ core-platf
 Monitoring: Prometheus + Grafana + Alertmanager, Loki (logs); error tracking (e.g. Sentry)
 ```
 
+### Hostnames (decision D-12: domain `occplsoftech.com`)
+
+| Host | Serves | Notes |
+|---|---|---|
+| `admin.occplsoftech.com` | Admin portal (Super Admin and Company Admin) | Portal `API_BASE_URL`, `OIDC_ISSUER`; Keycloak redirect URI `https://admin.occplsoftech.com/*`; Core `CORS_ALLOWED_ORIGINS`, `INVITATION_ACCEPT_URL=https://admin.occplsoftech.com/invitations/accept` |
+| `api.occplsoftech.com` | Core Platform API (`/api/v1/**`) | Razorpay webhook `https://api.occplsoftech.com/api/v1/webhooks/payments/razorpay`; `PROVISIONING_CALLBACK_BASE_URL`; problem `type` URIs and the product-config schema `$id` use this host |
+| `auth.occplsoftech.com` | Keycloak (realm `occpl`) | `OIDC_ISSUER_URI=https://auth.occplsoftech.com/realms/occpl`; admin console reachable only from the operations network |
+| `<product>.occplsoftech.com` | Product services (e.g. `notes.occplsoftech.com`) | Each product's `appUrl`; its API may sit on the same host or `<product>-api.` |
+| `*.staging.occplsoftech.com` | Staging (`admin.staging.…`, `api.staging.…`, `auth.staging.…`) | Separate realm, database and secrets |
+| `occplsoftech.com` | Company website (not part of this platform) | |
+
+TLS: one certificate per host or a wildcard `*.occplsoftech.com` (+ `*.staging.occplsoftech.com`),
+automatic renewal with expiry alert (§6). HSTS with `includeSubDomains` is sent by Core and must be
+sent by Nginx for the portal — only enable `preload` once every subdomain serves HTTPS.
+Email: sender `no-reply@occplsoftech.com` (`MAIL_FROM`) with SPF, DKIM and DMARC records for the
+chosen email provider.
+
 Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-ready
 (stateless, health probes, env config) if operational needs later justify it.
 
