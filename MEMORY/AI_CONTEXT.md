@@ -5,9 +5,9 @@ users/memberships, roles/permissions, product catalogue, plans, subscriptions, e
 provisioning, billing integration (Razorpay), audit, notifications. Products are separate services
 that own their data. Core contains no product business logic.
 
-**Current phase**: Phase 8 (Frontend portals) done 2026-10-13; **wait for approval before the next
-phase** (Billing B-1/B-2 with Razorpay, or Phase 9 Hardening). Open follow-ups: I-1, C-8, C-9, C-10,
-PC-4, PC-5, S-8 billing, S-9 per-product seats, PR-5, PR-6, PR-7, UI-4, UI-5, UI-6.
+**Current phase**: Billing (B-1, B-2, S-8) done 2026-10-14 after Phase 8; **wait for approval before
+Phase 9 Hardening**. Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5, S-9 per-product seats, PR-5,
+PR-6, PR-7, UI-4 (settings page), UI-5, UI-6, B-3 (live Razorpay smoke test), B-4 (GST, D-11), B-5..B-8.
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,
@@ -31,7 +31,7 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
 - Errors: throw `ApiException(ErrorCode, detail)`; never return entities; paging via `PageRequests`.
 - Module deps: identity→access,audit; company→identity,audit; membership→identity,access,company,audit,notification,entitlement;
   catalog→identity,audit; subscription→identity,company,catalog,audit; entitlement→subscription,catalog,company;
-  provisioning→catalog,company,entitlement,audit,notification; integration→catalog,entitlement,identity,membership,provisioning;
+  provisioning→catalog,company,entitlement,audit,notification; billing→subscription,company,audit; integration→catalog,entitlement,identity,membership,provisioning;
   access/audit/notification→shared only. `MembershipQueries` is the documented read-only cross-module SQL exception.
 - List endpoints take `SortParams` (raw `sort` values) — a plain `List<String> sort` gets split at commas.
 - Background jobs: `@Scheduled`, multi-instance safe (SKIP LOCKED / idempotent UPDATE); disabled in tests
@@ -55,6 +55,12 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
 - Provisioning: `EntitlementsChanged` (from `EntitlementRecomputer`) → `ProvisioningService` creates jobs in the same tx;
   `ProvisioningRunner.runDue()` (scheduled every 5 s; call directly in tests) claims, calls the product outside tx,
   records under row lock. Tests fake products with `support.ProductServiceStub` (also serves `/token`).
+- Billing: `PaymentGateway` port, `RazorpayGateway` (JDK HttpClient, basic auth); invoice row committed as
+  CREATING before the gateway call; `uk_invoice_open` (generated `open_key`) = one open/paid invoice per period.
+  Webhooks: `PaymentEvents.receive` (signature, then `process` in a tx; dedupe by `payment_webhook_event`).
+  Payments applied via `subscription.api.SubscriptionBilling.applyPayment(subscriptionId, periodStart)`
+  (APPLIED / ALREADY_COVERED / NOT_APPLICABLE). Tests fake Razorpay with `support.RazorpayStub`;
+  call `InvoiceService.createDueInvoices()` directly (scheduling disabled in tests).
 - Executable jars use classifier `exec` (Dockerfiles copy `*-exec.jar`); core-platform also builds a test-jar
   (KeycloakTestServer, KeycloakLoginFlow, MySqlTestDatabase, TestData) used by e2e-tests.
 - Keycloak realm secrets via env: KEYCLOAK_ADMIN_CLIENT_SECRET, PROVISIONING_CLIENT_SECRET, PRODUCT_SAMPLE_CLIENT_SECRET.

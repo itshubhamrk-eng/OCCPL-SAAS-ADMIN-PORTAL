@@ -188,14 +188,27 @@ All implemented in Phase 7.
 
 Product registration and update accept `serviceClientId` (unique; empty string clears it on PATCH).
 
-### Billing
+### Billing (implemented)
+
+Invoices are created, numbered and emailed by Razorpay (D-3/D-4); Core stores references, amounts
+and states. Amounts are in minor units (paise). When `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` are not
+set, writes answer 503 `BILLING_DISABLED`; reads still work.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/companies/{companyId}/invoices` | P or C:`company.billing.read` | Billing history |
-| GET | `/companies/{companyId}/invoices/{id}` | P or C:`company.billing.read` | Invoice detail |
-| POST | `/companies/{companyId}/invoices/{id}/payment-session` | C:`company.billing.manage` | Create gateway checkout (if D-7 allows) |
-| POST | `/webhooks/payments/{gateway}` | Signature (no user auth) | Gateway webhook, idempotent by event id |
+| GET | `/billing/status` | any signed-in user | `{enabled, webhooksEnabled, gateway}` |
+| GET | `/companies/{companyId}/invoices` | P:`platform.subscriptions.read` or C:`company.billing.read` | Billing history, newest first (paged; `status` filter) |
+| GET | `/companies/{companyId}/invoices/{id}` | same | Invoice with payments. `paymentUrl` (Razorpay hosted page) only for open invoices and for staff or C:`company.billing.manage`; `lastError` only for staff |
+| POST | `/companies/{companyId}/subscriptions/{subscriptionId}/invoices` | P:`platform.subscriptions.manage` | Issue the invoice for the subscription's next period now → 201. 409 `CONFLICT` if that period already has an open or paid invoice; 422 if the subscription has ended; 400 for a free plan or a company without a billing/primary contact email; 502 `PAYMENT_GATEWAY_ERROR` if Razorpay refuses (invoice kept as ISSUE_FAILED) |
+| POST | `/companies/{companyId}/invoices/{id}/cancel` | P:`platform.subscriptions.manage` | Cancel an ISSUED/PARTIALLY_PAID invoice at Razorpay and in Core; other states → 422; paid meanwhile at Razorpay → 409 |
+| POST | `/companies/{companyId}/invoices/{id}/refresh` | P:`platform.subscriptions.manage` | Fetch the invoice from Razorpay and apply its state (recovers a missed webhook) |
+| GET | `/platform/invoices` | P:`platform.subscriptions.read` | All invoices (`status`, `companyId`, paging, `sort` by createdAt/periodStart) |
+| POST | `/webhooks/payments/razorpay` | `X-Razorpay-Signature` (no user auth) | Razorpay webhook → 200 `{outcome: PROCESSED\|DUPLICATE\|IGNORED\|UNKNOWN_INVOICE}`; invalid signature → 401 (audited); missing `x-razorpay-event-id` → 400; webhook secret not set → 503 |
+
+Invoice `status`: CREATING → ISSUED → PARTIALLY_PAID → PAID, or ISSUE_FAILED, CANCELLED, EXPIRED.
+`paymentApplied` (after PAID): APPLIED (trial activated or period renewed), ALREADY_COVERED (the
+period had already been renewed, e.g. manually), NOT_APPLICABLE (subscription cancelled/expired —
+staff must refund in Razorpay).
 
 ### Audit, notifications, reporting
 

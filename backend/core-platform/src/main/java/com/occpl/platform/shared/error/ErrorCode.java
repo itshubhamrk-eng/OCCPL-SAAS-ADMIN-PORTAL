@@ -26,7 +26,9 @@ public enum ErrorCode {
     INVALID_STATE_TRANSITION(HttpStatus.UNPROCESSABLE_CONTENT, "Invalid state transition"),
     ENTITLEMENT_REQUIRED(HttpStatus.FORBIDDEN, "Product or feature not included in subscription"),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "Too many requests"),
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error");
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error"),
+    PAYMENT_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY, "Payment gateway error"),
+    BILLING_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "Billing is not configured");
 
     private static final String TYPE_BASE = "https://api.occpl.com/problems/";
 

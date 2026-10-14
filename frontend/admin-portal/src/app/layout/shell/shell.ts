@@ -23,6 +23,7 @@ const PLATFORM_NAV: (NavItem & { permission?: string })[] = [
     link: '/platform/subscriptions',
     permission: 'platform.subscriptions.read',
   },
+  { label: 'Invoices', link: '/platform/invoices', permission: 'platform.subscriptions.read' },
   {
     label: 'Provisioning',
     link: '/platform/provisioning',

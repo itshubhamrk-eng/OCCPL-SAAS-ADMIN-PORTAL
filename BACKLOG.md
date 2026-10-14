@@ -129,7 +129,8 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
   company's accessible products; enforced on invitations and reactivation. Verified.
 - ☑ **S-7** Service-facing entitlement check and usage endpoints for product services — done in
   Phase 7 (`/api/v1/service/access`, `/api/v1/service/usage/*`).
-- ☐ **S-8** Payment-driven renewal and invoices (billing, Razorpay). Today renewal is recorded by an administrator.
+- ☑ **S-8** Payment-driven renewal and invoices — done in the billing phase: a paid invoice activates a
+  trial (the rest of the trial is kept) or renews the period it was issued for. Manual renewal stays available to staff.
 - ☐ **S-9** Per-product user assignment (seats per product instead of company-wide members).
 
 ## Phase 7 — Provisioning & sample product
@@ -164,17 +165,31 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 - AC (all): typed API clients, reactive forms with validation messages, responsive at 360 px and
   desktop, keyboard accessible, component/service unit tests.
 
-- ☐ **UI-4** Platform settings page (needs a settings API) and billing history page (needs billing B-1).
+- ◐ **UI-4** Billing history page — done (company Billing tab, platform Invoices list). Platform settings page still needs a settings API.
 - ☐ **UI-5** Show company and actor names instead of ids in the platform subscription list and audit
   log (needs batch name lookups or names in those API responses).
 - ☐ **UI-6** Browser end-to-end tests in CI (the Phase 8 walkthrough ran manually with Playwright
   against the Docker stack).
 
-## Billing (scheduled after D-3/D-4, can run parallel to Phase 8)
+## Billing (done 2026-10-14)
 
-- ☐ **B-1** Gateway port + adapter, invoices, payment transactions.
-- ☐ **B-2** Webhook endpoint: signature verification, idempotency by event id, state updates.
-  AC: replayed webhook has no side effects; bad signature → 401 and audit.
+- ☑ **B-1** `PaymentGateway` port + `RazorpayGateway` adapter (Invoices API: create, fetch, cancel);
+  invoices and payment transactions; one open invoice per subscription period (database constraint);
+  hourly job issues renewal invoices 7 days before the period ends (multi-instance safe); staff can
+  issue, cancel and re-check invoices; billing disabled until keys are configured. Tests: BillingIT
+  (gateway stub), unit tests; browser walkthrough against the Docker stack with a local stub.
+- ☑ **B-2** `POST /api/v1/webhooks/payments/razorpay`: HMAC-SHA256 signature over the raw body,
+  idempotency by `x-razorpay-event-id`, invoice.paid/partially_paid/expired, payment.captured/failed.
+  AC met: replayed webhook → DUPLICATE, no side effects; bad signature → 401 and audit entry.
+- ☐ **B-3** Live verification with Razorpay test-mode keys and a real webhook (risk R-5; not possible
+  from the build sandbox).
+- ☐ **B-4** GST on invoices once D-11 is decided (tax fields, GSTIN, HSN/SAC).
+- ☐ **B-5** Separate platform billing permissions (`platform.billing.read/manage`); billing currently
+  reuses `platform.subscriptions.*`.
+- ☐ **B-6** Alert for invoices stuck in ISSUE_FAILED (e.g. no billing contact) and a "retry issue" action;
+  today the job retries on its next run and the failure is in the audit log.
+- ☐ **B-7** Refunds and credit notes (Razorpay refunds API) — not in scope yet.
+- ☐ **B-8** Company Admin self-serve checkout (depends on D-7).
 
 ## Phase 9 — Hardening
 

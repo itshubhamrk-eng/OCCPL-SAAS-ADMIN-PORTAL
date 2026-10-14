@@ -107,6 +107,18 @@ Invoices and payment transactions arrive with billing (Razorpay).
 | `usage_counter` | **PK(company_id, feature_id, period_start)**, `used` ≥ 0; stock features use period_start 1970-01-01 |
 | `usage_record` | id, company_id, feature_id, quantity (negative = release), `idempotency_key` — **UK(company_id, idempotency_key)**, period_start, used_after, recorded_at |
 
+### Billing (implemented)
+
+| Table | Key columns / constraints |
+|---|---|
+| `invoice` | id (also sent to Razorpay as `receipt`), company_id, subscription_id, gateway (RAZORPAY), gateway_invoice_id — **UK(gateway, gateway_invoice_id)**, gateway_number, `status` (CREATING, ISSUE_FAILED, ISSUED, PARTIALLY_PAID, PAID, CANCELLED, EXPIRED), description, currency, amount_minor > 0, amount_paid_minor, period_start/period_end (the subscription period the invoice pays for), payment_url, customer_email, issued/expires/paid_at, `payment_applied` (APPLIED, ALREADY_COVERED, NOT_APPLICABLE), last_error, version. Generated `open_key` = subscription + period_start while CREATING/ISSUED/PARTIALLY_PAID/PAID → **UK(open_key)**: at most one open or paid invoice per period, enforced by the database across instances. IX(company_id, created_at), IX(subscription_id, period_start), IX(status, created_at) |
+| `payment_transaction` | id, invoice_id, company_id, gateway_payment_id, `status` (CAPTURED, FAILED) — **UK(gateway_payment_id, status)**, amount_minor, currency, method, error_reason, occurred_at |
+| `payment_webhook_event` | **PK(gateway, event_id)** (idempotency), event_type, body_sha256 (the payload itself is not stored), outcome, received_at |
+
+The invoice row is committed as CREATING before Razorpay is called (no HTTP inside a transaction);
+a row still CREATING after 10 minutes (process died mid-call) becomes ISSUE_FAILED and must be
+checked in the Razorpay dashboard (BACKLOG B-6).
+
 ### Platform operations
 
 | Table | Key columns / constraints |

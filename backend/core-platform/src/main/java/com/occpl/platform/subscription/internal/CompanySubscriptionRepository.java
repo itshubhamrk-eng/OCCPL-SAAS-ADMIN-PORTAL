@@ -43,6 +43,13 @@ interface CompanySubscriptionRepository extends JpaRepository<CompanySubscriptio
     @Query("select s.id from CompanySubscription s where s.status = 'PAST_DUE' and s.currentPeriodEnd <= :graceStart order by s.currentPeriodEnd")
     List<UUID> graceElapsed(Instant graceStart, Limit limit);
 
+    @Query("""
+            select s.id from CompanySubscription s
+            where s.status in ('TRIAL', 'ACTIVE', 'PAST_DUE') and s.cancelAtPeriodEnd = false
+              and s.currentPeriodEnd <= :until and s.priceMinor > 0
+            order by s.currentPeriodEnd""")
+    List<UUID> dueForInvoice(Instant until, Limit limit);
+
     @Query("select s.id from CompanySubscription s where s.status = 'SUSPENDED' and s.statusChangedAt <= :suspendedBefore order by s.statusChangedAt")
     List<UUID> longSuspended(Instant suspendedBefore, Limit limit);
 }

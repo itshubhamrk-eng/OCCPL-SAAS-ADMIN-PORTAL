@@ -37,6 +37,12 @@ const TABS: Tab[] = [
     platform: 'platform.companies.read',
   },
   {
+    label: 'Billing',
+    path: 'billing',
+    company: 'company.billing.read',
+    platform: 'platform.subscriptions.read',
+  },
+  {
     label: 'Usage',
     path: 'usage',
     company: 'company.usage.read',

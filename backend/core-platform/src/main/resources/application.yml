@@ -131,6 +131,14 @@ occpl:
     token-uri: ${PROVISIONING_TOKEN_URI:${KEYCLOAK_BASE_URL:}/realms/${KEYCLOAK_REALM:occpl}/protocol/openid-connect/token}
     client-id: ${PROVISIONING_CLIENT_ID:occpl-core-services}
     client-secret: ${PROVISIONING_CLIENT_SECRET:}
+  billing:
+    # Razorpay (D-3/D-4). Billing stays disabled until both API keys are set; webhooks need the secret.
+    razorpay-api-url: ${RAZORPAY_API_URL:https://api.razorpay.com}
+    razorpay-key-id: ${RAZORPAY_KEY_ID:}
+    razorpay-key-secret: ${RAZORPAY_KEY_SECRET:}
+    razorpay-webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+    invoice-lead-time: ${BILLING_INVOICE_LEAD_TIME:7d}
+    payment-window: ${BILLING_PAYMENT_WINDOW:14d}
   rate-limit:
     enabled: ${RATE_LIMIT_ENABLED:true}
     redis-url: ${REDIS_URL:redis://localhost:6379}

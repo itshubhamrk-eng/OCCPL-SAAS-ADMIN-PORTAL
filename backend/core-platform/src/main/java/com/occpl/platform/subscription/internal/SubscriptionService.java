@@ -103,6 +103,17 @@ public class SubscriptionService {
         return view(s, true);
     }
 
+    /** Trial converted by a payment for the period starting at {@code paidFrom} (billing). */
+    @Transactional
+    public SubscriptionView activateByPayment(UUID companyId, UUID subscriptionId, Instant paidFrom) {
+        CompanySubscription s = lock(companyId, subscriptionId);
+        Instant now = clock.instant();
+        SubscriptionStatus previous = s.apply(SubscriptionStateMachine.Event.ACTIVATE, now);
+        s.startPaidPeriodFrom(paidFrom, now);
+        record(s, "ACTIVATED", previous, s.planId(), s.planId(), "Payment received", now);
+        return view(s, true);
+    }
+
     /** Starts the next paid period, applying a scheduled downgrade and clearing a scheduled cancellation. */
     @Transactional
     public SubscriptionView renew(UUID companyId, UUID subscriptionId) {

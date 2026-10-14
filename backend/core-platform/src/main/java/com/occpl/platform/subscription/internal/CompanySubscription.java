@@ -124,6 +124,18 @@ class CompanySubscription {
     }
 
     /**
+     * Trial converted by a payment for the period starting at {@code paidFrom} (normally the trial
+     * end): active from now, and the remaining trial days are kept — the paid period runs until
+     * {@code paidFrom} plus one billing period.
+     */
+    void startPaidPeriodFrom(Instant paidFrom, Instant now) {
+        Instant start = paidFrom.isAfter(now) ? paidFrom : now;
+        currentPeriodStart = now;
+        currentPeriodEnd = addPeriod(start, billingPeriod);
+        trialEnd = null;
+    }
+
+    /**
      * Next period after a renewal. A lapsed ACTIVE/PAST_DUE subscription continues from the old period
      * end (the customer pays for the period they used); a suspended one restarts now.
      */

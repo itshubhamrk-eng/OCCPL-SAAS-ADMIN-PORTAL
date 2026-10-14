@@ -217,6 +217,25 @@ the need.
 - Strict CSP unchanged (`script-src 'self'`, no inline scripts); confirmations use the native
   `<dialog>` element; no `innerHTML` with API data.
 
+### Implemented in the billing phase (verified against a Razorpay stub)
+
+- Razorpay webhooks: the HMAC-SHA256 of the **raw request body** with the webhook secret must
+  equal `X-Razorpay-Signature` (constant-time comparison) before anything is parsed. A failure
+  answers 401, increments `occpl.billing.webhooks{outcome=rejected}` and writes a
+  `billing.webhook_rejected` audit entry (body SHA-256 only). The endpoint is the only anonymous
+  write in the API (`permitAll` for `POST /api/v1/webhooks/payments/**`); it is subject to the
+  anonymous per-IP rate limit, and Razorpay retries throttled deliveries.
+- Replay: each `x-razorpay-event-id` is stored and processed once; a replayed delivery has no effect
+  (verified). Payment state comes only from signed webhooks or from Core's own authenticated call to
+  Razorpay ("check payment"), never from the browser.
+- No card or bank data reaches Core: payment happens on Razorpay's hosted page. Webhook payloads
+  are not stored (only their hash); payment rows keep the payment id, method, amount and failure reason.
+- `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` come from the environment only, are never
+  logged or returned by the API; gateway error messages kept in `last_error` are shown to staff only.
+- Who sees what: company members with `company.billing.read` see their invoices; the payment link
+  needs `company.billing.manage` (or staff); issuing, cancelling and re-checking invoices is staff-only
+  (`platform.subscriptions.manage`) and audited (`billing.invoice_*`, `billing.payment_*`).
+
 ## 5. Secrets and data protection
 
 - No secrets in Git. Local dev uses `.env` (gitignored) with dev-only values; staging/prod use

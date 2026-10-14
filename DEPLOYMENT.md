@@ -82,6 +82,25 @@ Testcontainers; includes the Core ↔ sample product end-to-end test in `backend
 | `PROVISIONING_CALLBACK_TIMEOUT` | no (`15m`) | How long an ASYNC product may take to report completion |
 | `PROVISIONING_ALERT_RECIPIENTS` | yes (prod) | Comma-separated emails notified when a provisioning job fails permanently |
 | `RATE_LIMIT_SERVICE_PER_MINUTE` | no (6000) | Per product service client |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | for billing | Razorpay API keys (Dashboard → Account & Settings → API Keys); test-mode keys outside production. Billing is disabled until both are set |
+| `RAZORPAY_WEBHOOK_SECRET` | for billing | Secret entered when creating the webhook in the Razorpay dashboard; without it the webhook endpoint answers 503 |
+| `RAZORPAY_API_URL` | no (`https://api.razorpay.com`) | Only for tests/stubs |
+| `BILLING_INVOICE_LEAD_TIME` / `BILLING_PAYMENT_WINDOW` | no (`7d` / `14d`) | Issue renewal invoices this long before the period ends; unpaid invoices expire after the window |
+
+### Razorpay setup (billing)
+
+1. Create API keys and set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (test mode first).
+2. Dashboard → Webhooks → Add: URL `https://<core-host>/api/v1/webhooks/payments/razorpay`, a strong
+   secret (→ `RAZORPAY_WEBHOOK_SECRET`), events `invoice.paid`, `invoice.partially_paid`,
+   `invoice.expired`, `payment.captured`, `payment.failed`. The URL must be reachable from the
+   internet over HTTPS; Nginx must pass the body unchanged (signature is over the raw body).
+3. Every company that pays needs a BILLING (or PRIMARY) contact with an email — the invoice is sent there.
+4. **Smoke test before going live (BACKLOG B-3, risk R-5):** with test keys, issue an invoice for a
+   test company (Subscription tab → "Issue invoice for next period"), pay it on the Razorpay page with
+   a test card, and check that the invoice becomes PAID with "Applied" and the subscription period
+   moves on. Also confirm the webhook delivery shows 200 in the dashboard. The adapter has so far
+   been tested only against a stub of Razorpay's documented API.
+5. Decide D-11 (GST) before taking live payments.
 
 Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
 (space-separated origins of the API and IdP). The portal's origin must be a valid redirect URI

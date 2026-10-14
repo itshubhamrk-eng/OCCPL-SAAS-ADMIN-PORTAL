@@ -110,6 +110,10 @@ services:
       PROVISIONING_CLIENT_SECRET: ${PROVISIONING_CLIENT_SECRET}
       PROVISIONING_CALLBACK_BASE_URL: http://core-platform:8080
       PROVISIONING_ALERT_RECIPIENTS: ${PROVISIONING_ALERT_RECIPIENTS:-}
+      # Billing stays disabled until both keys are set (use Razorpay test-mode keys locally).
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:8081:8081"

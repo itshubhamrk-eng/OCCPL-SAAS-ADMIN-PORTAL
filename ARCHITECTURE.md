@@ -82,7 +82,7 @@ Package root: `com.occpl.platform`. Package-by-module; each module has:
 | 7 | `entitlement` | entitlements recomputed on `SubscriptionChanged`, access checks, atomic usage counters, seat limit (`Entitlements` API); publishes `EntitlementsChanged` | shared, catalog, company, subscription |
 | 8 | `provisioning` | provisioning jobs and runner, company provisioning state, product-service HTTP client, alerts, product launcher (`ProvisioningCallbacks` API) | shared, catalog, company, entitlement, audit, notification |
 | 8a | `integration` | service API for product services (`/api/v1/service/**`): access checks, usage, provisioning callbacks | shared, catalog, entitlement, identity, membership, provisioning |
-| 9 | `billing` | invoices, payment transactions, gateway port & webhooks | shared, subscription, audit |
+| 9 | `billing` | invoices, payment transactions, `PaymentGateway` port with the Razorpay adapter, webhooks, renewal invoicing job; applies payments through `SubscriptionBilling` (implemented 2026-10-14) | shared, subscription, company (billing contact), audit |
 | 10 | `audit` | append-only audit log | shared |
 | 11 | `notification` | templates, outbound email, delivery records | shared |
 | 12 | `reporting` | read-only aggregates/dashboards | shared + read APIs of others |
@@ -146,6 +146,17 @@ contract and its tables move with it.
   exponentially (30 s doubling, max 1 h) up to the product's `maxAttempts`; 4xx fail at once. A
   permanent failure sets FAILED, raises an alert (error log, `occpl.provisioning.jobs{outcome=failed}`
   metric, email to `PROVISIONING_ALERT_RECIPIENTS`) and can be retried by platform staff.
+- **Billing** (implemented 2026-10-14): `InvoicingJob` (hourly) issues the next-period invoice for
+  paid TRIAL/ACTIVE/PAST_DUE subscriptions whose period ends within `BILLING_INVOICE_LEAD_TIME` (7 d)
+  and are not cancelling. The invoice row is committed as CREATING, Razorpay is called outside any
+  transaction, and the result is recorded afterwards; the unique `open_key` makes concurrent runs on
+  several instances create at most one invoice per period. Razorpay emails the invoice and hosts the
+  payment page. Its webhooks (signed, deduplicated by event id) mark the invoice paid, and
+  `SubscriptionBilling.applyPayment` activates a trial (keeping the remaining trial days: the paid
+  month starts at the invoice's period start) or renews the period — once, even if both the webhook
+  and a manual "check payment" report the same payment. An unpaid invoice expires after
+  `BILLING_PAYMENT_WINDOW` (14 d); the subscription itself follows the D-5 lifecycle (PAST_DUE →
+  grace → SUSPENDED) independently of invoices.
 - Scheduled jobs: subscription renewals/expiry sweeps, trial expiry, PAST_DUE → SUSPENDED after
   grace, usage-counter period resets, invitation expiry. All idempotent and batch-paginated.
 - No Kafka/RabbitMQ initially (ADR-0004). Revisit if outbox throughput or fan-out to many

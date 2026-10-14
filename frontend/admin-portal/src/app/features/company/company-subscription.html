@@ -1,4 +1,9 @@
 <div class="stack">
+  @if (invoiceNotice(); as message) {
+    <p class="notice success" role="status">
+      {{ message }} <a routerLink="../billing">Open billing</a>
+    </p>
+  }
   @if (manage()) {
     <section class="card">
       <h2>Assign a plan</h2>
@@ -127,6 +132,11 @@
             </button>
             <button type="button" class="btn small" (click)="target = s; cancelEndDialog.open()">
               Cancel at period end
+            </button>
+          }
+          @if (billingEnabled() && s.priceMinor > 0 && !s.cancelAtPeriodEnd) {
+            <button type="button" class="btn small" (click)="issueInvoice(s)">
+              Issue invoice for next period
             </button>
           }
           @if (s.status !== 'SUSPENDED') {

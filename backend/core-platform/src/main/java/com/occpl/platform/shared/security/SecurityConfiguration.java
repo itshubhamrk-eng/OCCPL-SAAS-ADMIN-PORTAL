@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationResult;
@@ -88,6 +89,8 @@ class SecurityConfiguration {
         ProblemDetailsAuthenticationHandlers handlers = new ProblemDetailsAuthenticationHandlers(jsonMapper);
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error").permitAll()
+                        // Payment gateway webhooks authenticate with an HMAC signature, not a token.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/payments/**").permitAll()
                         // Product services (client-credentials tokens) may use the service API only, and users never.
                         .requestMatchers("/api/v1/service/**").hasAuthority(ServicePrincipal.AUTHORITY)
                         .anyRequest().access(SecurityConfiguration::userOnly))

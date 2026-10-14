@@ -428,3 +428,49 @@ export interface AuditEntry {
   readonly correlationId: string | null;
   readonly details: Record<string, unknown> | null;
 }
+
+// ---------------------------------------------------------------- billing
+
+export type InvoiceStatus =
+  'CREATING' | 'ISSUE_FAILED' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'EXPIRED';
+
+export interface Invoice {
+  readonly id: string;
+  readonly companyId: string;
+  readonly subscriptionId: string;
+  readonly status: InvoiceStatus;
+  readonly description: string;
+  readonly currency: string;
+  readonly amountMinor: number;
+  readonly amountPaidMinor: number;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly gatewayInvoiceId: string | null;
+  readonly gatewayNumber: string | null;
+  /** Only on open invoices, for viewers allowed to pay. */
+  readonly paymentUrl: string | null;
+  readonly issuedAt: string | null;
+  readonly expiresAt: string | null;
+  readonly paidAt: string | null;
+  readonly paymentApplied: 'APPLIED' | 'ALREADY_COVERED' | 'NOT_APPLICABLE' | null;
+  /** Platform staff only. */
+  readonly lastError: string | null;
+  readonly createdAt: string;
+  readonly payments: Payment[] | null;
+}
+
+export interface Payment {
+  readonly gatewayPaymentId: string;
+  readonly status: 'CAPTURED' | 'FAILED';
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly method: string | null;
+  readonly errorReason: string | null;
+  readonly occurredAt: string;
+}
+
+export interface BillingStatus {
+  readonly enabled: boolean;
+  readonly webhooksEnabled: boolean;
+  readonly gateway: string;
+}

@@ -10,3 +10,4 @@
 | [0006](0006-redis-usage.md) | Redis for authz cache and rate limiting | Accepted |
 | [0007](0007-version-policy.md) | Version policy: latest stable, LTS where available | Accepted |
 | [0008](0008-product-integration-and-provisioning.md) | Product integration: client identity, DB-backed provisioning jobs | Accepted |
+| [0009](0009-gateway-invoices-and-webhooks.md) | Billing: gateway-created invoices, payment state from signed webhooks | Accepted |

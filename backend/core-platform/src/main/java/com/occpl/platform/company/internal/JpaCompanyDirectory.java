@@ -1,5 +1,6 @@
 package com.occpl.platform.company.internal;
 
+import com.occpl.platform.company.api.BillingProfile;
 import com.occpl.platform.company.api.CompanyDirectory;
 import com.occpl.platform.company.api.CompanySummary;
 import java.util.Collection;
@@ -18,10 +19,13 @@ class JpaCompanyDirectory implements CompanyDirectory {
 
     private final CompanyRepository repository;
     private final CompanySettingsRepository settings;
+    private final CompanyContactRepository contacts;
 
-    JpaCompanyDirectory(CompanyRepository repository, CompanySettingsRepository settings) {
+    JpaCompanyDirectory(CompanyRepository repository, CompanySettingsRepository settings,
+            CompanyContactRepository contacts) {
         this.repository = repository;
         this.settings = settings;
+        this.contacts = contacts;
     }
 
     @Override
@@ -42,5 +46,19 @@ class JpaCompanyDirectory implements CompanyDirectory {
     @Override
     public List<String> allowedEmailDomains(UUID companyId) {
         return settings.findById(companyId).map(CompanySettings::allowedEmailDomains).orElse(List.of());
+    }
+
+    @Override
+    public Optional<BillingProfile> billingProfile(UUID companyId) {
+        Optional<Company> company = repository.findById(companyId);
+        Optional<CompanyContact> contact = contacts.findByCompanyIdAndType(companyId, CompanyContact.Type.BILLING)
+                .or(() -> contacts.findByCompanyIdAndType(companyId, CompanyContact.Type.PRIMARY));
+        if (company.isEmpty() || contact.isEmpty()) {
+            return Optional.empty();
+        }
+        Company c = company.get();
+        CompanyContact k = contact.get();
+        return Optional.of(new BillingProfile(companyId, c.legalName(), c.country(), c.taxId(), k.name(), k.email(),
+                k.phone()));
     }
 }

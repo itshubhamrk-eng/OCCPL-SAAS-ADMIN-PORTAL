@@ -4,6 +4,32 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Billing — Razorpay invoices and webhooks (2026-10-14)
+- New `billing` module: `PaymentGateway` port with a Razorpay adapter (Invoices API: create, fetch,
+  cancel). Razorpay numbers and emails the invoice and hosts the payment page; Core stores references,
+  amounts and states (`invoice`, `payment_transaction`, `payment_webhook_event`; migration
+  `V202610140900`).
+- Renewal invoices are issued automatically 7 days before the period ends (hourly, multi-instance
+  safe; at most one open or paid invoice per period, enforced by a unique key). Staff can issue an
+  invoice now, cancel it, or re-check it at Razorpay.
+- Webhook `POST /api/v1/webhooks/payments/razorpay`: signature check over the raw body, 401 + audit on
+  failure, idempotent by event id. A paid invoice activates a trial (keeping its remaining days) or
+  renews the period it was issued for, exactly once (S-8).
+- Company billing contact (BILLING, else PRIMARY) is the invoice recipient.
+- Portal: company Billing tab (invoices, Pay link for `company.billing.manage`, payments; staff can
+  check payment or cancel), platform Invoices list, "Issue invoice for next period" on the
+  subscription page.
+- New error codes `PAYMENT_GATEWAY_ERROR` (502) and `BILLING_DISABLED` (503); billing is off until
+  Razorpay keys are configured.
+- Tests: BillingIT (7, against a Razorpay stub: issuing, one invoice per period, gateway failure,
+  forged/replayed webhooks, trial activation, partial payment, expiry, cancel, refresh, renewal job),
+  unit tests for signature and request mapping, 49 frontend tests. Browser walkthrough against the
+  Docker stack with a local Razorpay stub.
+- Fixed during verification: paying a trial invoice early started the paid month on the payment date
+  instead of at the end of the trial.
+- Not verified against Razorpay itself (not reachable from the build sandbox) — see risk R-5 and the
+  smoke test in DEPLOYMENT.md. GST treatment is open (D-11).
+
 ### Phase 8 — Frontend portals (2026-10-13)
 - Sign-in: own OpenID Connect client (Authorization Code + PKCE, tokens in memory, refresh,
   logout), auth interceptor, guards, MFA notice for platform staff.

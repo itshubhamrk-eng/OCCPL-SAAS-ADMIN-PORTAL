@@ -138,6 +138,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'invoices',
+            canActivate: [platformGuard(P + 'subscriptions.read')],
+            title: 'Invoices',
+            loadComponent: () =>
+              import('./features/platform/invoices-list').then((m) => m.InvoicesList),
+          },
+          {
             path: 'provisioning',
             canActivate: [platformGuard(P + 'provisioning.read')],
             title: 'Provisioning',
@@ -195,6 +202,13 @@ export const routes: Routes = [
             canActivate: [companyPermissionGuard('company.users.read', P + 'companies.read')],
             loadComponent: () =>
               import('./features/company/company-members').then((m) => m.CompanyMembers),
+          },
+          {
+            path: 'billing',
+            title: 'Billing',
+            canActivate: [companyPermissionGuard('company.billing.read', P + 'subscriptions.read')],
+            loadComponent: () =>
+              import('./features/company/company-billing').then((m) => m.CompanyBilling),
           },
           {
             path: 'usage',
