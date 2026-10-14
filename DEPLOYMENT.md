@@ -104,7 +104,7 @@ Testcontainers; includes the Core ↔ sample product end-to-end test in `backend
    been tested only against a stub of Razorpay's documented API.
 5. Decide D-11 (GST) before taking live payments.
 
-Admin portal container: `API_BASE_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
+Admin portal container: `API_BASE_URL` (including `/api/v1`, e.g. `https://api.occplsoftech.com/api/v1`), `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `CSP_CONNECT_SRC`
 (space-separated origins of the API and IdP). The portal's origin must be a valid redirect URI
 (`<origin>/*`) and post-logout redirect URI of the `occpl-admin-portal` client in Keycloak, and an
 allowed CORS origin of Core (`CORS_ALLOWED_ORIGINS`).
@@ -206,26 +206,47 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
 
 ## 3. Build & release pipeline (CI/CD)
 
-1. PR: `mvn verify` (unit + integration with Testcontainers, module verification),
-   `npm ci && ng lint && ng test --watch=false && ng build`, dependency scan, Flyway validate.
-2. Main: build versioned images (`core-platform:<git-sha>`, `admin-portal:<git-sha>`), Trivy
-   scan, push to registry.
-3. Deploy staging: run Flyway migration job (migrator credentials) → rolling restart of app
-   nodes → smoke tests → (optional) load test.
-4. Promote the same image digests to production with manual approval.
+1. **Every PR and push** (`.github/workflows/ci.yml`): backend `mvn verify` on MySQL 8.4 and 9.7
+   (unit, Testcontainers integration, Modulith verification, Core ↔ sample end-to-end); frontend
+   format, lint, tests, production build, `npm audit`; image builds with a Trivy scan; infra job
+   (`terraform fmt`/`validate` of every stack, production-realm check, shellcheck, compose config).
+2. **Main, after CI passed** (`.github/workflows/deploy.yml`): GitHub OIDC → build role; build and
+   push `core-platform`, `admin-portal` and `keycloak` to ECR, tagged with the commit SHA
+   (immutable tags: a release always means the same images).
+3. **Staging**: `infra/aws/scripts/rolling-deploy.sh <sha>` (bundle to S3, release recorded in SSM,
+   instances updated one at a time through SSM) → `smoke-test.sh` through the public ALB.
+4. **Production**: the same release after approval by the `production` environment's reviewers,
+   then the smoke test.
+5. **Redeploy / rollback**: run *Deploy* manually with a release SHA and an environment
+   (infra/aws/RUNBOOK.md §2).
 
 ## 4. Release & rollback
 
 - Migrations are expand/contract and backward compatible, so the previous app version runs on
-  the new schema. Rollback = redeploy previous image digest; DB is not rolled back.
+  the new schema. Rollback = redeploy the previous release; the database is not rolled back.
 - Destructive (contract) migrations ship only in a release after the code no longer uses the
   old structure.
-- Rolling deploy: drain node from LB (readiness DOWN) → stop → start new → readiness UP.
+- Flyway runs when Core starts on the first instance of a rollout (migrator account, Flyway's
+  lock prevents concurrent runs); the other instances find the schema up to date.
+- Rolling deploy: deregister the instance from all target groups (connections drain) → deploy
+  through SSM (`deploy.sh`: config from SSM/Secrets Manager, `docker compose pull && up`) →
+  wait until Keycloak, Core and the portal report ready → register. If an instance fails, all
+  instances already updated return to the previous release and the run fails.
+- Production keeps one of two instances serving throughout; staging (one instance) is
+  unavailable for about a minute per deploy.
+- New instances (instance refresh, replacement) boot the release recorded in
+  `/occpl/<env>/release` from the bundle in S3.
 
-## 5. Backups & recovery (drill done in Phase 9: infra/backup/DRILL.md)
+## 5. Backups & recovery
 
-Scripts in `infra/backup/` (MySQL Shell from the `mysql:9.7` image, so client and server versions match;
-account `occpl_backup`, password on stdin):
+**Production (AWS, primary):** RDS automated backups with point-in-time restore (35 days in
+production, 7 in staging); AWS Backup daily copy at 02:00 IST, copied to ap-south-2 (Hyderabad)
+for production; failed backup jobs alert through SNS. Procedures: infra/aws/RUNBOOK.md §3. The
+Keycloak database is on the same RDS instance and is covered by the same backups.
+
+**Self-managed MySQL** (local, or a deployment outside RDS; drill done in Phase 9:
+infra/backup/DRILL.md). Scripts in `infra/backup/` (MySQL Shell from the `mysql:8.4` image, so
+client and server versions match; account `occpl_backup`, password on stdin):
 
 | When | Script | What |
 |---|---|---|
@@ -233,29 +254,39 @@ account `occpl_backup`, password on stdin):
 | Every 5 min | `binlog-backup.sh /backups` | Appends the binary logs since the last increment to `/backups/<newest full>-binlog/` (1–2 s) → RPO ≤ 5 min + copy delay |
 | Recovery | `restore.sh /backups [<full>]` | Into an **empty** server: newest full backup, then all increments; `STOP_BEFORE=<GTID>` stops right before a bad transaction |
 
-Recovery runbook:
-1. Provision an empty MySQL 9.7 server (same settings as compose: utf8mb4, UTC, binary log + GTIDs on).
+Recovery runbook (self-managed):
+1. Provision an empty MySQL server (same settings as compose: utf8mb4, UTC, binary log + GTIDs on,
+   `log_bin_trust_function_creators=1` for the audit-log triggers).
 2. Copy the backup directories from off-host storage; run `restore.sh` (with `STOP_BEFORE` when
    undoing a mistake: find the GTID with `SHOW BINLOG EVENTS` / the binlog dump's JSON index).
-3. Recreate the database accounts (`infra/docker/mysql/01-create-users.sh` or the production secrets
-   tooling) — accounts are not part of the backup.
+3. Recreate the database accounts (`infra/docker/mysql/01-create-users.sh`, or
+   `infra/aws/compose/bin/bootstrap-db.sh`): accounts are not part of the backup.
 4. Point Core and the products at the server; Flyway validates the schema on start-up.
 5. Take a new full backup immediately (the GTID history continues).
 
 Measured in the drill (1 M users): restore 41–43 s, Core ready 14 s later; point-in-time recovery to
-the transaction before an accidental DELETE exact. Targets RPO 15 min / RTO 4 h are met with margin;
-remaining for Phase 10: off-host copies with retention and encryption, timers and alerts, the
-production Keycloak database, a drill on production hardware.
+the transaction before an accidental DELETE exact. Targets RPO 15 min / RTO 4 h.
 
-## 6. Monitoring & alerts (initial set)
+## 6. Monitoring & alerts (CloudWatch → SNS email, `infra/aws/modules/platform/monitoring.tf`)
 
-| Alert | Condition |
+Logs: every container to CloudWatch Logs (`/occpl/<env>/<service>`), plus the deploy log; ALB
+access logs to S3; VPC flow logs (rejected traffic). Metrics: ALB, RDS, ElastiCache, instance
+disk/memory (CloudWatch agent) and Core's Prometheus metrics (scraped by the agent into the
+`OCCPL/<env>` namespace).
+
+| Alarm | Condition |
 |---|---|
-| API error rate | 5xx > 1% for 5 min |
-| Latency | p95 > SLO for 10 min |
-| DB pool | Hikari pending > 0 for 5 min or active/max > 90% |
-| Provisioning | any job FAILED_PERMANENT; FAILED_RETRYABLE backlog > threshold |
-| Subscription jobs | scheduled sweep failed or not run in expected window |
-| Outbox lag | oldest unpublished event > 5 min |
-| Webhooks | signature failures spike |
-| Infra | disk > 80%, replica lag > 60 s, certificate expiry < 14 days |
+| `api-5xx-rate` | Core 5xx > 1% of requests for 5 min |
+| `api-latency-p95` | p95 > 300 ms for 10 min (SLO from the Phase 9 load test) |
+| `<service>-unhealthy`, `<service>-down` | unhealthy targets / no healthy target (core, portal, keycloak) |
+| `instances-missing` | fewer in-service instances than configured |
+| `disk-80` | root volume > 80% |
+| `db-cpu`, `db-free-storage`, `db-freeable-memory`, `cache-cpu` | database / cache resources |
+| `db-pool-pending` | Hikari threads waiting for a connection for 5 min |
+| `provisioning-failed` | any provisioning job failed permanently |
+| `webhook-rejections` | > 10 rejected payment webhooks in 5 min (bad secret or attack) |
+| `rate-limiter-down` | Core logs that it cannot reach Redis (rate limiting fails open) |
+| `certificate-expiry` | ACM certificate < 14 days |
+| Backup failed | AWS Backup job failed / expired (EventBridge) |
+
+Not yet alarmed: outbox lag and the subscription sweep window (no metric exported yet; BACKLOG).

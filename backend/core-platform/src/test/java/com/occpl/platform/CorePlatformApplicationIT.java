@@ -44,6 +44,21 @@ class CorePlatformApplicationIT {
     }
 
     @Test
+    void auditLogIsAppendOnly() {
+        String id = java.util.UUID.randomUUID().toString();
+        jdbc.update("insert into audit_log (id, occurred_at, actor_type, action, target_type, outcome) "
+                + "values (UUID_TO_BIN(?), UTC_TIMESTAMP(6), 'SYSTEM', 'test.append_only', 'test', 'SUCCESS')", id);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update(
+                        "update audit_log set action = 'tampered' where id = UUID_TO_BIN(?)", id))
+                .hasMessageContaining("append-only");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update(
+                        "delete from audit_log where id = UUID_TO_BIN(?)", id))
+                .hasMessageContaining("append-only");
+        assertThat(jdbc.queryForObject("select action from audit_log where id = UUID_TO_BIN(?)", String.class, id))
+                .isEqualTo("test.append_only");
+    }
+
+    @Test
     void seedsPermissionCatalogueAndSystemRoles() {
         assertThat(jdbc.queryForObject("select count(*) from permission", Integer.class)).isEqualTo(28);
         assertThat(jdbc.queryForList("select code from role where system_role order by code", String.class))

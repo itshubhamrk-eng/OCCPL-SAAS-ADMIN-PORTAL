@@ -1,0 +1,40 @@
+#!/bin/bash
+# Boot script of an app instance (rendered by Terraform). Installs Docker, the AWS CLI and the
+# CloudWatch agent, fetches the release bundle and starts the release recorded in SSM.
+set -euo pipefail
+exec > >(tee -a /var/log/occpl-bootstrap.log) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -q
+apt-get install -y -q docker.io docker-compose-v2 unattended-upgrades jq curl unzip
+systemctl enable --now docker
+# Security updates install automatically; reboots stay manual (instance refresh replaces hosts).
+cat > /etc/apt/apt.conf.d/52occpl-unattended <<'CONF'
+Unattended-Upgrade::Automatic-Reboot "false";
+CONF
+
+if ! command -v aws >/dev/null; then
+  snap install aws-cli --classic
+fi
+export PATH="$PATH:/snap/bin"
+if ! [ -x /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ]; then
+  curl -fsSL -o /tmp/cwagent.deb https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+  dpkg -i /tmp/cwagent.deb
+fi
+
+mkdir -p /etc/occpl /opt/occpl
+cat > /etc/occpl/instance.env <<ENV
+OCCPL_ENV=${env}
+AWS_REGION=${region}
+AWS_DEFAULT_REGION=${region}
+ARTIFACTS_BUCKET=${artifacts_bucket}
+SSM_PREFIX=${ssm_prefix}
+ENV
+chmod 600 /etc/occpl/instance.env
+
+aws s3 sync --delete "s3://${artifacts_bucket}/${env}/bundle/current/" /opt/occpl/ || true
+if [ -x /opt/occpl/bin/deploy.sh ]; then
+  /opt/occpl/bin/deploy.sh || echo "initial deploy failed; the load balancer keeps this instance out of service"
+else
+  echo "no release bundle yet; the first deploy comes from the pipeline"
+fi

@@ -5,9 +5,11 @@ users/memberships, roles/permissions, product catalogue, plans, subscriptions, e
 provisioning, billing integration (Razorpay), audit, notifications. Products are separate services
 that own their data. Core contains no product business logic.
 
-**Current phase**: Phase 9 (Hardening) done 2026-10-14; **wait for approval before Phase 10
-(Deployment)**. Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5, S-9, PR-5, PR-6, PR-7, UI-4 (settings
-page), UI-5, UI-6, B-3..B-8 (Razorpay live test, GST D-11, …), H-5 (staging load test), H-6, H-7, D-2.
+**Current phase**: Phase 10 (Deployment) code complete 2026-10-14: Terraform, compose bundle,
+deploy pipeline and runbook (`infra/aws/`). Not yet applied to an AWS account (D-1e: needs account
+access, Route 53 zone, SES production access, GitHub environments). Open follow-ups: I-1, C-8, C-9,
+C-10, PC-4, PC-5, S-9, PR-5, PR-6, UI-4 (settings page), UI-5, UI-6, B-3..B-8 (Razorpay live test,
+GST D-11, …), H-5 (staging load test), H-6, H-7, D-1e, D-2 drill, D-4..D-6.
 
 **Hosting (D-13/D-14, ADR-0011)**: AWS ap-south-1, EC2 + Docker Compose behind an ALB, RDS MySQL 8.4 LTS, ElastiCache, SES, Secrets Manager, ECR, Terraform.
 
@@ -21,10 +23,17 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
 **Layout**: `backend/core-platform` (package `com.occpl.platform.<module>.{api,web,internal}`,
 `shared` is OPEN), `backend/product-sample` (independent sample product `com.occpl.sample`, own DB),
 `backend/e2e-tests` (Keycloak + Core in-process + sample as a process), `frontend/admin-portal` (`core/`, `layout/`, `features/`), `infra/docker`
-(compose, realm, MySQL users), `.github/workflows/ci.yml`.
+(compose, realm, MySQL users), `infra/aws` (Terraform stacks, production compose bundle, deploy
+scripts, RUNBOOK.md), `.github/workflows/{ci,deploy}.yml`.
 
 **Commands**: backend `cd backend && mvn verify` (Docker needed for *IT); frontend
 `npm run format:check && npx ng lint && npm test && npx ng build`.
+
+**Deployment rules**: images are tagged with the git SHA (immutable ECR tags); instance config comes
+from SSM `/occpl/<env>/config` + Secrets Manager via `render-env.sh` — add new Core settings there
+and in Terraform `secrets.tf`; production realm = `make-production-realm.py` output (CI checks it is
+in sync); `audit_log` is append-only by triggers (needs `log_bin_trust_function_creators=1`);
+`API_BASE_URL` of the portal includes `/api/v1`.
 
 **Key rules**
 - Only a module's `api` package (`@NamedInterface("api")`) is public; `ModularityTests` enforce it.

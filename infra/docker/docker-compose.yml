@@ -17,7 +17,8 @@ services:
       SAMPLE_DB_MIGRATOR_PASSWORD: ${SAMPLE_DB_MIGRATOR_PASSWORD:?set in .env}
       SAMPLE_DB_APP_PASSWORD: ${SAMPLE_DB_APP_PASSWORD:?set in .env}
       DB_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?set in .env}
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00",
+              "--log-bin-trust-function-creators=1"] # as on RDS: lets the migrator create the audit-log triggers
     ports:
       - "127.0.0.1:3306:3306"
     volumes:

@@ -103,3 +103,29 @@ jobs:
             "$(go env GOPATH)/bin/trivy" image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
               --exit-code 1 "occpl/$image:${{ github.sha }}"
           done
+
+  infra:
+    name: Infrastructure (Terraform, deploy bundle)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.3
+      - run: terraform fmt -check -recursive infra/aws
+      - name: terraform validate
+        run: |
+          for stack in bootstrap shared envs/staging envs/production; do
+            terraform -chdir="infra/aws/$stack" init -backend=false -input=false >/dev/null
+            terraform -chdir="infra/aws/$stack" validate
+          done
+      - name: Production realm is in sync with the development realm
+        run: python3 infra/aws/compose/keycloak/make-production-realm.py --check
+      - name: Shell scripts
+        run: |
+          for f in infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh; do bash -n "$f"; done
+          shellcheck infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh
+      - name: Deploy compose file
+        run: |
+          REGISTRY=r RELEASE=x OCCPL_ENV=ci AWS_REGION=ap-south-1 \
+            docker compose -f infra/aws/compose/docker-compose.yml config --quiet --no-env-resolution

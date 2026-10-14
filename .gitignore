@@ -19,3 +19,10 @@ coverage/
 
 # Load-test tokens (load-tests/setup.py)
 load-tests/tokens.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraform.lock.hcl.bak

@@ -140,9 +140,10 @@ the need.
   Clear the variable after initial setup.
 - Company authorization via `@tenant.check`; cross-tenant ids return 404 with a body identical to a
   non-existent company. Suspended (and pending) companies allow only `*.read` permissions.
-- Audit rows for role changes are written in the same transaction (`audit_log`). The application DB
-  account still has UPDATE/DELETE on `audit_log` (database-wide grant); table-level revocation is
-  scheduled for Phase 10 (DEPLOYMENT.md).
+- Audit rows for role changes are written in the same transaction (`audit_log`). The table is
+  append-only for every account: `BEFORE UPDATE`/`BEFORE DELETE` triggers reject changes
+  (migration `V202610141100`; covered by `CorePlatformApplicationIT.auditLogIsAppendOnly`).
+  Removing old rows (retention) needs a deliberate migration that drops the triggers.
 - Rate limiting fails open when Redis is unavailable; requests with an invalid token are rejected
   by the bearer filter before the rate limiter, so the Nginx per-IP limit is the control for
   invalid-token floods.

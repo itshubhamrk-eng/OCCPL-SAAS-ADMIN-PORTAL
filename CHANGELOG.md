@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 10 — Deployment (2026-10-14)
+- AWS infrastructure as Terraform (`infra/aws`): state bucket; shared stack (ECR with immutable
+  tags, artifacts bucket, GitHub OIDC build role, SES identity with DKIM/MAIL FROM/DMARC and SMTP
+  credentials); environment module (VPC over two AZs, ALB with ACM and WAF, Keycloak admin console
+  restricted to `admin_cidrs`, EC2 Auto Scaling group reached through SSM, RDS MySQL 8.4 with TLS-only
+  accounts, ElastiCache Valkey with TLS, Secrets Manager, CloudWatch alarms, AWS Backup with a
+  cross-region copy for production); staging and production stacks.
+- Production runtime: compose bundle (Core, portal, Keycloak) with config rendered from SSM and
+  Secrets Manager on the instance; production Keycloak image (optimized MySQL build, clustered with
+  jdbc-ping, realm import generated from the development realm: TLS required, SES SMTP, production
+  redirect URIs, no sample-product clients).
+- Pipeline: `.github/workflows/deploy.yml` publishes images per commit, rolls them out to staging,
+  smoke-tests, then production after approval; manual redeploy/rollback; failed rollouts return all
+  updated instances to the previous release. CI `infra` job: Terraform fmt/validate, realm check,
+  shellcheck, compose config.
+- `audit_log` is append-only for every account (database triggers).
+- Fix found in the production rehearsal: the portal's `API_BASE_URL` must include `/api/v1`.
+- RUNBOOK.md: first-time setup, deploy/rollback, RDS point-in-time restore, region loss,
+  incidents, secret rotation, maintenance.
+
 ### AWS hosting decisions (2026-10-14)
 - D-13: AWS `ap-south-1` (Mumbai), EC2 instances with Docker Compose behind an Application Load
   Balancer; D-14: Amazon RDS for MySQL 8.4 LTS (RDS offers 9.7 only in preview). ADR-0011.

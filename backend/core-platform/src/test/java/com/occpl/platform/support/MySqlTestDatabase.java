@@ -13,7 +13,10 @@ public final class MySqlTestDatabase {
     /** MySQL image for integration tests; override with {@code -Doccpl.test.mysql-image=...}. */
     public static final String IMAGE = System.getProperty("occpl.test.mysql-image", "mysql:8.4");
 
-    private static final MySQLContainer MYSQL = new MySQLContainer(IMAGE);
+    /** Same setting as the RDS parameter group: the migrator (no SUPER) creates triggers with binary logging on. */
+    public static final String TRUST_FUNCTION_CREATORS = "--log-bin-trust-function-creators=1";
+
+    private static final MySQLContainer MYSQL = new MySQLContainer(IMAGE).withCommand(TRUST_FUNCTION_CREATORS);
 
     static {
         MYSQL.start();

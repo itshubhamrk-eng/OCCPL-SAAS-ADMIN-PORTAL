@@ -1,6 +1,6 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 9 (Hardening) complete — awaiting approval for Phase 10 (Deployment).** Before live payments: D-11 (GST) and the Razorpay smoke test (R-5). Before production sizing: load test on staging hardware (H-5) and confirmed SLOs (D-6).
+Status: **Phase 10 (Deployment) code complete** (AWS Terraform, pipeline, runbook) — first apply to the AWS account pending (D-1e). Before live payments: D-11 (GST) and the Razorpay smoke test (R-5). Before production sizing: load test on staging hardware (H-5) and confirmed SLOs (D-6).
 Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective
@@ -126,6 +126,6 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 |---|---|---|
 | R-1 | Flyway 12.4 is not verified by its vendor on MySQL 9.7 | Production uses MySQL 8.4 (verified, no warning); 9.7 stays in the CI matrix until RDS and Flyway support it |
 | R-2 | Spring Boot 4 / Jackson 3 ecosystem is newer; some third-party libraries may lag | Prefer Boot-managed dependencies; check compatibility before adding libraries |
-| R-3 | Self-hosted Keycloak must be operated (HA, upgrades, backups) | Two-node deployment, DB backups, upgrade runbook (Phase 10) |
+| R-3 | Self-hosted Keycloak must be operated (HA, upgrades, backups) | One Keycloak per instance, clustered (jdbc-ping); database on RDS with its backups; realm-change and upgrade procedures in infra/aws/RUNBOOK.md |
 | R-4 | Scale targets unproven until load-tested | H-3 done on a development VM with 1 M users (SLOs met up to 210 req/s on 4 vCPUs shared with the database and generator); production capacity still to be measured on staging hardware (H-5) |
 | R-5 | The Razorpay adapter has been tested only against a stub of Razorpay's documented API (razorpay.com is not reachable from the build sandbox) | Before going live: run the billing smoke test in DEPLOYMENT.md with Razorpay test-mode keys and a real webhook; fix any field mismatch in `RazorpayGateway` |

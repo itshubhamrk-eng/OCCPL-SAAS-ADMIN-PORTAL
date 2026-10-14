@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+alarm_email                   = "ops@occplsoftech.com"
+admin_cidrs                   = ["203.0.113.10/32"] # office / VPN egress addresses
+bootstrap_super_admin_email   = "admin@occplsoftech.com" # clear after the first Super Admin signed in
+provisioning_alert_recipients = "ops@occplsoftech.com"
