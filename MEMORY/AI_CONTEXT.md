@@ -9,11 +9,14 @@ that own their data. Core contains no product business logic.
 deploy pipeline and runbook (`infra/aws/`). Not yet applied to an AWS account (D-1e: needs account
 access, Route 53 zone, SES production access, GitHub environments). Open follow-ups: I-1, C-8, C-9,
 C-10, PC-4, PC-5, S-9, PR-5, PR-6, UI-4 (settings page), UI-5, UI-6, B-3..B-8 (Razorpay live test,
-GST D-11, …), H-5 (staging load test), H-6, H-7, D-1e, D-2 drill, D-4..D-6.
+GST D-11, …), H-5 (pre-launch load test on production), H-6, H-7, D-1e, D-2 drill, D-4..D-6.
 
 **Hosting (D-13/D-14, ADR-0011)**: AWS ap-south-1, EC2 + Docker Compose behind an ALB, RDS MySQL 8.4 LTS, ElastiCache, SES, Secrets Manager, ECR, Terraform.
 
-**Domain (D-12)**: `occplsoftech.com` — admin., api., auth., `<product>.`, `*.staging.` (DEPLOYMENT.md §2).
+**Domain (D-12)**: `occplsoftech.com` — admin., api., auth., `<product>.`, `*.staging.` reserved (DEPLOYMENT.md §2).
+
+**No AWS staging (D-15)**: one AWS environment, production; releases are tried on the local compose
+stack, then approved in GitHub (`production` environment) before the rolling deploy.
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,

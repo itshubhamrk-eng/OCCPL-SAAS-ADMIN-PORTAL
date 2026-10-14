@@ -74,7 +74,7 @@ module "platform" {
   hosted_zone_id = data.terraform_remote_state.shared.outputs.hosted_zone_id
   vpc_cidr       = "10.20.0.0/16"
 
-  # Production sizes (ADR-0011); revisit after the staging load test (BACKLOG H-5).
+  # Production sizes (ADR-0011); revisit after the pre-launch load test on this environment (BACKLOG H-5).
   instance_type            = "m7i.large"
   instance_count           = 2
   nat_gateway_count        = 2

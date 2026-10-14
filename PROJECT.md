@@ -1,6 +1,6 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 10 (Deployment) code complete** (AWS Terraform, pipeline, runbook) — first apply to the AWS account pending (D-1e). Before live payments: D-11 (GST) and the Razorpay smoke test (R-5). Before production sizing: load test on staging hardware (H-5) and confirmed SLOs (D-6).
+Status: **Phase 10 (Deployment) code complete** (AWS Terraform, pipeline, runbook) — first apply to the AWS account pending (D-1e). Before live payments: D-11 (GST) and the Razorpay smoke test (R-5). Before production sizing: load test on the production environment before launch (H-5) and confirmed SLOs (D-6).
 Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective
@@ -115,9 +115,10 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | D-8 | Self-registration vs invitation only | **Applied default:** invitation only (Phase 4) |
 | D-9 | Product launch model (subdomains + SSO vs path-based) | **Applied default (Phase 7):** both are supported without a code change — each product has its own `appUrl` (own host or subdomain) plus a `launch.path` template (`{companyId}`, `{companyCode}`); sign-in is SSO through Keycloak. Revisit if per-company subdomains are wanted. |
 | D-10 | Personal-data retention/export obligations (DPDP Act 2023, contracts) | Open — needed before launch (BACKLOG H-7) |
-| D-12 | Production domain | **Decided (2026-10-14):** `occplsoftech.com` — hostnames in DEPLOYMENT.md §2 (admin., api., auth., products as subdomains, staging under `*.staging.`). Hosting: AWS (D-13). |
+| D-12 | Production domain | **Decided (2026-10-14):** `occplsoftech.com` — hostnames in DEPLOYMENT.md §2 (admin., api., auth., products as subdomains; `*.staging.` reserved, unused per D-15). Hosting: AWS (D-13). |
 | D-13 | Hosting | **Decided (2026-10-14): AWS**, region `ap-south-1` (Mumbai), EC2 instances with Docker Compose behind an Application Load Balancer (ADR-0011). |
 | D-14 | Production database | **Decided (2026-10-14): Amazon RDS for MySQL 8.4 LTS** (RDS has 9.7 only in preview). Tests run on 8.4 by default and on 9.7 in CI; upgrade when RDS 9.7 is generally available. |
+| D-15 | Staging environment | **Decided (2026-10-14): none on AWS.** Releases are tried on the local Docker Compose stack, then approved for production; first deploy, rollback and restore drills run on production before launch (ADR-0011 amendment). |
 | D-11 | GST on invoices: are plan prices tax-inclusive or exclusive, which GST rate/HSN-SAC code, and is the company's GSTIN printed on invoices? | **Open — needed before live payments.** Today the plan price is sent to Razorpay as the line amount with no tax fields; the company's tax id is stored but not sent. |
 
 ## 6. Risks
@@ -127,5 +128,5 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | R-1 | Flyway 12.4 is not verified by its vendor on MySQL 9.7 | Production uses MySQL 8.4 (verified, no warning); 9.7 stays in the CI matrix until RDS and Flyway support it |
 | R-2 | Spring Boot 4 / Jackson 3 ecosystem is newer; some third-party libraries may lag | Prefer Boot-managed dependencies; check compatibility before adding libraries |
 | R-3 | Self-hosted Keycloak must be operated (HA, upgrades, backups) | One Keycloak per instance, clustered (jdbc-ping); database on RDS with its backups; realm-change and upgrade procedures in infra/aws/RUNBOOK.md |
-| R-4 | Scale targets unproven until load-tested | H-3 done on a development VM with 1 M users (SLOs met up to 210 req/s on 4 vCPUs shared with the database and generator); production capacity still to be measured on staging hardware (H-5) |
+| R-4 | Scale targets unproven until load-tested | H-3 done on a development VM with 1 M users (SLOs met up to 210 req/s on 4 vCPUs shared with the database and generator); production capacity still to be measured on the production environment before launch (H-5) |
 | R-5 | The Razorpay adapter has been tested only against a stub of Razorpay's documented API (razorpay.com is not reachable from the build sandbox) | Before going live: run the billing smoke test in DEPLOYMENT.md with Razorpay test-mode keys and a real webhook; fix any field mismatch in `RazorpayGateway` |

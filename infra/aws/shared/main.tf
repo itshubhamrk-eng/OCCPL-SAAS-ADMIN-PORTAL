@@ -1,4 +1,4 @@
-# Account-wide resources shared by staging and production (ADR-0011):
+# Account-wide resources used by the production environment (ADR-0011):
 # container registry, release artifacts bucket, GitHub Actions OIDC trust and build role,
 # SES domain identity for occplsoftech.com with its DNS records and SMTP credentials.
 

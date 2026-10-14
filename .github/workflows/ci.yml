@@ -115,7 +115,7 @@ jobs:
       - run: terraform fmt -check -recursive infra/aws
       - name: terraform validate
         run: |
-          for stack in bootstrap shared envs/staging envs/production; do
+          for stack in bootstrap shared envs/production; do
             terraform -chdir="infra/aws/$stack" init -backend=false -input=false >/dev/null
             terraform -chdir="infra/aws/$stack" validate
           done

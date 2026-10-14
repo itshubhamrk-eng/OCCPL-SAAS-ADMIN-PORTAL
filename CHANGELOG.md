@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### No AWS staging environment (2026-10-14)
+- Decision D-15: production is the only AWS environment; releases are tried on the local Docker
+  Compose stack and approved in GitHub before the rolling deploy. Removed `infra/aws/envs/staging`
+  and the staging job of the Deploy workflow; runbook and deployment docs updated.
+
 ### Phase 10 — Deployment (2026-10-14)
 - AWS infrastructure as Terraform (`infra/aws`): state bucket; shared stack (ECR with immutable
   tags, artifacts bucket, GitHub OIDC build role, SES identity with DKIM/MAIL FROM/DMARC and SMTP

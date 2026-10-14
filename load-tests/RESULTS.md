@@ -4,7 +4,7 @@ Measured on 2026-10-14. All numbers come from the k6 summaries of the runs below
 extrapolated. **They describe a single 4-vCPU / 15 GB development VM that ran everything at once**
 (Core, MySQL 9.7, Redis, Keycloak, the portal, the sample product *and* the k6 generator), so they
 are a lower bound and a regression baseline, not a statement about production capacity. Production
-sizing needs the same run on staging hardware (BACKLOG H-5).
+sizing needs the same run on the production environment before launch (BACKLOG H-5).
 
 ## Data set
 

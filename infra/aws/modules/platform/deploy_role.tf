@@ -1,5 +1,5 @@
-# Role assumed by the GitHub Actions deploy job of this environment (GitHub environment
-# "staging" / "production"; production requires a manual approval configured in GitHub).
+# Role assumed by the GitHub Actions deploy job of this environment (GitHub environment named
+# after it, e.g. "production", which requires a manual approval configured in GitHub).
 resource "aws_iam_role" "deploy" {
   name = "${local.name}-github-deploy"
   assume_role_policy = jsonencode({

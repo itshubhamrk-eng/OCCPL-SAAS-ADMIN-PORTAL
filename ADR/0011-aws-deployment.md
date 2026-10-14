@@ -30,8 +30,8 @@ personal data are mainly in India (DPDP Act 2023).
   load balancer, pull the new image digest, start, wait for readiness, re-register).
 - **Monitoring**: container logs to CloudWatch Logs; CloudWatch agent scrapes
   `/actuator/prometheus`; CloudWatch alarms implement the alerts in DEPLOYMENT.md §6.
-- **Infrastructure as code**: Terraform (`infra/aws/`), state in S3 with locking; staging is the
-  same code with smaller sizes (one instance, single-AZ database).
+- **Infrastructure as code**: Terraform (`infra/aws/`), state in S3 with locking. One AWS environment,
+  production (amended 2026-10-14, D-15: no AWS staging).
 
 ## Consequences
 + Managed database, Redis, email, certificates and secrets: the team operates only the two
@@ -42,3 +42,11 @@ personal data are mainly in India (DPDP Act 2023).
   8.4 (default) and 9.7 in CI. ADR-0007 ("latest versions") gets this exception.
 − Instances must be patched (unattended security upgrades, replaced from a refreshed image
   monthly); scaling beyond a few instances or per-service autoscaling would justify ECS later.
+
+## Amendment (2026-10-14): no AWS staging environment (D-15)
+Releases are verified by CI (full test suite on MySQL 8.4 and 9.7, end-to-end test, image scan) and
+by the operator on the local Docker Compose stack, then approved for production. Saves the cost of a
+second environment. Consequences: AWS-specific behaviour (RDS, ElastiCache TLS, SES, ALB/WAF) is first
+exercised in production, which is mitigated by the post-deploy smoke test, the automatic rollback
+of every updated instance and by doing the first deploy, the rollback drill and the restore drill
+before launch. The Terraform module stays environment-neutral, so staging can be added later.

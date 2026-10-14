@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Post-deploy smoke test through the public entry point (load balancer, TLS, WAF).
-# Usage: smoke-test.sh <host-suffix>   ("" for production, "staging." for staging)
+# Usage: smoke-test.sh [host-suffix]   (empty for production)
 set -euo pipefail
 suffix=${1-}
 domain=${DOMAIN:-occplsoftech.com}

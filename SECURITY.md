@@ -279,8 +279,9 @@ the need.
 
 ## 5. Secrets and data protection
 
-- No secrets in Git. Local dev uses `.env` (gitignored) with dev-only values; staging/prod use
-  the host secret manager / environment injection (e.g. Vault, AWS SSM, or Docker secrets).
+- No secrets in Git. Local dev uses `.env` (gitignored) with dev-only values; production uses
+  AWS Secrets Manager, read by the instances at deploy time into root-only env files
+  (`infra/aws/compose/bin/render-env.sh`).
 - TLS everywhere externally; TLS to MySQL/Redis in production.
 - Encryption at rest: MySQL InnoDB tablespace encryption or encrypted volumes; encrypted
   backups.

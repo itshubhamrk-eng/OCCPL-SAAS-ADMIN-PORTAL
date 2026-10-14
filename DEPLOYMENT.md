@@ -8,10 +8,10 @@ Status: Local stack, Dockerfiles and CI implemented in Phase 2; sample product s
 |---|---|---|---|
 | local | Development | Docker Compose on developer machine | Synthetic seed |
 | test (CI) | Automated tests | Testcontainers (MySQL, Keycloak, Redis) | Ephemeral |
-| staging | Release verification, load tests | Same topology as prod, smaller sizes | Synthetic / anonymized |
-| production | Customers | AWS ap-south-1: 2 EC2 instances (Docker Compose) behind an ALB, RDS MySQL 8.4 LTS Multi-AZ, ElastiCache, SES, Keycloak on both instances (ADR-0011) | Real |
+| pre-release check | Try a release before approving it for production (D-15) | Local Docker Compose stack (`infra/docker`), built from the release commit | Synthetic seed |
+| production | Customers (the only AWS environment, D-15) | AWS ap-south-1: 2 EC2 instances (Docker Compose) behind an ALB, RDS MySQL 8.4 LTS Multi-AZ, ElastiCache, SES, Keycloak on both instances (ADR-0011) | Real |
 
-Configuration: Spring profiles `local` and `test` exist (staging/prod use the production-safe defaults in
+Configuration: Spring profiles `local` and `test` exist (production uses the production-safe defaults in
 `application.yml` plus environment variables); the portal reads a runtime `config.json`
 generated from environment variables. All secrets injected at runtime (env vars / secret manager); none in
 Git or images.
@@ -181,7 +181,9 @@ Route 53 (occplsoftech.com) → AWS WAF → Application Load Balancer (ACM *.occ
 Product services: own hosts and databases, reached at <product>.occplsoftech.com
 ```
 
-Staging: same Terraform code, one instance, single-AZ database, `*.staging.occplsoftech.com`.
+No AWS staging environment (D-15): releases are verified by CI and on the local compose stack. The
+Terraform module is environment-neutral, so a staging environment can be added later
+(infra/aws/RUNBOOK.md §6).
 Kubernetes and ECS are not used initially (ADR-0004, ADR-0011); the containers would move unchanged.
 
 ### Hostnames (decision D-12: domain `occplsoftech.com`)
@@ -192,10 +194,10 @@ Kubernetes and ECS are not used initially (ADR-0004, ADR-0011); the containers w
 | `api.occplsoftech.com` | Core Platform API (`/api/v1/**`) | Razorpay webhook `https://api.occplsoftech.com/api/v1/webhooks/payments/razorpay`; `PROVISIONING_CALLBACK_BASE_URL`; problem `type` URIs and the product-config schema `$id` use this host |
 | `auth.occplsoftech.com` | Keycloak (realm `occpl`) | `OIDC_ISSUER_URI=https://auth.occplsoftech.com/realms/occpl`; admin console reachable only from the operations network |
 | `<product>.occplsoftech.com` | Product services (e.g. `notes.occplsoftech.com`) | Each product's `appUrl`; its API may sit on the same host or `<product>-api.` |
-| `*.staging.occplsoftech.com` | Staging (`admin.staging.…`, `api.staging.…`, `auth.staging.…`) | Separate realm, database and secrets |
+| `*.staging.occplsoftech.com` | Reserved for a staging environment if one is added later | Not in use (D-15) |
 | `occplsoftech.com` | Company website (not part of this platform) | |
 
-TLS: one certificate per host or a wildcard `*.occplsoftech.com` (+ `*.staging.occplsoftech.com`),
+TLS: one certificate per host or a wildcard `*.occplsoftech.com`,
 automatic renewal with expiry alert (§6). HSTS with `includeSubDomains` is sent by Core and must be
 sent by Nginx for the portal — only enable `preload` once every subdomain serves HTTPS.
 Email: sender `no-reply@occplsoftech.com` (`MAIL_FROM`) with SPF, DKIM and DMARC records for the
@@ -213,12 +215,12 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
 2. **Main, after CI passed** (`.github/workflows/deploy.yml`): GitHub OIDC → build role; build and
    push `core-platform`, `admin-portal` and `keycloak` to ECR, tagged with the commit SHA
    (immutable tags: a release always means the same images).
-3. **Staging**: `infra/aws/scripts/rolling-deploy.sh <sha>` (bundle to S3, release recorded in SSM,
-   instances updated one at a time through SSM) → `smoke-test.sh` through the public ALB.
-4. **Production**: the same release after approval by the `production` environment's reviewers,
-   then the smoke test.
-5. **Redeploy / rollback**: run *Deploy* manually with a release SHA and an environment
-   (infra/aws/RUNBOOK.md §2).
+3. **Pre-release check (manual)**: run the release commit on the local compose stack
+   (`cd infra/docker && docker compose up --build`) and try the changed features.
+4. **Production**: after approval by the `production` environment's reviewers,
+   `infra/aws/scripts/rolling-deploy.sh <sha>` (bundle to S3, release recorded in SSM, instances
+   updated one at a time through SSM) → `smoke-test.sh` through the public ALB.
+5. **Redeploy / rollback**: run *Deploy* manually with a release SHA (infra/aws/RUNBOOK.md §2).
 
 ## 4. Release & rollback
 
@@ -232,15 +234,16 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
   through SSM (`deploy.sh`: config from SSM/Secrets Manager, `docker compose pull && up`) →
   wait until Keycloak, Core and the portal report ready → register. If an instance fails, all
   instances already updated return to the previous release and the run fails.
-- Production keeps one of two instances serving throughout; staging (one instance) is
-  unavailable for about a minute per deploy.
+- Production keeps one of two instances serving throughout. Without an AWS staging environment,
+  differences between local compose and AWS (RDS, ElastiCache TLS, SES, the load balancer) first
+  show in production: the smoke test and the automatic rollback limit the impact, and releases with
+  risky migrations go out outside business hours.
 - New instances (instance refresh, replacement) boot the release recorded in
-  `/occpl/<env>/release` from the bundle in S3.
+  `/occpl/production/release` from the bundle in S3.
 
 ## 5. Backups & recovery
 
-**Production (AWS, primary):** RDS automated backups with point-in-time restore (35 days in
-production, 7 in staging); AWS Backup daily copy at 02:00 IST, copied to ap-south-2 (Hyderabad)
+**Production (AWS, primary):** RDS automated backups with point-in-time restore (35 days); AWS Backup daily copy at 02:00 IST, copied to ap-south-2 (Hyderabad)
 for production; failed backup jobs alert through SNS. Procedures: infra/aws/RUNBOOK.md §3. The
 Keycloak database is on the same RDS instance and is covered by the same backups.
 

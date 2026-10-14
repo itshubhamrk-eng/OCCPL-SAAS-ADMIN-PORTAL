@@ -13,7 +13,7 @@ variable "domain" {
 }
 
 variable "host_suffix" {
-  description = "Appended to admin./api./auth.: \"\" for production, \"staging.\" for staging"
+  description = "Appended to admin./api./auth. (\"\" for production; e.g. \"staging.\" if a second environment is ever added)"
   type        = string
 }
 

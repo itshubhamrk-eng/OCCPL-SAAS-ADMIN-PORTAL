@@ -206,8 +206,8 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 - ☑ **H-4** Backup/restore drill with MySQL Shell dumps + binary-log increments: full backup 5 s,
   increments 1–2 s every 5 min (RPO ≤ 5 min), restore 41–43 s + Core 14 s (RTO ≈ 1 min at this size),
   exact point-in-time recovery before an accidental DELETE. `infra/backup/DRILL.md`.
-- ☐ **H-5** Repeat H-3 on staging hardware: several Core instances behind the load balancer,
-  separate MySQL, generator on its own machine; soak test (hours); Keycloak login throughput.
+- ☐ **H-5** Repeat H-3 on the production environment before launch (no AWS staging, D-15): both
+  Core instances behind the load balancer, RDS, generator on its own machine; soak test (hours); Keycloak login throughput.
   Needed before confirming D-6 and sizing production.
 - ☐ **H-6** Usage-counter throughput under contention on one company (correctness is covered).
 - ☐ **H-7** Personal-data export and erasure (D-10, DPDP Act) — decision still open.
@@ -217,19 +217,18 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 - ◐ **D-1** AWS deployment (ADR-0011), code complete; not yet applied to an AWS account:
   - ☑ **D-1a** Terraform: state bucket; shared stack (ECR, artifacts bucket, GitHub OIDC, SES with
     DKIM/MAIL FROM/DMARC); environment module (VPC in two AZs, ALB + ACM + WAF, EC2 Auto Scaling
-    group with SSM, RDS MySQL 8.4, ElastiCache Valkey with TLS, Secrets Manager, IAM); staging and
-    production stacks. `terraform validate` passes for all stacks.
+    group with SSM, RDS MySQL 8.4, ElastiCache Valkey with TLS, Secrets Manager, IAM); production
+    stack (no AWS staging, D-15). `terraform validate` passes for all stacks.
   - ☑ **D-1b** Production compose bundle, production Keycloak image (optimized MySQL build, realm
     import generated from the development realm), instance scripts (render config from SSM and
     Secrets Manager, deploy, database bootstrap). Rehearsed locally end to end (MySQL 8.4, nginx as
     the ALB, browser login with MFA through the public hostnames).
-  - ☑ **D-1c** CI/CD: images to ECR per commit, rolling deploy to staging, smoke test, approval-gated
-    production; manual redeploy/rollback; automatic rollback of all updated instances on failure
+  - ☑ **D-1c** CI/CD: images to ECR per commit, approval-gated rolling deploy to production, smoke test; manual redeploy/rollback; automatic rollback of all updated instances on failure
     (rehearsed with a stubbed AWS CLI). CI infra job (fmt, validate, realm check, shellcheck).
   - ☑ **D-1d** CloudWatch logs, metrics and alarms → SNS email; RUNBOOK.md (setup, deploy,
     rollback, recovery, incidents, secret rotation, maintenance).
-  - ☐ **D-1e** First apply on the AWS account, first deploy to staging, rollback verified on
-    staging, then production. Needs: AWS account access, the Route 53 zone for occplsoftech.com,
+  - ☐ **D-1e** First apply on the AWS account and first deploy to production before launch, with a
+    rollback drill (deploy the previous release) while there are no customers yet. Needs: AWS account access, the Route 53 zone for occplsoftech.com,
     SES production access, GitHub environments/variables (RUNBOOK.md §1).
 - ◐ **D-2** Backups in production: RDS point-in-time recovery (35 days) + AWS Backup daily copy
   to ap-south-2, failure alerts, Keycloak database included — done in Terraform. ☐ Restore drill on
@@ -237,7 +236,7 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 - ☑ **D-3** Audit log append-only for every account (database triggers, `V202610141100`).
 - ☐ **D-4** Metrics for outbox lag (oldest unsent notification / provisioning job) and the
   subscription sweep's last run, with alarms.
-- ☐ **D-5** Redis TLS path verified against ElastiCache on staging (rehearsal had no TLS Redis;
+- ☐ **D-5** Redis TLS path verified against ElastiCache in production before launch (rehearsal had no TLS Redis;
   Core fails open, and the `rate-limiter-down` alarm covers it).
 - ☐ **D-6** Keycloak realm changes after the first import: scripted with `kcadm.sh`, or a
   config-as-code tool, instead of manual console changes.

@@ -1,13 +1,14 @@
 name: Deploy
 
-# Continuous delivery to AWS (ADR-0011): after CI passes on main, publish the images to ECR tagged
-# with the commit SHA, roll them out to staging, smoke-test, then — after a manual approval on the
-# "production" GitHub environment — to production. Run manually to redeploy or roll back a release
-# that is already in ECR (RUNBOOK.md).
+# Continuous delivery to AWS (ADR-0011, D-15): after CI passes on main, publish the images to ECR
+# tagged with the commit SHA and — after a manual approval on the "production" GitHub environment —
+# roll them out to production and smoke-test. There is no AWS staging environment: releases are
+# verified by CI and on the local Docker Compose stack (DEPLOYMENT.md §1). Run manually to redeploy or
+# roll back a release that is already in ECR (infra/aws/RUNBOOK.md §2).
 #
 # Repository variables: AWS_BUILD_ROLE_ARN, ECR_REGISTRY, ARTIFACTS_BUCKET.
-# Environment variables (staging, production): AWS_DEPLOY_ROLE_ARN, ASG_NAME, TARGET_GROUP_ARNS,
-# HOST_SUFFIX ("staging." / empty). Values: `terraform output` of infra/aws/shared and envs/<env>.
+# "production" environment variables: AWS_DEPLOY_ROLE_ARN, ASG_NAME, TARGET_GROUP_ARNS.
+# Values: `terraform output` of infra/aws/shared and infra/aws/envs/production.
 
 on:
   workflow_run:
@@ -17,13 +18,8 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: Release to deploy (git SHA of an image already in ECR)
+        description: Release to deploy (full git SHA of images already in ECR)
         required: true
-      environment:
-        description: Target environment
-        type: choice
-        options: [staging, production]
-        default: staging
 
 permissions:
   contents: read
@@ -79,47 +75,15 @@ jobs:
           provenance: false
           tags: ${{ vars.ECR_REGISTRY }}/occpl/keycloak:${{ steps.release.outputs.release }}
 
-  staging:
-    name: Deploy to staging
+  production:
+    name: Deploy to production
     needs: build
+    # After a successful build, or a manual redeploy/rollback (build skipped). Either way the
+    # "production" environment's required reviewers must approve before this job starts.
     if: >-
       always() &&
       (needs.build.result == 'success' ||
-       (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging'))
-    runs-on: ubuntu-24.04
-    environment: staging
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.release }}
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Rolling deploy
-        env:
-          OCCPL_ENV: staging
-          ASG_NAME: ${{ vars.ASG_NAME }}
-          TARGET_GROUP_ARNS: ${{ vars.TARGET_GROUP_ARNS }}
-          ARTIFACTS_BUCKET: ${{ vars.ARTIFACTS_BUCKET }}
-          RELEASE: ${{ needs.build.outputs.release || inputs.release }}
-        run: |
-          [[ "$RELEASE" =~ ^[0-9a-f]{40}$ ]] || { echo "release must be a full git SHA: $RELEASE"; exit 1; }
-          infra/aws/scripts/rolling-deploy.sh "$RELEASE"
-      - name: Smoke test
-        env:
-          HOST_SUFFIX: ${{ vars.HOST_SUFFIX }}
-        run: infra/aws/scripts/smoke-test.sh "$HOST_SUFFIX"
-
-  production:
-    name: Deploy to production
-    needs: [build, staging]
-    # Automatic after a successful staging rollout; manual runs may target production directly
-    # (rollback). Either way the "production" environment's required reviewers must approve.
-    if: >-
-      always() &&
-      ((needs.staging.result == 'success' && github.event_name == 'workflow_run') ||
-       (github.event_name == 'workflow_dispatch' && inputs.environment == 'production'))
+       (github.event_name == 'workflow_dispatch' && needs.build.result == 'skipped'))
     runs-on: ubuntu-24.04
     environment: production
     steps:
@@ -141,6 +105,4 @@ jobs:
           [[ "$RELEASE" =~ ^[0-9a-f]{40}$ ]] || { echo "release must be a full git SHA: $RELEASE"; exit 1; }
           infra/aws/scripts/rolling-deploy.sh "$RELEASE"
       - name: Smoke test
-        env:
-          HOST_SUFFIX: ${{ vars.HOST_SUFFIX }}
-        run: infra/aws/scripts/smoke-test.sh "$HOST_SUFFIX"
+        run: infra/aws/scripts/smoke-test.sh
