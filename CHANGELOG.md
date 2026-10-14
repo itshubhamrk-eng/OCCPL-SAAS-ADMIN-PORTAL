@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### AWS hosting decisions (2026-10-14)
+- D-13: AWS `ap-south-1` (Mumbai), EC2 instances with Docker Compose behind an Application Load
+  Balancer; D-14: Amazon RDS for MySQL 8.4 LTS (RDS offers 9.7 only in preview). ADR-0011.
+- Tests now default to MySQL 8.4 (`-Doccpl.test.mysql-image` overrides); CI runs the backend suite on
+  8.4 and 9.7. Full suite verified on 8.4 (80 unit, 77 integration, sample, end-to-end). Local compose
+  and backup scripts use 8.4.
+
 ### Production domain (2026-10-14)
 - Decision D-12: `occplsoftech.com`; hostname plan in DEPLOYMENT.md §2. Problem-detail `type` URIs
   and the product-configuration schema `$id` now use `https://api.occplsoftech.com/` (previously a

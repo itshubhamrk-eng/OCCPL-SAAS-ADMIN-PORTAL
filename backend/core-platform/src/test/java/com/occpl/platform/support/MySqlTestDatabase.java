@@ -3,10 +3,17 @@ package com.occpl.platform.support;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.testcontainers.mysql.MySQLContainer;
 
-/** One MySQL 9.7 container shared by all integration tests in the JVM (started on first use). */
+/**
+ * One MySQL container shared by all integration tests in the JVM (started on first use). The image
+ * defaults to production's version (Amazon RDS MySQL 8.4 LTS, decision D-14); CI also runs the
+ * suite with {@code -Doccpl.test.mysql-image=mysql:9.7} so the next upgrade is already tested.
+ */
 public final class MySqlTestDatabase {
 
-    private static final MySQLContainer MYSQL = new MySQLContainer("mysql:9.7");
+    /** MySQL image for integration tests; override with {@code -Doccpl.test.mysql-image=...}. */
+    public static final String IMAGE = System.getProperty("occpl.test.mysql-image", "mysql:8.4");
+
+    private static final MySQLContainer MYSQL = new MySQLContainer(IMAGE);
 
     static {
         MYSQL.start();

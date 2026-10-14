@@ -40,7 +40,7 @@ import org.testcontainers.mysql.MySQLContainer;
 @AutoConfigureMockMvc
 class SampleProductIT {
 
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:9.7");
+    static final MySQLContainer MYSQL = new MySQLContainer(System.getProperty("occpl.test.mysql-image", "mysql:8.4"));
     static final FakeCore CORE;
 
     static {

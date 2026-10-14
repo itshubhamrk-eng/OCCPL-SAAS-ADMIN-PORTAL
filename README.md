@@ -6,7 +6,7 @@ Admin / Company Admin portals).
 **Status:** Phases 1–9 and Billing (Razorpay) complete — awaiting approval for Phase 10 (deployment).
 Status report: [docs/OCCPL-Phase-Plan-and-Status.pdf](docs/OCCPL-Phase-Plan-and-Status.pdf).
 
-Stack: Java 25 · Spring Boot 4.1 · Angular 22 · MySQL 9.7 · Keycloak 26.8 · Docker Compose.
+Stack: Java 25 · Spring Boot 4.1 · Angular 22 · MySQL 8.4 LTS (Amazon RDS; tested on 9.7 too) · Keycloak 26.8 · Docker Compose.
 
 ```bash
 cd infra/docker && cp .env.example .env && docker compose up --build

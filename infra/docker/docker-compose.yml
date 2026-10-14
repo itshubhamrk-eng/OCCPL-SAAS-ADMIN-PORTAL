@@ -8,7 +8,7 @@ name: occpl
 
 services:
   mysql:
-    image: mysql:9.7
+    image: mysql:8.4 # production: Amazon RDS MySQL 8.4 LTS (D-14)
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
       MYSQL_DATABASE: occpl_core

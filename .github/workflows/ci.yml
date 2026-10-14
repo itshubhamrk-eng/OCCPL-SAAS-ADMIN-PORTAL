@@ -14,8 +14,13 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (Java 25, Maven)
+    name: Backend (Java 25, ${{ matrix.mysql }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # Production runs Amazon RDS MySQL 8.4 LTS (D-14); 9.7 is the planned upgrade.
+        mysql: ['mysql:8.4', 'mysql:9.7']
     defaults:
       run:
         working-directory: backend
@@ -29,11 +34,11 @@ jobs:
       # Unit + slice tests, Spring Modulith boundary verification, Testcontainers integration tests
       # (MySQL 9.7, Keycloak 26.8.1, Redis) and the Core ↔ sample product end-to-end test
       # (Docker is available on GitHub-hosted runners).
-      - run: mvn -B -ntp verify
+      - run: mvn -B -ntp verify -Doccpl.test.mysql-image=${{ matrix.mysql }}
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-test-reports
+          name: backend-test-reports-${{ strategy.job-index }}
           path: backend/**/target/*-reports/
 
   frontend:

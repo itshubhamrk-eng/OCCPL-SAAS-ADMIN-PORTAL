@@ -9,11 +9,13 @@ that own their data. Core contains no product business logic.
 (Deployment)**. Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5, S-9, PR-5, PR-6, PR-7, UI-4 (settings
 page), UI-5, UI-6, B-3..B-8 (Razorpay live test, GST D-11, …), H-5 (staging load test), H-6, H-7, D-2.
 
+**Hosting (D-13/D-14, ADR-0011)**: AWS ap-south-1, EC2 + Docker Compose behind an ALB, RDS MySQL 8.4 LTS, ElastiCache, SES, Secrets Manager, ECR, Terraform.
+
 **Domain (D-12)**: `occplsoftech.com` — admin., api., auth., `<product>.`, `*.staging.` (DEPLOYMENT.md §2).
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,
-springdoc 3.1, MySQL 9.7 LTS, Keycloak 26.8.1 (self-hosted), Angular 22.2 (zoneless, Vitest,
+springdoc 3.1, MySQL 8.4 LTS in production (Amazon RDS, D-14; tests default to 8.4, CI also 9.7 via `-Doccpl.test.mysql-image=mysql:9.7`), Keycloak 26.8.1 (self-hosted), Angular 22.2 (zoneless, Vitest,
 TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, Bucket4j/Lettuce).
 
 **Layout**: `backend/core-platform` (package `com.occpl.platform.<module>.{api,web,internal}`,

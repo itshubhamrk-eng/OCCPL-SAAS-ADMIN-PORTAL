@@ -21,7 +21,7 @@ observability, local stack). Decisions are recorded in `ADR/`.
                                                      │ modular monolith, N replicas)│
                                                      └──┬──────────┬──────────┬─────┘
                                                         │          │          │ REST (service token,
-                                                  MySQL 9.7│    Redis │          │ idempotency keys)
+                                                  MySQL 8.4│    Redis │          │ idempotency keys)
                                                         ▼          ▼          ▼
                                                     core DB    cache/RL   ┌───────────────┐
                                                                           │ Product A/B/C │──► own DB

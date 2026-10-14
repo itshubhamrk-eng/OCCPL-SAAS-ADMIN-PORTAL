@@ -24,3 +24,8 @@ version property/image tag and re-running CI.
 + Current platform features and security fixes; long support windows in production.
 − Newest ecosystem (Boot 4, Jackson 3, Flyway on MySQL 9.7) carries some compatibility risk
   (PROJECT.md R-1, R-2), mitigated by integration tests on the real database.
+
+## Amendment (2026-10-14)
+Production runs **MySQL 8.4 LTS** on Amazon RDS (D-14, ADR-0011) because RDS offers 9.7 only in
+its preview environment. The test suite runs on 8.4 (default) and 9.7 (CI matrix); upgrade when
+RDS 9.7 is generally available.

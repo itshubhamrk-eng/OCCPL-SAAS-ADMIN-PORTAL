@@ -9,7 +9,7 @@ Status: Local stack, Dockerfiles and CI implemented in Phase 2; sample product s
 | local | Development | Docker Compose on developer machine | Synthetic seed |
 | test (CI) | Automated tests | Testcontainers (MySQL, Keycloak, Redis) | Ephemeral |
 | staging | Release verification, load tests | Same topology as prod, smaller sizes | Synthetic / anonymized |
-| production | Customers | Ubuntu 24.04 LTS VMs (≥ 2 app nodes) behind LB/Nginx, managed or replicated MySQL 9.7 LTS, Redis, Keycloak (2 nodes) | Real |
+| production | Customers | AWS ap-south-1: 2 EC2 instances (Docker Compose) behind an ALB, RDS MySQL 8.4 LTS Multi-AZ, ElastiCache, SES, Keycloak on both instances (ADR-0011) | Real |
 
 Configuration: Spring profiles `local` and `test` exist (staging/prod use the production-safe defaults in
 `application.yml` plus environment variables); the portal reads a runtime `config.json`
@@ -167,15 +167,22 @@ credentials in the realm, not in the realm import file.
 Open http://localhost:8080/swagger-ui.html → **Authorize** → *keycloak (OAuth2, authorizationCode)*
 → tick `openid` → sign in. The local realm allows this redirect only for development.
 
-## 2. Initial production topology
+## 2. Production topology on AWS (ADR-0011)
 
 ```
-Internet → LB / Nginx (TLS, static portal, reverse proxy) ─┬─ core-platform #1 ─┐
-                                                            └─ core-platform #2 ─┼─ MySQL primary (+ replica, PITR backups)
-                                       Keycloak ×2 ──── own DB                   ├─ Redis
-                                       product services (own hosts/DBs)          └─ SMTP provider
-Monitoring: Prometheus + Grafana + Alertmanager, Loki (logs); error tracking (e.g. Sentry)
+Route 53 (occplsoftech.com) → AWS WAF → Application Load Balancer (ACM *.occplsoftech.com, ap-south-1)
+     admin.  ─┐   host-based routing
+     api.    ─┼─→ EC2 #1 (AZ a) ┐  Docker Compose: core-platform, admin-portal (nginx), keycloak
+     auth.   ─┘   EC2 #2 (AZ b) ┘  Auto Scaling group (fixed size 2), SSM only, no SSH
+                       │
+     private subnets ──┼─ RDS MySQL 8.4 LTS Multi-AZ (occpl_core, keycloak) · backups + PITR 35 days
+                       ├─ ElastiCache (Valkey/Redis OSS, TLS + AUTH, 1 replica)
+                       └─ SES (SMTP), Secrets Manager, ECR, CloudWatch Logs / metrics / alarms
+Product services: own hosts and databases, reached at <product>.occplsoftech.com
 ```
+
+Staging: same Terraform code, one instance, single-AZ database, `*.staging.occplsoftech.com`.
+Kubernetes and ECS are not used initially (ADR-0004, ADR-0011); the containers would move unchanged.
 
 ### Hostnames (decision D-12: domain `occplsoftech.com`)
 

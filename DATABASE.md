@@ -184,7 +184,7 @@ subscription event (event-driven, idempotent full recompute for the company).
   contract) to allow rolling deploys and rollback of the application without DB rollback.
 - Large-table changes use online DDL (`ALGORITHM=INSTANT/INPLACE`) or a pt-online-schema-change
   / gh-ost runbook; never long table locks during business hours.
-- CI runs all migrations against a fresh MySQL 9.7 Testcontainer (implemented: `CorePlatformApplicationIT`) and against a copy of the
+- CI runs all migrations against fresh MySQL 8.4 and 9.7 Testcontainers (matrix) (implemented: `CorePlatformApplicationIT`) and against a copy of the
   previous release's schema; `flyway validate` gates deployment.
 - Separate DB users: `occpl_migrator` (DDL, used only by the migration step) and `occpl_app`
   (DML only; no UPDATE/DELETE on `audit_log`).

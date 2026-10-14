@@ -12,3 +12,4 @@
 | [0008](0008-product-integration-and-provisioning.md) | Product integration: client identity, DB-backed provisioning jobs | Accepted |
 | [0009](0009-gateway-invoices-and-webhooks.md) | Billing: gateway-created invoices, payment state from signed webhooks | Accepted |
 | [0010](0010-backups-mysql-shell.md) | Backups with MySQL Shell dumps and binary-log increments | Accepted |
+| [0011](0011-aws-deployment.md) | AWS deployment: EC2 + Docker Compose, RDS MySQL 8.4, Mumbai | Accepted |

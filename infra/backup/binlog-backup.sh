@@ -11,7 +11,7 @@ base=${1:?usage: binlog-backup.sh <backup-dir>}
 host=${MYSQL_HOST:-127.0.0.1}
 port=${MYSQL_PORT:-3306}
 user=${MYSQL_USER:-occpl_backup}
-image=${MYSQL_CLIENT_IMAGE:-mysql:9.7}
+image=${MYSQL_CLIENT_IMAGE:-mysql:8.4}
 : "${MYSQL_PASSWORD:?set MYSQL_PASSWORD}"  # passed to MySQL Shell on stdin, never as an argument
 
 # Newest completed full backup (MySQL Shell writes @.done.json last).

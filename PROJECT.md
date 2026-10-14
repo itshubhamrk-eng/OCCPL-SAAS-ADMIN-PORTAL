@@ -80,7 +80,7 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | springdoc-openapi | 3.1.1 | — | |
 | Angular | **22.2** (TypeScript 6.0, Vitest 5, zoneless) | 22.2.2 | |
 | Node.js (build only) | 24 LTS | 26 | Angular 22 requires ≥ 22.22.3 / 24.15 |
-| MySQL | **9.7 LTS** | 26.7 (innovation track) | Flyway 12.4 logs "verified up to MySQL 9.4"; integration tests pass on 9.7 (risk R-1) |
+| MySQL | **8.4 LTS in production** (Amazon RDS, D-14); 9.7 LTS tested in CI | 26.7 (innovation track) | RDS offers 9.7 only in preview; the full suite passes on 8.4 and 9.7; Flyway is verified for 8.4 |
 | Keycloak | **26.8.1** | 26.8.1 | |
 | Nginx | 1.30 (stable, unprivileged image) | 1.31 mainline | |
 | Redis | not yet added | 8.10 | Added with rate limiting / caching in Phase 3 |
@@ -115,14 +115,16 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | D-8 | Self-registration vs invitation only | **Applied default:** invitation only (Phase 4) |
 | D-9 | Product launch model (subdomains + SSO vs path-based) | **Applied default (Phase 7):** both are supported without a code change — each product has its own `appUrl` (own host or subdomain) plus a `launch.path` template (`{companyId}`, `{companyCode}`); sign-in is SSO through Keycloak. Revisit if per-company subdomains are wanted. |
 | D-10 | Personal-data retention/export obligations (DPDP Act 2023, contracts) | Open — needed before launch (BACKLOG H-7) |
-| D-12 | Production domain | **Decided (2026-10-14):** `occplsoftech.com` — hostnames in DEPLOYMENT.md §2 (admin., api., auth., products as subdomains, staging under `*.staging.`). Hosting provider, managed vs self-run MySQL/Keycloak, registry and email provider still open (Phase 10). |
+| D-12 | Production domain | **Decided (2026-10-14):** `occplsoftech.com` — hostnames in DEPLOYMENT.md §2 (admin., api., auth., products as subdomains, staging under `*.staging.`). Hosting: AWS (D-13). |
+| D-13 | Hosting | **Decided (2026-10-14): AWS**, region `ap-south-1` (Mumbai), EC2 instances with Docker Compose behind an Application Load Balancer (ADR-0011). |
+| D-14 | Production database | **Decided (2026-10-14): Amazon RDS for MySQL 8.4 LTS** (RDS has 9.7 only in preview). Tests run on 8.4 by default and on 9.7 in CI; upgrade when RDS 9.7 is generally available. |
 | D-11 | GST on invoices: are plan prices tax-inclusive or exclusive, which GST rate/HSN-SAC code, and is the company's GSTIN printed on invoices? | **Open — needed before live payments.** Today the plan price is sent to Razorpay as the line amount with no tax fields; the company's tax id is stored but not sent. |
 
 ## 6. Risks
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R-1 | Flyway 12.4 has not been verified by its vendor on MySQL 9.7 (warns at startup) | CI runs every migration on a MySQL 9.7 Testcontainer; upgrade Flyway when verification catches up; fall back to MySQL 8.4 LTS if a defect appears |
+| R-1 | Flyway 12.4 is not verified by its vendor on MySQL 9.7 | Production uses MySQL 8.4 (verified, no warning); 9.7 stays in the CI matrix until RDS and Flyway support it |
 | R-2 | Spring Boot 4 / Jackson 3 ecosystem is newer; some third-party libraries may lag | Prefer Boot-managed dependencies; check compatibility before adding libraries |
 | R-3 | Self-hosted Keycloak must be operated (HA, upgrades, backups) | Two-node deployment, DB backups, upgrade runbook (Phase 10) |
 | R-4 | Scale targets unproven until load-tested | H-3 done on a development VM with 1 M users (SLOs met up to 210 req/s on 4 vCPUs shared with the database and generator); production capacity still to be measured on staging hardware (H-5) |

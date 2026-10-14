@@ -60,7 +60,7 @@ class CoreAndSampleProductE2EIT {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @SuppressWarnings("resource")
-    private static final MySQLContainer SAMPLE_DB = new MySQLContainer("mysql:9.7").withDatabaseName("occpl_sample");
+    private static final MySQLContainer SAMPLE_DB = new MySQLContainer(MySqlTestDatabase.IMAGE).withDatabaseName("occpl_sample");
     private static Process sample;
 
     static {
