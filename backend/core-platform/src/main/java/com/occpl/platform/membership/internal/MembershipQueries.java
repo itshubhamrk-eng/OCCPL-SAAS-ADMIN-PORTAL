@@ -60,12 +60,21 @@ class MembershipQueries {
             params.put("roleCode", roleCode);
         }
         String like = Likes.prefix(q == null ? null : q.toLowerCase());
-        if (like != null) {
+        String from = " from company_membership m join platform_user u on u.id = m.user_id"
+                + " left join user_profile p on p.user_id = m.user_id";
+        if (like != null && q.strip().length() >= 3) {
+            // Start from the matching users (prefix indexes on email and display name) instead of walking
+            // every member of a large company: ~4 ms instead of ~200 ms for 50,000 members (load test H-3).
+            from = " from (select id user_id from platform_user where email like :q escape '\\\\'"
+                    + " union select user_id from user_profile where display_name like :q escape '\\\\') hit"
+                    + " join company_membership m on m.user_id = hit.user_id"
+                    + " join platform_user u on u.id = m.user_id left join user_profile p on p.user_id = m.user_id";
+            params.put("q", like);
+        } else if (like != null) {
+            // One or two characters match a large share of all users: filter the company's members instead.
             where.append(" and (u.email like :q escape '\\\\' or p.display_name like :q escape '\\\\')");
             params.put("q", like);
         }
-        String from = " from company_membership m join platform_user u on u.id = m.user_id"
-                + " left join user_profile p on p.user_id = m.user_id";
 
         long total = jdbc.sql("select count(*)" + from + where).params(params).query(Long.class).single();
         String select = "select BIN_TO_UUID(m.id) membership_id, BIN_TO_UUID(m.user_id) user_id, u.email,"

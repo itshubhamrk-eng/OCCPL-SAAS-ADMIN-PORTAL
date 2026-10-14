@@ -350,6 +350,10 @@ class CompanyAndMembershipIT {
         perform(get("/api/v1/companies/" + companyId + "/memberships?q=anna"), "admin", null)
                 .andExpect(jsonPath("$.totalItems").value(1))
                 .andExpect(jsonPath("$.items[0].roles[0]").value("COMPANY_USER"));
+        // Short terms filter the company's members; longer ones start from matching users (other companies' "an…" users are not counted).
+        perform(get("/api/v1/companies/" + companyId + "/memberships?q=an"), "admin", null)
+                .andExpect(jsonPath("$.totalItems").value(1))
+                .andExpect(jsonPath("$.items[0].email").value(email("anna")));
         perform(get("/api/v1/companies/" + companyId + "/memberships?role=COMPANY_MANAGER"), "admin", null)
                 .andExpect(jsonPath("$.items[0].email").value(email("mike")));
         perform(get("/api/v1/companies/" + companyId + "/memberships?size=1&page=1&sort=email,asc"), "admin", null)

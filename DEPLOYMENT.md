@@ -85,6 +85,8 @@ Testcontainers; includes the Core ↔ sample product end-to-end test in `backend
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | for billing | Razorpay API keys (Dashboard → Account & Settings → API Keys); test-mode keys outside production. Billing is disabled until both are set |
 | `RAZORPAY_WEBHOOK_SECRET` | for billing | Secret entered when creating the webhook in the Razorpay dashboard; without it the webhook endpoint answers 503 |
 | `RAZORPAY_API_URL` | no (`https://api.razorpay.com`) | Only for tests/stubs |
+| `CATALOG_ALLOW_LOCAL_URLS` | no (`false`) | Development only: product URLs on localhost/127.0.0.1 and plain HTTP to them |
+| `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` | no (private and loopback ranges) | Regex of proxy addresses whose `X-Forwarded-*` headers are trusted; set to the load balancer's addresses in production |
 | `BILLING_INVOICE_LEAD_TIME` / `BILLING_PAYMENT_WINDOW` | no (`7d` / `14d`) | Issue renewal invoices this long before the period ends; unpaid invoices expire after the window |
 
 ### Razorpay setup (billing)
@@ -128,9 +130,10 @@ accepts the invitation and opens their company.
 ### Registering a product service
 
 1. In Keycloak (realm `occpl`): create the product's confidential client (service account, audience
-   mapper `occpl-core`), a client for its users (audience = the product's `apiAudience`), and add an
-   audience mapper for the product's `apiAudience` to `occpl-core-services`. The local realm import
-   contains these for the sample product.
+   mapper `occpl-core`), a client for its users (audience = the product's `apiAudience`), and a
+   client scope **named exactly like the product's `apiAudience`** with an audience mapper for it,
+   added to `occpl-core-services` as an **optional** client scope (Core requests it per call, so its
+   token is valid at that product only). The local realm import contains these for the sample product.
 2. In Core: `POST /api/v1/products` with `apiAudience`, `apiBaseUrl` and `serviceClientId`; add
    features; create and publish a configuration version with `provisioning` (and `launch`); activate.
 3. Assign a plan containing the product to a company; Core provisions the company within seconds
@@ -195,12 +198,30 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
   old structure.
 - Rolling deploy: drain node from LB (readiness DOWN) → stop → start new → readiness UP.
 
-## 5. Backups & recovery (to be verified in H-4)
+## 5. Backups & recovery (drill done in Phase 9: infra/backup/DRILL.md)
 
-- MySQL: daily full backup (e.g. Percona XtraBackup or managed snapshots) + binlog shipping for
-  point-in-time recovery; encrypted, stored off-host, 35-day retention.
-- Keycloak DB: same policy.
-- Quarterly restore drill to staging with measured RPO/RTO recorded here.
+Scripts in `infra/backup/` (MySQL Shell from the `mysql:9.7` image, so client and server versions match;
+account `occpl_backup`, password on stdin):
+
+| When | Script | What |
+|---|---|---|
+| Nightly | `backup.sh /backups` | Consistent parallel dump of `occpl_core` and `occpl_sample` → `/backups/<UTC>-full/` (1.08 GB database → 39 MB in 5 s in the drill) |
+| Every 5 min | `binlog-backup.sh /backups` | Appends the binary logs since the last increment to `/backups/<newest full>-binlog/` (1–2 s) → RPO ≤ 5 min + copy delay |
+| Recovery | `restore.sh /backups [<full>]` | Into an **empty** server: newest full backup, then all increments; `STOP_BEFORE=<GTID>` stops right before a bad transaction |
+
+Recovery runbook:
+1. Provision an empty MySQL 9.7 server (same settings as compose: utf8mb4, UTC, binary log + GTIDs on).
+2. Copy the backup directories from off-host storage; run `restore.sh` (with `STOP_BEFORE` when
+   undoing a mistake: find the GTID with `SHOW BINLOG EVENTS` / the binlog dump's JSON index).
+3. Recreate the database accounts (`infra/docker/mysql/01-create-users.sh` or the production secrets
+   tooling) — accounts are not part of the backup.
+4. Point Core and the products at the server; Flyway validates the schema on start-up.
+5. Take a new full backup immediately (the GTID history continues).
+
+Measured in the drill (1 M users): restore 41–43 s, Core ready 14 s later; point-in-time recovery to
+the transaction before an accidental DELETE exact. Targets RPO 15 min / RTO 4 h are met with margin;
+remaining for Phase 10: off-host copies with retention and encryption, timers and alerts, the
+production Keycloak database, a drill on production hardware.
 
 ## 6. Monitoring & alerts (initial set)
 

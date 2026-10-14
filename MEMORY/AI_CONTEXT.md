@@ -5,9 +5,9 @@ users/memberships, roles/permissions, product catalogue, plans, subscriptions, e
 provisioning, billing integration (Razorpay), audit, notifications. Products are separate services
 that own their data. Core contains no product business logic.
 
-**Current phase**: Billing (B-1, B-2, S-8) done 2026-10-14 after Phase 8; **wait for approval before
-Phase 9 Hardening**. Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5, S-9 per-product seats, PR-5,
-PR-6, PR-7, UI-4 (settings page), UI-5, UI-6, B-3 (live Razorpay smoke test), B-4 (GST, D-11), B-5..B-8.
+**Current phase**: Phase 9 (Hardening) done 2026-10-14; **wait for approval before Phase 10
+(Deployment)**. Open follow-ups: I-1, C-8, C-9, C-10, PC-4, PC-5, S-9, PR-5, PR-6, PR-7, UI-4 (settings
+page), UI-5, UI-6, B-3..B-8 (Razorpay live test, GST D-11, …), H-5 (staging load test), H-6, H-7, D-2.
 
 **Stack (ADR-0007)**: Java 25 LTS, Spring Boot 4.1.1 (Framework 7, Security 7, Hibernate 7.4,
 **Jackson 3 = `tools.jackson.*`**, Flyway 12.4 + `spring-boot-starter-flyway`), Spring Modulith 2.1,
@@ -61,6 +61,18 @@ TS 6), Node 24 for builds, Nginx 1.30 unprivileged, Redis 8.10 (rate limiting, B
   Payments applied via `subscription.api.SubscriptionBilling.applyPayment(subscriptionId, periodStart)`
   (APPLIED / ALREADY_COVERED / NOT_APPLICABLE). Tests fake Razorpay with `support.RazorpayStub`;
   call `InvoiceService.createDueInvoices()` directly (scheduling disabled in tests).
+- Company paths: `CompanyPathGuard` (MappedInterceptor bean in MembershipConfiguration, not @Component —
+  @WebMvcTest slices load every HandlerInterceptor/WebMvcConfigurer bean) denies before body binding;
+  `@tenant.check` reuses its lookup. `EndpointSecurityIT` enumerates all mappings: a new endpoint needs
+  @PreAuthorize (or an allow-list entry with a reason) and, under /companies/{companyId}, @tenant.check
+  or a platform authority; nested id path variables need an entry in its foreign-resource map.
+- Service tokens to products: `ServiceTokenProvider.token(apiAudience)` requests `scope=<apiAudience>`
+  (optional client scope per product in the realm); cached per audience.
+- Product URLs: local/link-local hosts only with `occpl.catalog.allow-local-urls` (true in tests/compose).
+- Overload: SQLTransientConnectionException → 503 SERVICE_BUSY + Retry-After (advice + OverloadFilter).
+- `spring.modulith.moments.enabled=false` — Moments would re-enable @Scheduled in tests.
+- Load tests: `load-tests/` (setup.py, seed_sql.py, k6/core.js, RESULTS.md); backups: `infra/backup/`
+  (MySQL Shell; DRILL.md). k6/trivy are not installed in the sandbox: `go install` them.
 - Executable jars use classifier `exec` (Dockerfiles copy `*-exec.jar`); core-platform also builds a test-jar
   (KeycloakTestServer, KeycloakLoginFlow, MySqlTestDatabase, TestData) used by e2e-tests.
 - Keycloak realm secrets via env: KEYCLOAK_ADMIN_CLIENT_SECRET, PROVISIONING_CLIENT_SECRET, PRODUCT_SAMPLE_CLIENT_SECRET.

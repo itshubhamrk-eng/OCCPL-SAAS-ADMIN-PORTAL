@@ -3,7 +3,7 @@
 Central multi-product SaaS management platform for OCCPL Innovations (Core Platform + Super
 Admin / Company Admin portals).
 
-**Status:** Phases 1–8 and Billing (Razorpay) complete — awaiting approval for Phase 9 (hardening).
+**Status:** Phases 1–9 and Billing (Razorpay) complete — awaiting approval for Phase 10 (deployment).
 Status report: [docs/OCCPL-Phase-Plan-and-Status.pdf](docs/OCCPL-Phase-Plan-and-Status.pdf).
 
 Stack: Java 25 · Spring Boot 4.1 · Angular 22 · MySQL 9.7 · Keycloak 26.8 · Docker Compose.

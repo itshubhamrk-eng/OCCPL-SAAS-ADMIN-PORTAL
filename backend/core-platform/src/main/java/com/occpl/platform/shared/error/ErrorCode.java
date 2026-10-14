@@ -28,7 +28,8 @@ public enum ErrorCode {
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "Too many requests"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error"),
     PAYMENT_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY, "Payment gateway error"),
-    BILLING_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "Billing is not configured");
+    BILLING_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "Billing is not configured"),
+    SERVICE_BUSY(HttpStatus.SERVICE_UNAVAILABLE, "Service busy");
 
     private static final String TYPE_BASE = "https://api.occpl.com/problems/";
 

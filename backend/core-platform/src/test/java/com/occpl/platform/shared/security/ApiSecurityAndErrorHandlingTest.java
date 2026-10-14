@@ -106,6 +106,15 @@ class ApiSecurityAndErrorHandlingTest {
     }
 
     @Test
+    void answersOverloadWith503AndRetryAfter() throws Exception {
+        mvc.perform(get("/api/v1/probe/busy").with(jwt()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "2"))
+                .andExpect(jsonPath("$.code").value("SERVICE_BUSY"))
+                .andExpect(jsonPath("$.detail").value(not(containsString("hikari"))));
+    }
+
+    @Test
     void returnsProblemDetailsForUnsupportedMethod() throws Exception {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .delete("/api/v1/probe").with(jwt()))
@@ -149,6 +158,12 @@ class ApiSecurityAndErrorHandlingTest {
         @GetMapping("/api/v1/probe/boom")
         String boom() {
             throw new IllegalStateException("connection to secret-db-host failed");
+        }
+
+        @GetMapping("/api/v1/probe/busy")
+        String busy() {
+            throw new org.springframework.transaction.CannotCreateTransactionException("no connection",
+                    new java.sql.SQLTransientConnectionException("core-hikari - Connection is not available"));
         }
     }
 

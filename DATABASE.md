@@ -57,7 +57,7 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 |---|---|
 | `platform_user` | id, `email` (normalized lower-case) **UK**, `status` (INVITED, ACTIVE, DISABLED), `last_login_at` (refreshed at most every 15 min), version. Named `platform_user` because USER is a MySQL keyword. |
 | `user_identity` | id, user_id FK, `provider` (e.g. `keycloak`), `subject` — **UK(provider, subject)**, **UK(user_id, provider)** (one subject per provider: prevents account takeover by a second IdP account with the same email) |
-| `user_profile` | user_id PK/FK, display_name, phone, locale, timezone |
+| `user_profile` | user_id PK/FK, display_name — IX(display_name) for member search by name prefix (Phase 9), phone, locale, timezone |
 | `company_membership` | id, company_id FK, user_id FK, `status` (INVITED, ACTIVE, SUSPENDED, DEACTIVATED), joined_at, version — **UK(company_id, user_id)**, IX(user_id, status) |
 | `invitation` | id, company_id FK, membership_id FK, email, `token_hash` CHAR(64) (SHA-256, never the raw token) **UK**, `status` (PENDING, ACCEPTED, REVOKED, EXPIRED), expires_at, invited_by, accepted_at, version — one PENDING per membership via generated column `pending_key` = IF(status='PENDING', membership_id, NULL) **UK**; IX(company_id, status, created_at), IX(status, expires_at) |
 | `permission` | `code` PK (e.g. `company.users.manage`), `scope` (PLATFORM, COMPANY), description — seeded by the repeatable migration, not user-editable |
@@ -198,6 +198,12 @@ subscription event (event-driven, idempotent full recompute for the company).
   (`spring.jpa.open-in-view=false`).
 - Search on company/user names: prefix `LIKE 'x%'` on indexed columns initially; full-text or
   an external search engine only if measured necessary.
+
+- Member search (`MembershipQueries.search`) with a term of three or more characters starts from the
+  users matching the prefix (`uk_platform_user_email`, `ix_user_profile_display_name`) and joins the
+  company's memberships by `(company_id, user_id)`; shorter terms filter the company's members. Load
+  test H-3: 214 ms → 4 ms for a 50,000-member company (load-tests/RESULTS.md).
+- Backups: MySQL Shell dumps + binary-log increments, restore drill in `infra/backup/DRILL.md`.
 
 ## 8. Retention
 

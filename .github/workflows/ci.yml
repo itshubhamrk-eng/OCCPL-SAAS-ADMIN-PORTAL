@@ -68,16 +68,33 @@ jobs:
         with:
           context: backend/core-platform
           push: false
+          load: true
           tags: occpl/core-platform:${{ github.sha }}
       - name: Build product-sample image
         uses: docker/build-push-action@v6
         with:
           context: backend/product-sample
           push: false
+          load: true
           tags: occpl/product-sample:${{ github.sha }}
       - name: Build admin-portal image
         uses: docker/build-push-action@v6
         with:
           context: frontend/admin-portal
           push: false
+          load: true
           tags: occpl/admin-portal:${{ github.sha }}
+      # Known vulnerabilities in the images (OS packages and bundled libraries). Fails on HIGH or
+      # CRITICAL findings that have a fix; Trivy is built from a pinned release.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Install Trivy
+        run: go install github.com/aquasecurity/trivy/cmd/trivy@v0.74.0
+      - name: Scan images
+        run: |
+          for image in core-platform product-sample admin-portal; do
+            "$(go env GOPATH)/bin/trivy" image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
+              --exit-code 1 "occpl/$image:${{ github.sha }}"
+          done

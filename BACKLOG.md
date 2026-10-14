@@ -193,16 +193,30 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 9 — Hardening
 
-- ☐ **H-1** Security review, OWASP dependency scan, header/CORS verification.
-- ☐ **H-2** Tenant-isolation test suite across all company-scoped endpoints.
-- ☐ **H-3** Load tests (k6): seed 10k companies / 1M users distribution (power-law: most
-  companies < 50 users, few > 5k); scenarios: login + `/me`, company-scoped listings,
-  entitlement checks, usage consume, admin writes, platform listings. AC: meet SLOs in
-  PROJECT.md §2 at agreed RPS; results recorded in `load-tests/RESULTS.md` (measured, never
-  assumed).
-- ☐ **H-4** Backup/restore drill with measured RPO/RTO.
+- ☑ **H-1** Security review (independent code review: 8 findings, all fixed with tests), Trivy
+  dependency/image scan (critical Tomcat and high Jackson CVEs fixed; 0 known in the Java libraries
+  afterwards), Trivy in CI, Dependabot for all modules, header/CORS verification with curl (portal
+  header inheritance bug fixed). Details: SECURITY.md "Implemented in Phase 9".
+- ☑ **H-2** `EndpointSecurityIT` derived from the request mappings (authorization declared, 401
+  anonymous, user/service token separation, 404 for every endpoint of another company with any body,
+  foreign nested ids not found) and `CompanyPathGuard` (deny-by-default before body parsing).
+- ☑ **H-3** k6 load tests on 10k companies / 1M users (Zipf sizes): all provisional SLOs met up to
+  210 req/s on the 4-vCPU development VM (everything incl. the generator on one machine); member
+  search fixed (507 → 54 ms p95); overload now answers 503 + Retry-After. `load-tests/RESULTS.md`.
+- ☑ **H-4** Backup/restore drill with MySQL Shell dumps + binary-log increments: full backup 5 s,
+  increments 1–2 s every 5 min (RPO ≤ 5 min), restore 41–43 s + Core 14 s (RTO ≈ 1 min at this size),
+  exact point-in-time recovery before an accidental DELETE. `infra/backup/DRILL.md`.
+- ☐ **H-5** Repeat H-3 on staging hardware: several Core instances behind the load balancer,
+  separate MySQL, generator on its own machine; soak test (hours); Keycloak login throughput.
+  Needed before confirming D-6 and sizing production.
+- ☐ **H-6** Usage-counter throughput under contention on one company (correctness is covered).
+- ☐ **H-7** Personal-data export and erasure (D-10, DPDP Act) — decision still open.
 
 ## Phase 10 — Deployment
+
+- ☐ **D-2** Backups in production: timers for `backup.sh` (nightly) and `binlog-backup.sh` (5 min),
+  off-host copies with versioning, retention (35 days) and encryption, alerts on failed/late backups,
+  Keycloak database included; drill on production hardware.
 
 - ☐ **D-1** Production compose/VM deployment, Nginx TLS, secrets injection, monitoring stack,
   runbook, rollback procedure verified on staging.

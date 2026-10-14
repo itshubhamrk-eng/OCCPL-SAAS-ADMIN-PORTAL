@@ -123,13 +123,18 @@ contract and its tables move with it.
    `ServicePrincipal` with the single authority `SERVICE`: such tokens may call `/api/v1/service/**`
    only, and user tokens may never call it. The integration module maps the client to the product
    whose `serviceClientId` matches (unknown/retired → 403).
-5. `RateLimitFilter` (Redis token bucket) keyed by user id, service client id, or client IP when unauthenticated.
+5. `RateLimitFilter` (Redis token bucket) keyed by user id, service client id, or client IP when
+   unauthenticated. The client IP comes from Tomcat's `RemoteIpValve`: `X-Forwarded-For` is read from
+   the right and only trusted (private/loopback) proxy hops are skipped.
+5a. `CompanyPathGuard` (MVC interceptor, Phase 9): for `/api/v1/companies/{companyId}/**`, before the
+   body is read: ACTIVE membership of a non-deactivated company, or a platform permission → else 404.
 6. Method security. Platform: `@PreAuthorize("hasAuthority('platform.roles.manage')")`. Company:
    `@PreAuthorize("@tenant.check(#companyId, 'company.users.read', 'platform.companies.read')")` loads
    the caller's ACTIVE membership in the path's company (404 if none), checks company status and
    permission, and stores `TenantContext` (companyId, membershipId, permissions) for the request.
    Services additionally scope every repository query by `companyId`.
-8. Global exception handler → RFC 9457 problem details (see API_SPEC.md §2).
+8. Global exception handler → RFC 9457 problem details (see API_SPEC.md §2). Database pool
+   exhaustion → 503 `SERVICE_BUSY` with `Retry-After` (also from filters, via `OverloadFilter`).
 
 ## 6. Asynchronous processing
 
@@ -168,7 +173,7 @@ Reference implementation: `backend/product-sample`; verified end to end by `back
 
 | Concern | Contract |
 |---|---|
-| Service identity | Two confidential Keycloak clients per direction. **Core → product**: Core's client `occpl-core-services` (client credentials); each product adds an audience mapper for its `apiAudience` to that client, and the product accepts provisioning calls only from tokens whose `client_id` is `occpl-core-services`. **Product → Core**: the product's own client (e.g. `product-sample-service`) with an audience mapper for `occpl-core`; registered in the catalogue as the product's `serviceClientId`. Core derives the calling product from the token's `client_id`, never from the request. mTLS optional in production. |
+| Service identity | Two confidential Keycloak clients per direction. **Core → product**: Core's client `occpl-core-services` (client credentials); each product has an optional client scope named after its `apiAudience` (with an audience mapper) on that client, and Core requests a token per product with `scope=<apiAudience>` (Phase 9), so a product cannot replay the token it receives at another product; the product accepts provisioning calls only from tokens whose `client_id` is `occpl-core-services`. **Product → Core**: the product's own client (e.g. `product-sample-service`) with an audience mapper for `occpl-core`; registered in the catalogue as the product's `serviceClientId`. Core derives the calling product from the token's `client_id`, never from the request. mTLS optional in production. |
 | User calls to product | Users sign in through a product client (e.g. `product-sample-web`, audience = the product's `apiAudience`). The product validates `iss`, `aud`, signature, reads `sub`, takes the company from its URL and **verifies** every request with `GET /api/v1/service/access?companyId&userSubject[&featureCode]` (user status, ACTIVE membership with `company.products.launch`, company status, entitlement). Fail closed when Core is unreachable. |
 | Tenant identification | `companyId` (UUID); `companyCode` is sent at provisioning for display and URLs. |
 | Provisioning | Configured per product version: `provisioning.mode` NONE / SYNC / ASYNC, `path` (may contain `{companyId}`, `{companyCode}`), `timeoutSeconds`, `maxAttempts`. `PUT {apiBaseUrl}{path}` with body `{jobId, companyId, companyCode, companyName, productCode, configVersion, async, callbackUrl}` and headers `Authorization`, `Idempotency-Key: <jobId>`; `DELETE {apiBaseUrl}{path}` to deprovision (404/410 = already gone). 2xx = done; ASYNC: 202 = accepted, the product then calls `POST /api/v1/service/provisioning/jobs/{jobId}/callback {outcome: SUCCEEDED|FAILED, message}` before the callback deadline (default 15 min). Other 4xx permanent; network errors, timeouts, 5xx, 408, 429, 401 retried. |

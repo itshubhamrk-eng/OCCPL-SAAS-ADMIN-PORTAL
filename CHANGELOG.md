@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Phase 9 — Hardening (2026-10-14)
+- Tenant isolation: endpoint-inventory test over every request mapping; deny-by-default guard for
+  company paths before the body is read (another company's endpoints always answer 404).
+- Security review fixes: seat limit bypass via re-sent/accepted invitations of deactivated members;
+  re-invites require holding the member's current roles; per-product service tokens (optional
+  Keycloak client scope per product audience); X-Forwarded-For handled by Tomcat's RemoteIpValve;
+  webhook body capped at 64 KB and underpaid invoices not marked paid; product URLs refuse local
+  and link-local addresses outside development (`CATALOG_ALLOW_LOCAL_URLS`); service access checks
+  the entitlement before revealing membership; invitation delivery errors no longer log URLs.
+- Dependencies: Tomcat 11.0.27, Jackson 3.1.7 / 2.21.7 (critical/high CVEs); Trivy image scan in
+  CI; Dependabot for all Maven modules and images.
+- Portal: every nginx location sends the full security header set.
+- Load tests (k6, 10k companies / 1M users): SLOs met up to 210 req/s on the development VM;
+  member search rewritten (p95 507 → 54 ms, new index on `user_profile.display_name`); database pool
+  exhaustion answers 503 `SERVICE_BUSY` with `Retry-After`.
+- Backups: MySQL Shell full dumps + binary-log increments, restore script with point-in-time
+  recovery, least-privilege backup account; drill with measured RPO/RTO.
+- Fixed: Spring Modulith Moments switched on scheduled jobs even with scheduling disabled.
+
 ### Billing — Razorpay invoices and webhooks (2026-10-14)
 - New `billing` module: `PaymentGateway` port with a Razorpay adapter (Invoices API: create, fetch,
   cancel). Razorpay numbers and emails the invoice and hosts the payment page; Core stores references,

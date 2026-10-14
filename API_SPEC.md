@@ -44,7 +44,11 @@ Stable `code` values: `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `CONFLICT`,
 `LIMIT_EXCEEDED`, `ENTITLEMENT_REQUIRED`, `PRECONDITION_FAILED`, `RATE_LIMITED`, `UNAUTHENTICATED`,
 `ACCOUNT_DISABLED`, `EMAIL_NOT_VERIFIED`, `IDENTITY_CONFLICT`, `COMPANY_SUSPENDED`, `METHOD_NOT_ALLOWED`,
 `UNSUPPORTED_MEDIA_TYPE`,
-`IDEMPOTENCY_KEY_REUSED`, `INTERNAL_ERROR`.
+`IDEMPOTENCY_KEY_REUSED`, `INTERNAL_ERROR`, `PAYMENT_GATEWAY_ERROR` (502), `BILLING_DISABLED` (503),
+`SERVICE_BUSY` (503 with `Retry-After`: the database pool is exhausted — retry later; Phase 9).
+
+Requests to another company's endpoints (`/companies/{companyId}/**` without an ACTIVE membership
+or a platform permission) always answer 404, before the body is validated (Phase 9).
 
 ## 3. Endpoint inventory
 
@@ -164,7 +168,7 @@ Invalid transitions return 422 `INVALID_STATE_TRANSITION`. Timed transitions run
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/companies/{companyId}/entitlements` | P:`platform.subscriptions.read` or C:`company.usage.read` | Products with access status, feature limits and current usage — implemented |
-| GET | `/service/access?companyId&userSubject&featureCode` | S (product service token) | Access of a company (and, with `userSubject`, of that user) to the **calling** product or one of its features. Always 200: `{allowed, reason, productCode, companyId, userId, roles, entitlementStatus, limit, used, remaining}`; reasons `OK, COMPANY_INACTIVE, NO_ENTITLEMENT, SUSPENDED, FEATURE_NOT_INCLUDED, LIMIT_REACHED, UNKNOWN_USER, USER_INACTIVE, NOT_A_MEMBER, NOT_PERMITTED` — implemented |
+| GET | `/service/access?companyId&userSubject&featureCode` | S (product service token) | Access of a company (and, with `userSubject`, of that user) to the **calling** product or one of its features. Always 200: `{allowed, reason, productCode, companyId, userId, roles, entitlementStatus, limit, used, remaining}`; reasons `OK, COMPANY_INACTIVE, NO_ENTITLEMENT, SUSPENDED, FEATURE_NOT_INCLUDED, LIMIT_REACHED, UNKNOWN_USER, USER_INACTIVE, NOT_A_MEMBER, NOT_PERMITTED` — implemented. The entitlement is checked first: for `COMPANY_INACTIVE`/`NO_ENTITLEMENT` no user details are returned (Phase 9) |
 | POST | `/service/usage/consume` · `/service/usage/release` | S | `{companyId, featureCode, quantity (1–1,000,000), idempotencyKey (≤ 80, [A-Za-z0-9_.:-])}` → `{used, limit, remaining, replayed}`; 409 `LIMIT_EXCEEDED`, 403 `ENTITLEMENT_REQUIRED` — implemented |
 
 S = client-credentials token of a product service (`client_id` claim) registered as the product's
@@ -203,7 +207,7 @@ set, writes answer 503 `BILLING_DISABLED`; reads still work.
 | POST | `/companies/{companyId}/invoices/{id}/cancel` | P:`platform.subscriptions.manage` | Cancel an ISSUED/PARTIALLY_PAID invoice at Razorpay and in Core; other states → 422; paid meanwhile at Razorpay → 409 |
 | POST | `/companies/{companyId}/invoices/{id}/refresh` | P:`platform.subscriptions.manage` | Fetch the invoice from Razorpay and apply its state (recovers a missed webhook) |
 | GET | `/platform/invoices` | P:`platform.subscriptions.read` | All invoices (`status`, `companyId`, paging, `sort` by createdAt/periodStart) |
-| POST | `/webhooks/payments/razorpay` | `X-Razorpay-Signature` (no user auth) | Razorpay webhook → 200 `{outcome: PROCESSED\|DUPLICATE\|IGNORED\|UNKNOWN_INVOICE}`; invalid signature → 401 (audited); missing `x-razorpay-event-id` → 400; webhook secret not set → 503 |
+| POST | `/webhooks/payments/razorpay` | `X-Razorpay-Signature` (no user auth) | Razorpay webhook → 200 `{outcome: PROCESSED\|DUPLICATE\|IGNORED\|UNKNOWN_INVOICE\|AMOUNT_MISMATCH}` (`AMOUNT_MISMATCH`: reported paid amount below the invoice amount — left unpaid, audited); invalid signature → 401 (audited); missing `x-razorpay-event-id` or body over 64 KB → 400; webhook secret not set → 503 |
 
 Invoice `status`: CREATING → ISSUED → PARTIALLY_PAID → PAID, or ISSUE_FAILED, CANCELLED, EXPIRED.
 `paymentApplied` (after PAID): APPLIED (trial activated or period renewed), ALREADY_COVERED (the

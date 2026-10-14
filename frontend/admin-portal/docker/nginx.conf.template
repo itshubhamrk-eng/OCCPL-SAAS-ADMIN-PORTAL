@@ -12,6 +12,8 @@ server {
     root /usr/share/nginx/html;
     server_tokens off;
 
+    # nginx drops these server-level headers in any location that sets its own add_header, so every
+    # such location below repeats the full set (verified with curl in Phase 9).
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
@@ -29,18 +31,28 @@ server {
         add_header Cache-Control "no-store" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
         add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
         add_header X-Frame-Options "DENY" always;
     }
 
     location = /config.json {
         add_header Cache-Control "no-store" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
         add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+        add_header X-Frame-Options "DENY" always;
     }
 
     # Hashed build output can be cached indefinitely.
     location ~* \.(?:js|css|woff2?|svg|png|ico)$ {
         add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
         add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+        add_header X-Frame-Options "DENY" always;
         try_files $uri =404;
     }
 

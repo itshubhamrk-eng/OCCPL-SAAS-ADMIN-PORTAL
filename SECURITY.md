@@ -109,7 +109,7 @@ the need.
 | Injection | JPA parameter binding / Criteria only; dynamic sort fields mapped from allowlists. |
 | Output | Angular auto-escaping; no `innerHTML` with untrusted data; API returns JSON only. |
 | Errors | RFC 9457 problem details; no stack traces, SQL or internal IDs of other tenants. |
-| Webhooks | HMAC signature verification with constant-time compare, timestamp tolerance, event-id idempotency, raw body retained only as a hash. |
+| Webhooks | HMAC signature verification over the raw body with constant-time compare, body capped at 64 KB, event-id idempotency, raw body retained only as a hash, paid amount checked against the invoice. (Razorpay signs no timestamp; replays of a signed body under a new event id are harmless because invoice transitions are idempotent.) |
 | Uploads | None initially. If added: type sniffing, size limits, AV scan, object storage, never served from app origin. |
 
 ### Implemented in Phase 2 (verified)
@@ -235,6 +235,46 @@ the need.
 - Who sees what: company members with `company.billing.read` see their invoices; the payment link
   needs `company.billing.manage` (or staff); issuing, cancelling and re-checking invoices is staff-only
   (`platform.subscriptions.manage`) and audited (`billing.invoice_*`, `billing.payment_*`).
+
+### Implemented in Phase 9 — hardening (verified)
+
+- **Endpoint inventory test** (`EndpointSecurityIT`, built from the application's own request
+  mappings, so new endpoints are covered automatically): every endpoint declares `@PreAuthorize` or
+  is in a short allow-list with a reason (own-data endpoints, service API, signed webhook); every
+  company endpoint uses `@tenant.check(#companyId, …)` or a platform authority; all endpoints but the
+  webhook answer 401 anonymously; user tokens get 403 on the service API and service tokens 403
+  everywhere else; a company admin gets **404 on every endpoint of another company, whatever the
+  body**; ids of another company's memberships, invitations, subscriptions and invoices are not
+  found through one's own company path, for company admins and platform staff alike.
+- **Deny-by-default for company paths** (`CompanyPathGuard`): before the body is read, a request to
+  `/api/v1/companies/{companyId}/**` needs an ACTIVE membership of a non-deactivated company or a
+  platform permission (MFA); otherwise 404. Previously a cross-tenant write with an invalid body got
+  400 (validation runs before `@PreAuthorize`) — no data leaked, but responses were not uniform.
+- **Independent code review** (8 findings, all fixed with tests): seat limit bypass by re-sending
+  or accepting invitations of deactivated members (medium); one Core service token valid at every
+  product → now one token per product via an optional client scope per `apiAudience` (medium);
+  `X-Forwarded-For` spoofing of the rate-limit key → Tomcat `RemoteIpValve` (`forward-headers-strategy:
+  native`, only private/loopback proxies trusted); product URLs pointing at loopback/link-local
+  (cloud metadata) addresses → refused unless `CATALOG_ALLOW_LOCAL_URLS=true` (development);
+  webhook amount not checked; re-invite could replace roles of a member the caller may not manage;
+  service access check revealed membership before checking the entitlement; invitation delivery
+  errors could log the invitation URL.
+- **Dependencies**: Trivy (vulnerability DB of 2026-10-14) found Tomcat 11.0.24 with 3 critical CVEs
+  and Jackson 3.1.5/2.21.5 with 5 high ones; upgraded to Tomcat 11.0.27, Jackson 3.1.7/2.21.7 (pinned
+  in the poms until Spring Boot manages them). Re-scan: 0 known vulnerabilities in the Java
+  libraries of both images; the Ubuntu base layer has 19 medium/4 low (no fix available); portal
+  image (Alpine) 1 medium; frontend npm dependencies 0. CI runs `npm audit` and builds images;
+  Trivy in CI and Dependabot are configured in this phase.
+- **Headers verified with curl** on the running stack: API — CSP `default-src 'none'`,
+  `frame-ancestors 'none'`, `nosniff`, `no-referrer`, `X-Frame-Options: DENY`, `no-store`, HSTS when
+  the request arrived over HTTPS through the proxy; CORS preflight allowed for the portal origin
+  only (foreign origin → 403), exposed headers limited. Portal — nginx dropped `Referrer-Policy`
+  and `Permissions-Policy` on `index.html`/assets (an `add_header` in a location replaces all
+  inherited ones); every location now sends the full set.
+- **Overload**: database pool exhaustion answers 503 with `Retry-After` instead of 500 with stack
+  traces (`OverloadFilter`, controller advice).
+- Spring Modulith *Moments* (unused) enabled `@Scheduled` jobs even when
+  `occpl.scheduling.enabled=false`; disabled.
 
 ## 5. Secrets and data protection
 

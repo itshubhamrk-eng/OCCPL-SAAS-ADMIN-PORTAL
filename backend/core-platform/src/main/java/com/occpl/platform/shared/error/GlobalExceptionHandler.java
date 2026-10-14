@@ -79,6 +79,12 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception ex, HttpServletRequest request) {
+        if (Overload.isOverload(ex)) {
+            log.warn("Overloaded (no database connection available) for {} {}", request.getMethod(),
+                    request.getRequestURI());
+            return ResponseEntity.status(503).header(HttpHeaders.RETRY_AFTER, Overload.RETRY_AFTER_SECONDS)
+                    .body(Problems.of(ErrorCode.SERVICE_BUSY, Overload.detail(), request.getRequestURI()));
+        }
         log.error("Unhandled exception for {} {}", request.getMethod(), request.getRequestURI(), ex);
         return respond(Problems.of(ErrorCode.INTERNAL_ERROR, "An unexpected error occurred.",
                 request.getRequestURI()));

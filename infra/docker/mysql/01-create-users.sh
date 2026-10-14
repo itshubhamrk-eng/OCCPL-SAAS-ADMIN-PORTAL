@@ -19,6 +19,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON occpl_sample.* TO 'sample_app'@'%';
 CREATE USER IF NOT EXISTS 'occpl_backup'@'%' IDENTIFIED BY '${DB_BACKUP_PASSWORD}';
 GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES ON occpl_core.* TO 'occpl_backup'@'%';
 GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES ON occpl_sample.* TO 'occpl_backup'@'%';
-GRANT RELOAD, PROCESS, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO 'occpl_backup'@'%';
+GRANT RELOAD, PROCESS, REPLICATION CLIENT, REPLICATION SLAVE, BACKUP_ADMIN ON *.* TO 'occpl_backup'@'%';
+-- MySQL Shell's dump utilities read role definitions; table-level grants avoid exposing mysql.user.
+GRANT SELECT ON mysql.role_edges TO 'occpl_backup'@'%';
+GRANT SELECT ON mysql.default_roles TO 'occpl_backup'@'%';
 FLUSH PRIVILEGES;
 SQL

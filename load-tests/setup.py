@@ -115,14 +115,14 @@ def ensure_client(adm: str, client_id: str, flow_id: str) -> None:
     base = f"{KC}/admin/realms/{REALM}/clients"
     _, found, _ = http("GET", f"{base}?clientId={client_id}", token=adm)
     if found:
-        return
+        http("DELETE", f"{base}/{found[0]['id']}", token=adm)  # recreate so its settings are current
     http("POST", base, {
         "clientId": client_id, "publicClient": True, "standardFlowEnabled": False, "directAccessGrantsEnabled": True,
         "attributes": {"access.token.lifespan": "3600"},
         "authenticationFlowBindingOverrides": {"direct_grant": flow_id},
         "protocolMappers": [
             {"name": "occpl-core-audience", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
-             "config": {"included.client.audience": "occpl-core", "access.token.claim": "true", "id.token.claim": "false"}},
+             "config": {"included.custom.audience": "occpl-core", "access.token.claim": "true", "id.token.claim": "false"}},
             {"name": "amr", "protocol": "openid-connect", "protocolMapper": "oidc-amr-mapper",
              "config": {"access.token.claim": "true", "id.token.claim": "true", "introspection.token.claim": "true"}},
         ]}, adm)
@@ -135,6 +135,12 @@ def password_token(client_id: str, username: str, otp: str | None = None) -> str
         form["totp"] = otp
     _, r, _ = http("POST", f"{KC}/realms/{REALM}/protocol/openid-connect/token", form=form)
     return r["access_token"]
+
+
+def staff_token() -> str:
+    """Keycloak accepts each TOTP code only once, also across runs: always use a fresh 30 s window."""
+    time.sleep(30 - time.time() % 30 + 1)
+    return password_token("occpl-loadtest-staff", STAFF_EMAIL, totp(STAFF_TOTP_SECRET))
 
 
 def create_kc_user(adm: str, email: str, credentials: list) -> str:
@@ -168,7 +174,7 @@ def main() -> None:
                       "credentialData": json.dumps({"subType": "totp", "digits": 6, "counter": 0, "period": 30,
                                                     "algorithm": "HmacSHA256"})}
     create_kc_user(adm, STAFF_EMAIL, [{"type": "password", "value": PASSWORD, "temporary": False}, otp_credential])
-    staff = password_token("occpl-loadtest-staff", STAFF_EMAIL, totp(STAFF_TOTP_SECRET))
+    staff = staff_token()
     http("GET", f"{CORE}/api/v1/me", token=staff)  # first login creates the platform user
     sql(f"""INSERT IGNORE INTO platform_role_assignment (user_id, role_id, assigned_at)
 SELECT id, UUID_TO_BIN('01920000-0000-7000-8000-000000000001'), UTC_TIMESTAMP(6) FROM platform_user WHERE email = '{STAFF_EMAIL}';""")
@@ -176,7 +182,7 @@ SELECT id, UUID_TO_BIN('01920000-0000-7000-8000-000000000001'), UTC_TIMESTAMP(6)
     if "platform.products.manage" not in (me.get("platform") or {}).get("permissions", []):
         raise SystemExit(f"staff token does not carry platform permissions (amr/MFA?): {me}")
 
-    if not sql("SELECT id FROM product WHERE code = 'lt-product';").strip():
+    if not sql("SELECT HEX(id) FROM product WHERE code = 'lt-product';").strip():
         _, product, _ = http("POST", f"{CORE}/api/v1/products", {
             "code": "lt-product", "name": "Load Test Product", "appUrl": "https://lt-product.occpl.test",
             "serviceClientId": "product-sample-service"}, staff)
@@ -211,15 +217,18 @@ UNION ALL
   JOIN platform_user u ON u.id = s.id JOIN seed_company sc ON sc.n = s.company_n JOIN company c ON c.id = sc.id
   WHERE sc.n > 20 AND s.idx < 2 ORDER BY RAND(42) LIMIT {a.sample - 20});""")
     sample = []
+    adm, adm_at = admin_token(), time.time()
     for line in rows.strip().splitlines():
         user_id, email, company_id, role, code = line.split("\t")
+        if time.time() - adm_at > 40:  # admin-cli tokens live 60 s
+            adm, adm_at = admin_token(), time.time()
         kc_id = create_kc_user(adm, email, [{"type": "password", "value": PASSWORD, "temporary": False}])
         sql(f"UPDATE user_identity SET subject = '{kc_id}' WHERE user_id = UUID_TO_BIN('{user_id}') AND provider = 'keycloak';")
         sample.append({"userId": user_id, "email": email, "companyId": company_id, "role": role, "companyCode": code,
                        "subject": kc_id})
     for s in sample:
         s["token"] = password_token("occpl-loadtest-users", s["email"])
-    staff = password_token("occpl-loadtest-staff", STAFF_EMAIL, totp(STAFF_TOTP_SECRET))
+    staff = staff_token()
     with open(os.path.join(HERE, "tokens.json"), "w") as f:
         json.dump({"createdAt": int(time.time()), "staff": staff, "users": sample,
                    "serviceClientId": "product-sample-service", "serviceClientSecret": env("PRODUCT_SAMPLE_CLIENT_SECRET")}, f)
