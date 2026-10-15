@@ -27,9 +27,9 @@ variable "github_repository" {
 }
 
 variable "manage_dmarc_record" {
-  description = "Create the _dmarc record (disable if the domain already publishes one)"
+  description = "Create the _dmarc record (leave false while the domain already publishes one, e.g. from the mail host)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "dmarc_report_email" {
