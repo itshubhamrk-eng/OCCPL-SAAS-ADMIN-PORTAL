@@ -125,10 +125,12 @@ jobs:
         run: |
           for f in infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh infra/scripts/*.sh infra/vps/bin/*.sh infra/vps/mysql/*.sh; do bash -n "$f"; done
           shellcheck infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh infra/scripts/*.sh infra/vps/bin/*.sh infra/vps/mysql/*.sh
-      - name: Deploy compose file
+      - name: Deploy compose file (AWS)
         run: |
+          # The env files exist only on a real instance (written by render-env.sh): empty stand-ins.
+          sudo mkdir -p /etc/occpl && sudo touch /etc/occpl/core.env /etc/occpl/keycloak.env /etc/occpl/portal.env
           REGISTRY=r RELEASE=x OCCPL_ENV=ci AWS_REGION=ap-south-1 \
-            docker compose -f infra/aws/compose/docker-compose.yml config --quiet --no-env-resolution
+            docker compose -f infra/aws/compose/docker-compose.yml config --quiet
       - name: VPS compose file
         run: |
           cp infra/vps/.env.example /tmp/vps.env
