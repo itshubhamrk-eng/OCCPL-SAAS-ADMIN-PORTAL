@@ -30,4 +30,4 @@ esac
 if [ -n "$BACKUP_S3_URI" ]; then
   aws s3 sync "$dir" "$BACKUP_S3_URI" --only-show-errors --no-progress
 fi
-[ "$mode" = full ] && [ -n "$BACKUP_PING_URL" ] && curl -fsS -m 10 -o /dev/null "$BACKUP_PING_URL" || true
+if [ "$mode" = full ] && [ -n "$BACKUP_PING_URL" ]; then curl -fsS -m 10 -o /dev/null "$BACKUP_PING_URL" || true; fi

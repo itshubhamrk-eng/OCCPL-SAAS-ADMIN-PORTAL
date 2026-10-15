@@ -14,7 +14,7 @@ prefix="s3://$ARTIFACTS_BUCKET/$OCCPL_ENV/bootstrap"
 aws s3 cp "$here/../compose/bin/bootstrap-db.sh" "$prefix/bootstrap-db.sh"
 instance=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$ASG_NAME" \
   --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId | [0]" --output text)
-[ -n "$instance" ] && [ "$instance" != None ] || { echo "no instance in service in $ASG_NAME" >&2; exit 1; }
+if [ -z "$instance" ] || [ "$instance" = None ]; then echo "no instance in service in $ASG_NAME" >&2; exit 1; fi
 
 id=$(aws ssm send-command --instance-ids "$instance" --document-name AWS-RunShellScript \
   --comment "occpl bootstrap database" --timeout-seconds 600 \
