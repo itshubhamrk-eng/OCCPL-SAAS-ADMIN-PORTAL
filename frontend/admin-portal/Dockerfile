@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:24.21-bookworm-slim AS build
+FROM node:26.11-bookworm-slim AS build
 WORKDIR /workspace
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
