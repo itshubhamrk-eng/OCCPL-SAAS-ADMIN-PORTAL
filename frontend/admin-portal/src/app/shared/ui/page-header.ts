@@ -23,7 +23,7 @@ import { RouterLink } from '@angular/router';
   styles: `
     :host {
       display: block;
-      margin-bottom: var(--occpl-space-4);
+      margin-bottom: var(--occpl-space-6);
     }
     .back {
       display: inline-block;

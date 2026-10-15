@@ -9,7 +9,8 @@ h1 {
 
 h2 {
   font-size: var(--occpl-font-size-lg);
-  margin: 0 0 var(--occpl-space-3);
+  font-weight: 700;
+  margin: 0 0 var(--occpl-space-4);
 }
 
 h3 {
@@ -59,9 +60,13 @@ h3 {
   backdrop-filter: blur(10px);
   border: 1px solid var(--occpl-color-border);
   border-radius: var(--occpl-radius-md);
-  padding: var(--occpl-space-4);
+  padding: var(--occpl-space-6);
   box-shadow: var(--occpl-shadow-sm);
   min-width: 0;
+
+  @media (max-width: 40rem) {
+    padding: var(--occpl-space-4);
+  }
 }
 
 .stat {
@@ -77,8 +82,8 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: var(--occpl-space-1);
-  min-height: 2.5rem;
-  padding: 0 var(--occpl-space-4);
+  min-height: 2.75rem;
+  padding: 0 var(--occpl-space-6);
   border: 1px solid var(--occpl-color-border);
   border-radius: var(--occpl-radius-sm);
   background: var(--occpl-color-surface);
@@ -111,8 +116,8 @@ h3 {
   }
 
   &.small {
-    min-height: 2rem;
-    padding: 0 var(--occpl-space-3);
+    min-height: 2.25rem;
+    padding: 0 var(--occpl-space-4);
   }
 
   &.link {
@@ -127,7 +132,7 @@ h3 {
 
 .form {
   display: grid;
-  gap: var(--occpl-space-4);
+  gap: var(--occpl-space-4) var(--occpl-space-6);
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
   align-items: start;
 
@@ -146,6 +151,7 @@ h3 {
   > .label {
     font-weight: 600;
     font-size: var(--occpl-font-size-sm);
+    line-height: 1.25rem;
   }
 
   .hint {
@@ -158,8 +164,8 @@ input:not([type='checkbox']):not([type='radio']),
 select,
 textarea {
   width: 100%;
-  min-height: 2.5rem;
-  padding: var(--occpl-space-2) var(--occpl-space-3);
+  min-height: 2.75rem;
+  padding: var(--occpl-space-2) var(--occpl-space-4);
   border: 1px solid var(--occpl-color-border);
   border-radius: var(--occpl-radius-sm);
   background: var(--occpl-color-surface);
@@ -211,8 +217,9 @@ textarea.code {
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--occpl-space-2);
-  align-items: end;
+  gap: var(--occpl-space-3);
+  align-items: flex-end;
+  margin-bottom: var(--occpl-space-4);
 
   .field {
     flex: 1 1 12rem;
@@ -235,7 +242,7 @@ table.data {
 
   th,
   td {
-    padding: var(--occpl-space-2) var(--occpl-space-3);
+    padding: var(--occpl-space-3) var(--occpl-space-4);
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--occpl-color-border);

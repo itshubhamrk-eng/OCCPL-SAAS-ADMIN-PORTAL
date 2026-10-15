@@ -164,3 +164,13 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    (key-only login, fail2ban), plus 80 and 443. If you create the instance by hand in the console instead of
    Terraform: Ubuntu 24.04, `t3.large`, 80 GiB gp3, Elastic IP, credit specification *Standard*, IMDSv2 only; log in
    as `ubuntu` with the key pair you created, add `~/.ssh/occpl_vps.pub` to `~/.ssh/authorized_keys`, then continue at step 2.
+7. **Sign-in page theme on an existing realm.** The realm import only runs on the very first start, so a realm created
+   before the `occpl` theme existed keeps the stock Keycloak look. Set it once on the server (after the release that
+   contains the theme is deployed):
+   ```bash
+   cd /opt/occpl && set -a && . ./.env && set +a
+   K="docker exec -i $(docker ps --format '{{.Names}}' | grep keycloak | head -1) /opt/keycloak/bin/kcadm.sh"
+   $K config credentials --server http://localhost:8080 --realm master --user bootstrap-admin --password "$KEYCLOAK_ADMIN_PASSWORD"
+   $K update realms/occpl -s loginTheme=occpl
+   ```
+   New installs get it from the generated production realm.

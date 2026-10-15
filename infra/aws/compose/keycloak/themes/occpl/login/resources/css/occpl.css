@@ -1,0 +1,169 @@
+/* OCCPL sign-in: crimson + indigo on light grey, glass card. Overrides keycloak.v2 (PatternFly 5) through its variables. */
+:root {
+  --occpl-crimson: #d61f45;
+  --occpl-crimson-strong: #b3123a;
+  --occpl-indigo: #4338ca;
+  --occpl-ink: #1e2140;
+  --occpl-muted: #5d6285;
+  --keycloak-card-top-color: var(--occpl-crimson);
+  --keycloak-logo-url: none;
+  --keycloak-bg-logo-url: none;
+  --pf-v5-global--primary-color--100: var(--occpl-crimson);
+  --pf-v5-global--primary-color--200: var(--occpl-crimson-strong);
+  --pf-v5-global--link--Color: var(--occpl-crimson-strong);
+  --pf-v5-global--link--Color--hover: var(--occpl-crimson);
+  --pf-v5-global--active-color--100: var(--occpl-indigo);
+  --pf-v5-global--BorderRadius--sm: 12px;
+  --pf-v5-global--FontFamily--text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --pf-v5-global--FontFamily--heading: var(--pf-v5-global--FontFamily--text);
+}
+
+/* Background: light grey with a crimson glow top-left, an indigo glow bottom-right and two soft orbs. */
+.login-pf body {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 640px at 0% 0%, rgb(214 31 69 / 30%) 0%, transparent 62%),
+    radial-gradient(800px 600px at 100% 100%, rgb(67 56 202 / 30%) 0%, transparent 60%),
+    radial-gradient(500px 360px at 85% 8%, rgb(224 138 0 / 12%) 0%, transparent 70%),
+    #edeff3;
+  background-attachment: fixed;
+}
+
+.pf-v5-c-login {
+  background: transparent;
+}
+
+/* Logo: a crimson mark and the product name (the realm display name text is replaced). */
+#kc-header-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#kc-header-wrapper::before {
+  content: "O";
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e02550, var(--occpl-crimson-strong));
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgb(214 31 69 / 35%);
+}
+
+#kc-header-wrapper::after {
+  content: "OCCPL Admin Portal";
+  color: var(--occpl-ink);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Card */
+.pf-v5-c-login__main {
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 78%);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgb(255 255 255 / 90%);
+  box-shadow: 0 24px 70px rgb(67 56 202 / 22%);
+}
+
+.pf-v5-c-login__main-header {
+  border-top: 5px solid var(--occpl-crimson);
+}
+
+.pf-v5-c-login__main-header .pf-v5-c-title {
+  color: var(--occpl-ink);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Inputs and buttons */
+.pf-v5-c-form-control {
+  border-radius: 12px;
+  --pf-v5-c-form-control--Height: 2.9rem;
+}
+
+.pf-v5-c-form-control:focus-within {
+  --pf-v5-c-form-control--BorderBottomColor: var(--occpl-indigo);
+  box-shadow: 0 0 0 4px rgb(67 56 202 / 14%);
+}
+
+.pf-v5-c-button.pf-m-primary {
+  border-radius: 12px;
+  min-height: 2.9rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #e02550, var(--occpl-crimson-strong));
+  box-shadow: 0 10px 24px rgb(214 31 69 / 30%);
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus {
+  background: linear-gradient(135deg, var(--occpl-crimson), #96103a);
+}
+
+.pf-v5-c-login__main-footer-band-item a,
+.pf-v5-c-login__main-footer a {
+  color: var(--occpl-crimson-strong);
+  font-weight: 600;
+}
+
+.pf-v5-c-alert.pf-m-danger {
+  border-radius: 12px;
+}
+
+/* Dark mode (follows the browser setting, like the portal) */
+.pf-v5-theme-dark body {
+  background:
+    radial-gradient(900px 640px at 0% 0%, rgb(214 31 69 / 32%) 0%, transparent 62%),
+    radial-gradient(800px 600px at 100% 100%, rgb(67 56 202 / 40%) 0%, transparent 60%),
+    #12121f;
+  background-attachment: fixed;
+}
+
+.pf-v5-theme-dark #kc-header-wrapper::after,
+.pf-v5-theme-dark .pf-v5-c-login__main-header .pf-v5-c-title {
+  color: #ececf7;
+}
+
+.pf-v5-theme-dark .pf-v5-c-login__main {
+  background: rgb(28 28 46 / 80%);
+  border-color: rgb(255 255 255 / 10%);
+}
+
+.pf-v5-theme-dark .pf-v5-c-login__main a,
+.pf-v5-theme-dark .pf-v5-c-login__main-footer-band-item a {
+  color: #ff7d9a;
+}
+
+.pf-v5-c-form__label-text {
+  color: var(--occpl-ink);
+  font-weight: 600;
+}
+
+.pf-v5-theme-dark .pf-v5-c-form__label-text {
+  color: #ececf7;
+}
+
+.pf-v5-c-form-control input:focus {
+  outline: none;
+}
+
+@media (max-width: 40rem) {
+  .pf-v5-c-login__container {
+    padding: 1rem;
+  }
+
+  #kc-header-wrapper::after {
+    font-size: 1.125rem;
+  }
+}
