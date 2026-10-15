@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Dev server live; CI fixes (2026-10-15)
+- First release deployed to the EC2 dev server by the pipeline; sign-in with MFA verified at admin.dev.occplsoftech.com.
+- CI fixes found on the first GitHub runs: shellcheck SC2015 rewrites, AWS compose check with empty env-file stand-ins, Trivy installed
+  from the checksum-verified release binary (go install failed on Go 1.26); `init-env.sh` suggests mailbox addresses on the main domain.
+- The 10 Dependabot PRs opened by the first push are not merged (major version jumps need testing).
+
 ### Dev/test server on EC2 (2026-10-15, D-17)
 - `infra/aws/dev`: one `t3.large` (Ubuntu 24.04, default VPC, fixed address, firewall, S3-backup role,
   Route 53 records for `*.dev.occplsoftech.com`) running the VPS stack; `release.yml` now deploys every

@@ -160,3 +160,7 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    the *Release* workflow deploys to dev automatically and smoke-tests it; production only follows when
    the repository variable `DEPLOY_PRODUCTION` is `true` and the reviewers approve.
 5. The first Super Admin and the rest work as in §5, with the `.dev.` hostnames.
+6. The GitHub runners connect from changing addresses: the security group must allow SSH (22) from anywhere
+   (key-only login, fail2ban), plus 80 and 443. If you create the instance by hand in the console instead of
+   Terraform: Ubuntu 24.04, `t3.large`, 80 GiB gp3, Elastic IP, credit specification *Standard*, IMDSv2 only; log in
+   as `ubuntu` with the key pair you created, add `~/.ssh/occpl_vps.pub` to `~/.ssh/authorized_keys`, then continue at step 2.
