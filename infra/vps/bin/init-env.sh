@@ -12,19 +12,20 @@ ask() { # var prompt default [secret]
 }
 rand() { openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 40; }
 
-ask DOMAIN "Domain" occplsoftech.com
-ask ACME_EMAIL "Email for certificate notices" "tech@$DOMAIN"
+ask DOMAIN "Domain (e.g. occplsoftech.com, or dev.occplsoftech.com for the test server)" occplsoftech.com
+mail_domain=$(awk -F. '{print $(NF-1) "." $NF}' <<< "$DOMAIN") # mailboxes live on the main domain, not on dev.
+ask ACME_EMAIL "Email for certificate notices" "tech@$mail_domain"
 ask ADMIN_IPS "IP addresses allowed to open the Keycloak console (space-separated, with /32)" ""
 [ -n "$ADMIN_IPS" ] || { echo "ADMIN_IPS is required" >&2; exit 1; }
 ask IMAGE_PREFIX "Image prefix" ghcr.io/itshubhamrk-eng/occpl
 ask SMTP_HOST "SMTP host" smtp.hostinger.com
 ask SMTP_PORT "SMTP port (465 = SSL, 587 = STARTTLS)" 465
-ask SMTP_USERNAME "SMTP user" "tech@$DOMAIN"
+ask SMTP_USERNAME "SMTP user" "tech@$mail_domain"
 ask SMTP_PASSWORD "SMTP password" "" secret
 ask SMTP_FROM_ADDRESS "Sender address" "$SMTP_USERNAME"
 ask MAIL_NAME "Sender display name" "OCCPL Innovations"
 ask BOOTSTRAP_SUPER_ADMIN_EMAIL "Email of the first Super Admin" ""
-ask PROVISIONING_ALERT_RECIPIENTS "Email for provisioning alerts" "tech@$DOMAIN"
+ask PROVISIONING_ALERT_RECIPIENTS "Email for provisioning alerts" "tech@$mail_domain"
 if [ "$SMTP_PORT" = 465 ]; then ssl=true; starttls=false; else ssl=false; starttls=true; fi
 
 umask 077
