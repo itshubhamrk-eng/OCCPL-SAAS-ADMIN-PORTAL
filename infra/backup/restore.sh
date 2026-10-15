@@ -13,7 +13,7 @@ base=${1:?usage: restore.sh <backup-dir> [full-backup-name]}
 host=${MYSQL_HOST:-127.0.0.1}
 port=${MYSQL_PORT:-3306}
 user=${MYSQL_USER:-root}
-image=${MYSQL_CLIENT_IMAGE:-mysql:8.4}
+image=${MYSQL_CLIENT_IMAGE:-mysql:9.7} # MySQL Shell 9.x: only it has util.dumpBinlogs; it also dumps and loads 8.4 servers
 threads=${RESTORE_THREADS:-4}
 : "${MYSQL_PASSWORD:?set MYSQL_PASSWORD}"
 

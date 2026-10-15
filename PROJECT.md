@@ -1,6 +1,6 @@
 # OCCPL Innovations — Multi-Product SaaS Platform
 
-Status: **Phase 10 (Deployment) code complete** (AWS Terraform, pipeline, runbook) — first apply to the AWS account pending (D-1e). Before live payments: D-11 (GST) and the Razorpay smoke test (R-5). Before production sizing: load test on the production environment before launch (H-5) and confirmed SLOs (D-6).
+Status: **Phase 10 (Deployment) code complete**: single-VPS stack (`infra/vps`, ADR-0012) is the launch target, AWS stack ready as the later option — go-live needs the VPS and the first deploy (V-3). Before live payments: D-11 (GST) and the Razorpay smoke test (R-5). Before production sizing: load test on the production environment before launch (H-5) and confirmed SLOs (D-6).
 Phase 1 decisions were answered on 2026-10-13 (see §5).
 
 ## 1. Business objective
@@ -119,6 +119,7 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | D-13 | Hosting | **Decided (2026-10-14): AWS**, region `ap-south-1` (Mumbai), EC2 instances with Docker Compose behind an Application Load Balancer (ADR-0011). |
 | D-14 | Production database | **Decided (2026-10-14): Amazon RDS for MySQL 8.4 LTS** (RDS has 9.7 only in preview). Tests run on 8.4 by default and on 9.7 in CI; upgrade when RDS 9.7 is generally available. |
 | D-15 | Staging environment | **Decided (2026-10-14): none on AWS.** Releases are tried on the local Docker Compose stack, then approved for production; first deploy, rollback and restore drills run on production before launch (ADR-0011 amendment). |
+| D-16 | Launch hosting | **Decided (2026-10-15): one VPS** (Docker Compose, Caddy, MySQL 8.4 and Redis in containers) instead of the AWS stack; AWS design kept ready (ADR-0012). AWS keeps DNS (Route 53), the off-host backup bucket and (later) SES. |
 | D-11 | GST on invoices: are plan prices tax-inclusive or exclusive, which GST rate/HSN-SAC code, and is the company's GSTIN printed on invoices? | **Open — needed before live payments.** Today the plan price is sent to Razorpay as the line amount with no tax fields; the company's tax id is stored but not sent. |
 
 ## 6. Risks

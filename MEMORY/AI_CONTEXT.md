@@ -11,7 +11,9 @@ access, Route 53 zone, SES production access, GitHub environments). Open follow-
 C-10, PC-4, PC-5, S-9, PR-5, PR-6, UI-4 (settings page), UI-5, UI-6, B-3..B-8 (Razorpay live test,
 GST D-11, …), H-5 (pre-launch load test on production), H-6, H-7, D-1e, D-2 drill, D-4..D-6.
 
-**Hosting (D-13/D-14, ADR-0011)**: AWS ap-south-1, EC2 + Docker Compose behind an ALB, RDS MySQL 8.4 LTS, ElastiCache, SES, Secrets Manager, ECR, Terraform.
+**Launch hosting (D-16, ADR-0012)**: ONE VPS, Docker Compose + Caddy (`infra/vps`, runbook there), images from GHCR via `release.yml` (approval → SSH → `bin/deploy.sh`, auto-rollback), backups with the infra/backup scripts (MySQL Shell 9.7 client) + S3 copy, email via the Hostinger SMTP mailbox for now. AWS design below is ready but not used.
+
+**AWS design (D-13/D-14, ADR-0011)**: AWS ap-south-1, EC2 + Docker Compose behind an ALB, RDS MySQL 8.4 LTS, ElastiCache, SES, Secrets Manager, ECR, Terraform.
 
 **Domain (D-12)**: `occplsoftech.com` — admin., api., auth., `<product>.`, `*.staging.` reserved (DEPLOYMENT.md §2).
 

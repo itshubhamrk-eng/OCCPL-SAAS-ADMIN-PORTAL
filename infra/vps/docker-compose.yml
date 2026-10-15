@@ -1,0 +1,187 @@
+# Single-server production stack (ADR-0012): Caddy (HTTPS) → admin portal, Core Platform, Keycloak,
+# with MySQL 8.4 and Redis on the same host. Configuration comes from /opt/occpl/.env (written by
+# bin/init-env.sh, mode 600); RELEASE (git SHA of the images) is set by bin/deploy.sh.
+name: occpl
+
+x-logging: &logging
+  driver: json-file
+  options: {max-size: "20m", max-file: "5"}
+
+services:
+  caddy:
+    image: caddy:2.10.2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?set in .env}
+      ADMIN_HOST: admin.${DOMAIN:?set in .env}
+      API_HOST: api.${DOMAIN}
+      AUTH_HOST: auth.${DOMAIN}
+      ADMIN_IPS: ${ADMIN_IPS:-127.0.0.1/32}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data   # certificates: keep across restarts (Let's Encrypt rate limits)
+      - caddy-config:/config
+    mem_limit: 128m
+    logging: *logging
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      MYSQL_DATABASE: occpl_core
+      DB_MIGRATOR_PASSWORD: ${DB_MIGRATOR_PASSWORD:?set in .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set in .env}
+      DB_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?set in .env}
+      DB_KEYCLOAK_PASSWORD: ${DB_KEYCLOAK_PASSWORD:?set in .env}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --log-bin-trust-function-creators=1   # the migrator creates the audit-log triggers
+      - --gtid-mode=ON                        # point-in-time recovery (infra/backup)
+      - --enforce-gtid-consistency=ON
+      - --binlog-expire-logs-seconds=604800
+      - --innodb-buffer-pool-size=${MYSQL_BUFFER_POOL:-1G}
+      - --max-connections=150
+      - --slow-query-log=1
+      - --long-query-time=1
+    ports:
+      - "127.0.0.1:3306:3306"   # backups run on the host
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    mem_limit: ${MYSQL_MEM_LIMIT:-2g}
+    stop_grace_period: 60s
+    logging: *logging
+
+  redis:
+    image: redis:8.10
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set in .env}", "--save", "", "--appendonly", "no",
+              "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    mem_limit: 256m
+    logging: *logging
+
+  keycloak:
+    image: ${IMAGE_PREFIX:?set in .env}-keycloak:${RELEASE:?set by deploy.sh}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      KC_DB_URL: jdbc:mysql://mysql:3306/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${DB_KEYCLOAK_PASSWORD}
+      KC_HOSTNAME: https://auth.${DOMAIN}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"   # Core reaches Keycloak internally, tokens keep the public issuer
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_MANAGEMENT_PORT: "9000"
+      KC_LOG_CONSOLE_OUTPUT: json
+      KC_BOOTSTRAP_ADMIN_USERNAME: bootstrap-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set in .env}
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=70
+      # Substituted into the realm import (first start only).
+      KC_PORTAL_URL: https://admin.${DOMAIN}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set in .env}
+      PROVISIONING_CLIENT_SECRET: ${PROVISIONING_CLIENT_SECRET:?set in .env}
+      KC_SMTP_HOST: ${SMTP_HOST}
+      KC_SMTP_PORT: ${SMTP_PORT}
+      KC_SMTP_USER: ${SMTP_USERNAME}
+      KC_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      KC_SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      KC_SMTP_SSL: ${SMTP_SSL:-false}
+      KC_SMTP_FROM: ${SMTP_FROM_ADDRESS:?set in .env}
+    ports:
+      - "127.0.0.1:9000:9000"   # management: readiness for deploy.sh
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+    mem_limit: ${KEYCLOAK_MEM_LIMIT:-1536m}
+    stop_grace_period: 30s
+    logging: *logging
+
+  core-platform:
+    image: ${IMAGE_PREFIX}-core-platform:${RELEASE}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/occpl_core
+      DB_USERNAME: occpl_app
+      DB_PASSWORD: ${DB_APP_PASSWORD}
+      DB_MIGRATOR_USERNAME: occpl_migrator
+      DB_MIGRATOR_PASSWORD: ${DB_MIGRATOR_PASSWORD}
+      # Tokens carry the public issuer; keys and admin calls go over the compose network.
+      OIDC_ISSUER_URI: https://auth.${DOMAIN}/realms/occpl
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/occpl/protocol/openid-connect/certs
+      CORS_ALLOWED_ORIGINS: https://admin.${DOMAIN}
+      API_DOCS_ENABLED: "false"
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_AUTH: "true"
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      SMTP_SSL: ${SMTP_SSL:-false}
+      MAIL_FROM: ${MAIL_FROM}
+      INVITATION_ACCEPT_URL: https://admin.${DOMAIN}/invitations/accept
+      PROVISIONING_CLIENT_SECRET: ${PROVISIONING_CLIENT_SECRET}
+      PROVISIONING_TOKEN_URI: http://keycloak:8080/realms/occpl/protocol/openid-connect/token
+      PROVISIONING_CALLBACK_BASE_URL: https://api.${DOMAIN}
+      PROVISIONING_ALERT_RECIPIENTS: ${PROVISIONING_ALERT_RECIPIENTS:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      BOOTSTRAP_SUPER_ADMIN_EMAIL: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:-}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError
+    ports:
+      - "127.0.0.1:8081:8081"   # actuator: readiness for deploy.sh (not public)
+    mem_limit: ${CORE_MEM_LIMIT:-2g}
+    stop_grace_period: 40s
+    logging: *logging
+
+  admin-portal:
+    image: ${IMAGE_PREFIX}-admin-portal:${RELEASE}
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: https://api.${DOMAIN}/api/v1
+      OIDC_ISSUER: https://auth.${DOMAIN}/realms/occpl
+      OIDC_CLIENT_ID: occpl-admin-portal
+      CSP_CONNECT_SRC: https://api.${DOMAIN} https://auth.${DOMAIN}
+    ports:
+      - "127.0.0.1:8088:8080"
+    mem_limit: 128m
+    logging: *logging
+
+volumes:
+  mysql-data:
+  caddy-data:
+  caddy-config:

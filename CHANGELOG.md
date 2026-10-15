@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Single-VPS deployment (2026-10-15, D-16, ADR-0012)
+- `infra/vps`: Caddy (automatic HTTPS), MySQL 8.4, Redis, Keycloak (production image), Core, portal on one
+  server; scripts for server preparation, `.env` generation, deploy with automatic rollback, backups
+  with off-host copy, heartbeat; runbook. `release.yml` publishes images to GHCR and deploys over SSH
+  after approval; the AWS workflow is manual-only (`deploy-aws.yml`). CI checks the new compose file,
+  Caddyfile and scripts.
+- Core: `SMTP_SSL` (implicit TLS) alongside STARTTLS; the production realm takes `KC_SMTP_STARTTLS`/`KC_SMTP_SSL`.
+- Backup tools default to the MySQL Shell 9.7 client (8.4 shell has no `dumpBinlogs`); verified against an 8.4 server.
+- Terraform (shared stack): S3 bucket and write-only user for off-host backups.
+- `smoke-test.sh` moved to `infra/scripts/` and accepts Caddy's 308 redirect.
+
 ### No AWS staging environment (2026-10-14)
 - Decision D-15: production is the only AWS environment; releases are tried on the local Docker
   Compose stack and approved in GitHub before the rolling deploy. Removed `infra/aws/envs/staging`

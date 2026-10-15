@@ -20,5 +20,5 @@ headers=$(curl -s -D - -o /dev/null --max-time 10 "$api/api/v1/me")
 grep -q '^HTTP/[0-9.]* 401' <<< "$headers" || fail "API without token: $(head -1 <<< "$headers")"
 grep -qi '^strict-transport-security' <<< "$headers" || fail "API sends no HSTS (proxy headers not trusted?)"
 status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://admin.$suffix$domain/")
-[ "$status" = 301 ] || fail "HTTP is not redirected to HTTPS ($status)"
+[ "$status" = 301 ] || [ "$status" = 308 ] || fail "HTTP is not redirected to HTTPS ($status)"
 echo "smoke test passed: $admin $api $auth"

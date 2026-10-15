@@ -72,6 +72,8 @@ JAVA_OPTS_KC_HEAP=-XX:MaxRAMPercentage=70
 KC_PORTAL_URL=$admin
 KC_SMTP_HOST=$(val "$smtp" host)
 KC_SMTP_PORT=$(val "$smtp" port)
+KC_SMTP_STARTTLS=true
+KC_SMTP_SSL=false
 KC_SMTP_USER=$(val "$smtp" username)
 KC_SMTP_PASSWORD=$(val "$smtp" password)
 KC_SMTP_FROM=no-reply@$(cfg admin_host | sed -E 's/^admin\.(staging\.)?//')

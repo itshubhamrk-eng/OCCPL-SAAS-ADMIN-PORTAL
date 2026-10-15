@@ -214,6 +214,19 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
 
 ## Phase 10 — Deployment
 
+**Launch target changed (D-16, ADR-0012): one VPS.** The AWS items below stay as the later option.
+
+- ☑ **V-1** `infra/vps`: Caddy + MySQL + Redis + Keycloak + Core + portal compose stack, install/init-env/
+  deploy/backup/healthcheck scripts, `release.yml` (GHCR images, approval-gated SSH deploy, smoke test),
+  rehearsed on local Docker: first deploy 96 s, upgrade 31 s, failed release rolled back, full +
+  incremental backup and restore, browser sign-in with MFA through the public hostnames.
+- ☑ **V-2** Runbook (`infra/vps/RUNBOOK.md`), ADR-0012, off-host backup bucket (Terraform, validated).
+- ☐ **V-3** Go live: order the VPS, DNS A records, GitHub environment, first deploy, first Super Admin,
+  backups to S3, heartbeat/uptime monitors, rollback and restore drill on the real server.
+- ☐ **V-4** Email: SMTP over Hostinger is configured but untested from the real server (port 465 SSL
+  or 587 STARTTLS); switch to SES when production access is approved.
+- ☐ **V-5** Not exercised yet: Let's Encrypt issuance, the S3 upload, GHCR pull from the real server.
+
 - ◐ **D-1** AWS deployment (ADR-0011), code complete; not yet applied to an AWS account:
   - ☑ **D-1a** Terraform: state bucket; shared stack (ECR, artifacts bucket, GitHub OIDC, SES with
     DKIM/MAIL FROM/DMARC); environment module (VPC in two AZs, ALB + ACM + WAF, EC2 Auto Scaling

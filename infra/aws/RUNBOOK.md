@@ -64,7 +64,7 @@ account (the registrar's name servers pointing at it); a GitHub admin on the rep
   and a smoke test run. Try a release on the local compose stack before approving.
 - **Redeploy or roll back.** In GitHub: Actions → *Deploy* → *Run workflow*, with the release
   (the full SHA of an earlier release; ECR keeps the last 100), then approve it. The same thing
-  from a workstation: `infra/aws/scripts/rolling-deploy.sh <sha> && infra/aws/scripts/smoke-test.sh`.
+  from a workstation: `infra/aws/scripts/rolling-deploy.sh <sha> && infra/scripts/smoke-test.sh`.
 - **How a rollout works.** One instance at a time: leave the load balancer, deploy through SSM,
   wait until Keycloak, Core and the portal are ready, then rejoin. If an instance fails, every
   instance that was already updated goes back to the previous release and the run fails.

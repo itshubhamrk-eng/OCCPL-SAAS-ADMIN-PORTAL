@@ -123,9 +123,22 @@ jobs:
         run: python3 infra/aws/compose/keycloak/make-production-realm.py --check
       - name: Shell scripts
         run: |
-          for f in infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh; do bash -n "$f"; done
-          shellcheck infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh
+          for f in infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh infra/scripts/*.sh infra/vps/bin/*.sh infra/vps/mysql/*.sh; do bash -n "$f"; done
+          shellcheck infra/aws/scripts/*.sh infra/aws/compose/bin/*.sh infra/scripts/*.sh infra/vps/bin/*.sh infra/vps/mysql/*.sh
       - name: Deploy compose file
         run: |
           REGISTRY=r RELEASE=x OCCPL_ENV=ci AWS_REGION=ap-south-1 \
             docker compose -f infra/aws/compose/docker-compose.yml config --quiet --no-env-resolution
+      - name: VPS compose file
+        run: |
+          cp infra/vps/.env.example /tmp/vps.env
+          sed -i 's/^RELEASE=.*/RELEASE=0000000000000000000000000000000000000000/' /tmp/vps.env
+          for v in MYSQL_ROOT_PASSWORD DB_MIGRATOR_PASSWORD DB_APP_PASSWORD DB_BACKUP_PASSWORD DB_KEYCLOAK_PASSWORD REDIS_PASSWORD KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_ADMIN_CLIENT_SECRET PROVISIONING_CLIENT_SECRET SMTP_PASSWORD; do
+            sed -i "s/^$v=.*/$v=x/" /tmp/vps.env
+          done
+          docker compose --project-directory infra/vps --env-file /tmp/vps.env -f infra/vps/docker-compose.yml config --quiet
+      - name: Caddyfile
+        run: |
+          docker run --rm -v "$PWD/infra/vps/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -e ACME_EMAIL=a@b.c -e ADMIN_HOST=admin.x.test -e API_HOST=api.x.test -e AUTH_HOST=auth.x.test -e ADMIN_IPS=10.0.0.1/32 \
+            caddy:2.10.2 caddy validate --config /etc/caddy/Caddyfile

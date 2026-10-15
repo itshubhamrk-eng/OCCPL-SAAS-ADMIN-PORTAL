@@ -3,7 +3,7 @@
 Central multi-product SaaS management platform for OCCPL Innovations (Core Platform + Super
 Admin / Company Admin portals).
 
-**Status:** Phases 1–10 complete in code; the AWS environments are defined in [infra/aws](infra/aws/README.md) and are applied by an operator ([RUNBOOK](infra/aws/RUNBOOK.md)).
+**Status:** Phases 1–10 complete in code. Launch target: one VPS ([infra/vps](infra/vps/README.md), [RUNBOOK](infra/vps/RUNBOOK.md)); the AWS design stays ready in [infra/aws](infra/aws/README.md).
 Status report: [docs/OCCPL-Phase-Plan-and-Status.pdf](docs/OCCPL-Phase-Plan-and-Status.pdf).
 
 Stack: Java 25 · Spring Boot 4.1 · Angular 22 · MySQL 8.4 LTS (Amazon RDS; tested on 9.7 too) · Keycloak 26.8 · Docker Compose.
@@ -23,7 +23,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for local development and test commands.
 | [SECURITY.md](SECURITY.md) | AuthN/AuthZ, tenant isolation, data protection |
 | [BACKLOG.md](BACKLOG.md) | Prioritized tasks with acceptance criteria |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Environments, pipeline, rollback, backups, alerts |
-| [infra/aws/RUNBOOK.md](infra/aws/RUNBOOK.md) | AWS setup, deploy/rollback, recovery, incidents, secret rotation |
+| [infra/vps/RUNBOOK.md](infra/vps/RUNBOOK.md) | VPS setup, deploy/rollback, backups and restore, day-to-day operations |
+| [infra/aws/RUNBOOK.md](infra/aws/RUNBOOK.md) | AWS setup (later option): deploy/rollback, recovery, incidents, secret rotation |
 | [CHANGELOG.md](CHANGELOG.md) | Completed changes |
 | [ADR/](ADR/README.md) | Architecture decision records |
 | [MEMORY/AI_CONTEXT.md](MEMORY/AI_CONTEXT.md) | Condensed context for coding sessions |

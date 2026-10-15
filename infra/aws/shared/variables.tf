@@ -36,3 +36,9 @@ variable "dmarc_report_email" {
   type    = string
   default = "dmarc@occplsoftech.com"
 }
+
+variable "backup_retention_days" {
+  description = "How long the off-host database backups of the VPS are kept"
+  type        = number
+  default     = 35
+}

@@ -26,3 +26,18 @@ output "ses_smtp_secret_arn" {
 output "hosted_zone_id" {
   value = data.aws_route53_zone.main.zone_id
 }
+
+output "backups_bucket" {
+  description = "Set BACKUP_S3_URI=s3://<bucket>/vps in the VPS .env"
+  value       = aws_s3_bucket.backups.bucket
+}
+
+output "vps_backup_access_key_id" {
+  value = aws_iam_access_key.vps_backup.id
+}
+
+output "vps_backup_secret_access_key" {
+  description = "Shown only with: terraform output -raw vps_backup_secret_access_key"
+  value       = aws_iam_access_key.vps_backup.secret
+  sensitive   = true
+}

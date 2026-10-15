@@ -1,32 +1,31 @@
-name: Deploy
+name: Deploy to AWS (dormant)
 
-# Continuous delivery to AWS (ADR-0011, D-15): after CI passes on main, publish the images to ECR
-# tagged with the commit SHA and — after a manual approval on the "production" GitHub environment —
-# roll them out to production and smoke-test. There is no AWS staging environment: releases are
-# verified by CI and on the local Docker Compose stack (DEPLOYMENT.md §1). Run manually to redeploy or
-# roll back a release that is already in ECR (infra/aws/RUNBOOK.md §2).
+# The AWS stack of ADR-0011 is NOT the launch target: production runs on one VPS (ADR-0012, D-16,
+# release.yml). This workflow stays for the day the platform moves to AWS (infra/aws/RUNBOOK.md).
+# It runs only when started by hand: Actions → "Deploy to AWS (dormant)" → Run workflow. Set
+# "build" to publish the images of the given commit to ECR first, otherwise they must already be
+# there. The "production" GitHub environment's reviewers must approve before the rollout starts.
 #
 # Repository variables: AWS_BUILD_ROLE_ARN, ECR_REGISTRY, ARTIFACTS_BUCKET.
 # "production" environment variables: AWS_DEPLOY_ROLE_ARN, ASG_NAME, TARGET_GROUP_ARNS.
-# Values: `terraform output` of infra/aws/shared and infra/aws/envs/production.
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       release:
-        description: Release to deploy (full git SHA of images already in ECR)
+        description: Full git SHA to deploy
         required: true
+      build:
+        description: Build and push the images of this commit to ECR first
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   id-token: write # OIDC → AWS, no stored keys
 
 concurrency:
-  group: deploy # one rollout at a time; never cancel one half-way
+  group: deploy-aws # one rollout at a time; never cancel one half-way
   cancel-in-progress: false
 
 env:
@@ -35,16 +34,18 @@ env:
 jobs:
   build:
     name: Publish images
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    if: inputs.build
     runs-on: ubuntu-24.04
     outputs:
       release: ${{ steps.release.outputs.release }}
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ inputs.release }}
       - id: release
-        run: echo "release=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+        env:
+          RELEASE: ${{ inputs.release }}
+        run: echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
       - name: Production realm is in sync with the development realm
         run: python3 infra/aws/compose/keycloak/make-production-realm.py --check
       - uses: aws-actions/configure-aws-credentials@v4
@@ -80,16 +81,13 @@ jobs:
     needs: build
     # After a successful build, or a manual redeploy/rollback (build skipped). Either way the
     # "production" environment's required reviewers must approve before this job starts.
-    if: >-
-      always() &&
-      (needs.build.result == 'success' ||
-       (github.event_name == 'workflow_dispatch' && needs.build.result == 'skipped'))
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
     runs-on: ubuntu-24.04
-    environment: production
+    environment: production # the IAM trust policy of the deploy role names this environment
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.release }}
+          ref: ${{ inputs.release }}
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
@@ -105,4 +103,4 @@ jobs:
           [[ "$RELEASE" =~ ^[0-9a-f]{40}$ ]] || { echo "release must be a full git SHA: $RELEASE"; exit 1; }
           infra/aws/scripts/rolling-deploy.sh "$RELEASE"
       - name: Smoke test
-        run: infra/aws/scripts/smoke-test.sh
+        run: infra/scripts/smoke-test.sh

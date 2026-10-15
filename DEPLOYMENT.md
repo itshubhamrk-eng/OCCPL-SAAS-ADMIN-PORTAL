@@ -9,7 +9,7 @@ Status: Local stack, Dockerfiles and CI implemented in Phase 2; sample product s
 | local | Development | Docker Compose on developer machine | Synthetic seed |
 | test (CI) | Automated tests | Testcontainers (MySQL, Keycloak, Redis) | Ephemeral |
 | pre-release check | Try a release before approving it for production (D-15) | Local Docker Compose stack (`infra/docker`), built from the release commit | Synthetic seed |
-| production | Customers (the only AWS environment, D-15) | AWS ap-south-1: 2 EC2 instances (Docker Compose) behind an ALB, RDS MySQL 8.4 LTS Multi-AZ, ElastiCache, SES, Keycloak on both instances (ADR-0011) | Real |
+| production | Customers | **One VPS** with Docker Compose (D-16, ADR-0012, `infra/vps`); the AWS design of ADR-0011 (`infra/aws`) is ready for later | Real |
 
 Configuration: Spring profiles `local` and `test` exist (production uses the production-safe defaults in
 `application.yml` plus environment variables); the portal reads a runtime `config.json`
@@ -167,7 +167,22 @@ credentials in the realm, not in the realm import file.
 Open http://localhost:8080/swagger-ui.html → **Authorize** → *keycloak (OAuth2, authorizationCode)*
 → tick `openid` → sign in. The local realm allows this redirect only for development.
 
-## 2. Production topology on AWS (ADR-0011)
+## 2. Production topology
+
+**Launch target: one VPS (ADR-0012, `infra/vps`, operations in `infra/vps/RUNBOOK.md`).**
+
+```
+Internet ─ :80/:443 ─ Caddy (Let's Encrypt, HTTP → HTTPS)
+   admin.occplsoftech.com → admin-portal · api.occplsoftech.com → core-platform
+   auth.occplsoftech.com  → keycloak (/admin and the master realm only from ADMIN_IPS)
+   internal: MySQL 8.4 (occpl_core, keycloak) · Redis; backups → /var/backups/occpl → S3 (write-only user)
+```
+
+DNS stays in Route 53 (three A records to the server). Email uses the `tech@occplsoftech.com` SMTP
+mailbox until SES is approved. One machine means an outage on reboot or host failure; recovery is a
+restore (RUNBOOK §6).
+
+### Later: AWS (ADR-0011, `infra/aws`)
 
 ```
 Route 53 (occplsoftech.com) → AWS WAF → Application Load Balancer (ACM *.occplsoftech.com, ap-south-1)
@@ -212,15 +227,17 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
    (unit, Testcontainers integration, Modulith verification, Core ↔ sample end-to-end); frontend
    format, lint, tests, production build, `npm audit`; image builds with a Trivy scan; infra job
    (`terraform fmt`/`validate` of every stack, production-realm check, shellcheck, compose config).
-2. **Main, after CI passed** (`.github/workflows/deploy.yml`): GitHub OIDC → build role; build and
-   push `core-platform`, `admin-portal` and `keycloak` to ECR, tagged with the commit SHA
-   (immutable tags: a release always means the same images).
+2. **Main, after CI passed** (`.github/workflows/release.yml`): build and push `core-platform`,
+   `admin-portal` and `keycloak` to the GitHub container registry, tagged with the commit SHA
+   (a release always means the same images); the production realm file is checked against the dev realm.
 3. **Pre-release check (manual)**: run the release commit on the local compose stack
    (`cd infra/docker && docker compose up --build`) and try the changed features.
-4. **Production**: after approval by the `production` environment's reviewers,
-   `infra/aws/scripts/rolling-deploy.sh <sha>` (bundle to S3, release recorded in SSM, instances
-   updated one at a time through SSM) → `smoke-test.sh` through the public ALB.
-5. **Redeploy / rollback**: run *Deploy* manually with a release SHA (infra/aws/RUNBOOK.md §2).
+4. **Production**: after approval by the `production` environment's reviewers: copy `infra/vps` to the
+   server over SSH, `bin/deploy.sh <sha>` (pull, start, wait until Keycloak, Core and the portal are
+   ready; automatic rollback to the previous release on failure) → `infra/scripts/smoke-test.sh`
+   through the public addresses.
+5. **Redeploy / rollback**: run *Release* manually with a release SHA (infra/vps/RUNBOOK.md §7).
+   (`deploy-aws.yml` is the dormant manual workflow for the AWS stack.)
 
 ## 4. Release & rollback
 
@@ -228,9 +245,11 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
   the new schema. Rollback = redeploy the previous release; the database is not rolled back.
 - Destructive (contract) migrations ship only in a release after the code no longer uses the
   old structure.
-- Flyway runs when Core starts on the first instance of a rollout (migrator account, Flyway's
-  lock prevents concurrent runs); the other instances find the schema up to date.
-- Rolling deploy: deregister the instance from all target groups (connections drain) → deploy
+- **VPS (launch):** Flyway runs when Core starts (migrator account). `bin/deploy.sh` restarts the
+  containers (about 30 s to 1.5 min of downtime; one server), waits for readiness and rolls back to
+  the previous release if it does not become ready. Risky migrations go out outside business hours.
+- **AWS (later):** Flyway runs when Core starts on the first instance of a rollout (Flyway's lock
+  prevents concurrent runs); the other instances find the schema up to date. Rolling deploy: deregister the instance from all target groups (connections drain) → deploy
   through SSM (`deploy.sh`: config from SSM/Secrets Manager, `docker compose pull && up`) →
   wait until Keycloak, Core and the portal report ready → register. If an instance fails, all
   instances already updated return to the previous release and the run fails.
@@ -243,13 +262,21 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
 
 ## 5. Backups & recovery
 
+**VPS (launch):** `infra/vps/bin/backup.sh` (cron): nightly full dump of `occpl_core` and `keycloak` at
+02:00 IST and a binary-log increment every 5 minutes with the scripts below, 7 days locally, a copy
+in the write-only S3 bucket (35 days; `infra/aws/shared/backups.tf`), heartbeat pings for missed runs.
+Recovery onto a new server: `infra/vps/RUNBOOK.md` §6 (rehearsed: dump 14 s, restore 6–8 s for the
+test data, incremental changes included). The backup tools use MySQL Shell 9.7 (`util.dumpBinlogs`)
+against the 8.4 server.
+
+
 **Production (AWS, primary):** RDS automated backups with point-in-time restore (35 days); AWS Backup daily copy at 02:00 IST, copied to ap-south-2 (Hyderabad)
 for production; failed backup jobs alert through SNS. Procedures: infra/aws/RUNBOOK.md §3. The
 Keycloak database is on the same RDS instance and is covered by the same backups.
 
 **Self-managed MySQL** (local, or a deployment outside RDS; drill done in Phase 9:
-infra/backup/DRILL.md). Scripts in `infra/backup/` (MySQL Shell from the `mysql:8.4` image, so
-client and server versions match; account `occpl_backup`, password on stdin):
+infra/backup/DRILL.md). Scripts in `infra/backup/` (MySQL Shell 9.7 from the `mysql:9.7` image (only 9.x has
+`util.dumpBinlogs`; it dumps and loads 8.4 servers); account `occpl_backup`, password on stdin):
 
 | When | Script | What |
 |---|---|---|
@@ -270,7 +297,15 @@ Recovery runbook (self-managed):
 Measured in the drill (1 M users): restore 41–43 s, Core ready 14 s later; point-in-time recovery to
 the transaction before an accidental DELETE exact. Targets RPO 15 min / RTO 4 h.
 
-## 6. Monitoring & alerts (CloudWatch → SNS email, `infra/aws/modules/platform/monitoring.tf`)
+## 6. Monitoring & alerts
+
+**VPS (launch):** `bin/healthcheck.sh` every 5 minutes checks Keycloak, Core and the portal and the
+disk (85%) and pings `HEARTBEAT_URL` (healthchecks.io emails when the pings stop); an external uptime
+monitor checks `https://admin.occplsoftech.com/healthz`; `BACKUP_PING_URL` reports missed backups. Logs:
+`docker compose logs`, rotated by Docker (20 MB × 5 per container). Metrics dashboards and alarms such as
+those below arrive with the move to AWS.
+
+**AWS (later):** CloudWatch → SNS email, `infra/aws/modules/platform/monitoring.tf`.
 
 Logs: every container to CloudWatch Logs (`/occpl/<env>/<service>`), plus the deploy log; ALB
 access logs to S3; VPC flow logs (rejected traffic). Metrics: ALB, RDS, ElastiCache, instance

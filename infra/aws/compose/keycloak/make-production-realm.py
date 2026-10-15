@@ -24,7 +24,7 @@ def production(realm: dict) -> dict:
     realm = json.loads(json.dumps(realm))  # deep copy
     realm["sslRequired"] = "all"
     realm["smtpServer"] = {
-        "host": "${KC_SMTP_HOST}", "port": "${KC_SMTP_PORT}", "starttls": "true", "ssl": "false",
+        "host": "${KC_SMTP_HOST}", "port": "${KC_SMTP_PORT}", "starttls": "${KC_SMTP_STARTTLS}", "ssl": "${KC_SMTP_SSL}",
         "auth": "true", "user": "${KC_SMTP_USER}", "password": "${KC_SMTP_PASSWORD}",
         "from": "${KC_SMTP_FROM}", "fromDisplayName": "OCCPL Innovations Sign-in",
     }

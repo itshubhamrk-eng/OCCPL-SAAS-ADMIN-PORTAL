@@ -21,7 +21,7 @@ infra/aws/
 │   └── keycloak/               production Keycloak image (optimized build + realm import)
 └── scripts/              run by the Deploy workflow or an operator:
     ├── rolling-deploy.sh       one instance at a time through the load balancer, auto-rollback
-    ├── smoke-test.sh           public checks through ALB/WAF/TLS after a deploy
+    ├── (smoke-test.sh moved to infra/scripts/)
     └── bootstrap-database.sh   runs bootstrap-db.sh on an instance through SSM
 ```
 
