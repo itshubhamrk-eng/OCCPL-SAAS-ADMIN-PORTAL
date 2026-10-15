@@ -1,0 +1,106 @@
+name: Deploy to AWS (dormant)
+
+# The AWS stack of ADR-0011 is NOT the launch target: production runs on one VPS (ADR-0012, D-16,
+# release.yml). This workflow stays for the day the platform moves to AWS (infra/aws/RUNBOOK.md).
+# It runs only when started by hand: Actions → "Deploy to AWS (dormant)" → Run workflow. Set
+# "build" to publish the images of the given commit to ECR first, otherwise they must already be
+# there. The "production" GitHub environment's reviewers must approve before the rollout starts.
+#
+# Repository variables: AWS_BUILD_ROLE_ARN, ECR_REGISTRY, ARTIFACTS_BUCKET.
+# "production" environment variables: AWS_DEPLOY_ROLE_ARN, ASG_NAME, TARGET_GROUP_ARNS.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Full git SHA to deploy
+        required: true
+      build:
+        description: Build and push the images of this commit to ECR first
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # OIDC → AWS, no stored keys
+
+concurrency:
+  group: deploy-aws # one rollout at a time; never cancel one half-way
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-south-1
+
+jobs:
+  build:
+    name: Publish images
+    if: inputs.build
+    runs-on: ubuntu-24.04
+    outputs:
+      release: ${{ steps.release.outputs.release }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release }}
+      - id: release
+        env:
+          RELEASE: ${{ inputs.release }}
+        run: echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+      - name: Production realm is in sync with the development realm
+        run: python3 infra/aws/compose/keycloak/make-production-realm.py --check
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_BUILD_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - name: core-platform
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/core-platform
+          push: true
+          provenance: false
+          tags: ${{ vars.ECR_REGISTRY }}/occpl/core-platform:${{ steps.release.outputs.release }}
+      - name: admin-portal
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend/admin-portal
+          push: true
+          provenance: false
+          tags: ${{ vars.ECR_REGISTRY }}/occpl/admin-portal:${{ steps.release.outputs.release }}
+      - name: keycloak
+        uses: docker/build-push-action@v6
+        with:
+          context: infra/aws/compose/keycloak
+          push: true
+          provenance: false
+          tags: ${{ vars.ECR_REGISTRY }}/occpl/keycloak:${{ steps.release.outputs.release }}
+
+  production:
+    name: Deploy to production
+    needs: build
+    # After a successful build, or a manual redeploy/rollback (build skipped). Either way the
+    # "production" environment's required reviewers must approve before this job starts.
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    environment: production # the IAM trust policy of the deploy role names this environment
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Rolling deploy
+        env:
+          OCCPL_ENV: production
+          ASG_NAME: ${{ vars.ASG_NAME }}
+          TARGET_GROUP_ARNS: ${{ vars.TARGET_GROUP_ARNS }}
+          ARTIFACTS_BUCKET: ${{ vars.ARTIFACTS_BUCKET }}
+          RELEASE: ${{ needs.build.outputs.release || inputs.release }}
+        run: |
+          [[ "$RELEASE" =~ ^[0-9a-f]{40}$ ]] || { echo "release must be a full git SHA: $RELEASE"; exit 1; }
+          infra/aws/scripts/rolling-deploy.sh "$RELEASE"
+      - name: Smoke test
+        run: infra/scripts/smoke-test.sh

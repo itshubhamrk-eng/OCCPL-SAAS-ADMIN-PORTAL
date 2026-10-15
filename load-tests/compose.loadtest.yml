@@ -1,0 +1,10 @@
+# Load-test settings on top of infra/docker/docker-compose.yml (test environments only):
+#   docker compose -f infra/docker/docker-compose.yml -f load-tests/compose.loadtest.yml up -d
+# The per-user and per-service rate limits stay enabled (their Redis round trip is part of every
+# request) but are raised so the generator's few hundred sample users are not throttled.
+services:
+  core-platform:
+    environment:
+      RATE_LIMIT_USER_PER_MINUTE: "1000000"
+      RATE_LIMIT_SERVICE_PER_MINUTE: "10000000"
+      RATE_LIMIT_ANONYMOUS_PER_MINUTE: "100000"

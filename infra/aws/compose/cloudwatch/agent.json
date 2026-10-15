@@ -1,0 +1,42 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "namespace": "CWAgent",
+    "append_dimensions": {
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "aggregation_dimensions": [["AutoScalingGroupName", "path"], ["AutoScalingGroupName"]],
+    "metrics_collected": {
+      "disk": { "measurement": ["used_percent"], "resources": ["/"] },
+      "mem": { "measurement": ["mem_used_percent"] }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          { "file_path": "/var/log/occpl-*.log", "log_group_name": "/occpl/OCCPL_ENV/deploy", "log_stream_name": "{instance_id}" }
+        ]
+      },
+      "prometheus": {
+        "log_group_name": "/occpl/OCCPL_ENV/cloudwatch-agent",
+        "prometheus_config_path": "/opt/occpl/cloudwatch/prometheus.yml",
+        "emf_processor": {
+          "metric_namespace": "OCCPL/OCCPL_ENV",
+          "metric_declaration": [
+            { "source_labels": ["job"], "label_matcher": "^core$", "dimensions": [["Environment", "pool"]],
+              "metric_selectors": ["^hikaricp_connections_(pending|active|max)$"] },
+            { "source_labels": ["job"], "label_matcher": "^core$", "dimensions": [["Environment", "outcome"]],
+              "metric_selectors": ["^occpl_provisioning_jobs_total$", "^occpl_billing_webhooks_total$"] },
+            { "source_labels": ["job"], "label_matcher": "^core$", "dimensions": [["Environment"]],
+              "metric_selectors": ["^jvm_memory_used_bytes$", "^process_cpu_usage$"] }
+          ]
+        }
+      }
+    }
+  }
+}

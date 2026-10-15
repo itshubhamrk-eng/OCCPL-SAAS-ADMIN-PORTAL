@@ -1,0 +1,158 @@
+# Defaults are production-safe: API docs off, no CORS origins, structured JSON logs.
+# Secrets and environment-specific values come from environment variables only.
+spring:
+  application:
+    name: core-platform
+  modulith:
+    moments:
+      # Unused; its auto-configuration would turn on @Scheduled jobs even with occpl.scheduling.enabled=false.
+      enabled: false
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/occpl_core}
+    username: ${DB_USERNAME:occpl_app}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 5000
+      max-lifetime: 1500000
+      pool-name: core-hikari
+  flyway:
+    # Migrations run with a DDL-capable account; the application account is DML-only.
+    user: ${DB_MIGRATOR_USERNAME:${spring.datasource.username}}
+    password: ${DB_MIGRATOR_PASSWORD:${spring.datasource.password}}
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
+      mail.smtp.ssl.enable: ${SMTP_SSL:false} # implicit TLS (port 465), as an alternative to STARTTLS
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+          audiences: ${OIDC_AUDIENCE:occpl-core}
+
+server:
+  port: 8080
+  shutdown: graceful
+  # Tomcat's RemoteIpValve: X-Forwarded-For is read from the right and only hops from trusted proxies
+  # (default: private and loopback addresses; override with SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES) are
+  # skipped, so a client-supplied value cannot replace the real address (rate limiting, audit IP hashes).
+  forward-headers-strategy: native
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  health:
+    mail:
+      # SMTP outages are handled by retries; they must not fail readiness or the overall health.
+      enabled: false
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:false}
+    oauth:
+      client-id: ${OPENAPI_OIDC_CLIENT_ID:occpl-admin-portal}
+      use-pkce-with-authorization-code-grant: true
+      scopes: openid
+
+occpl:
+  catalog:
+    # Development only: product URLs on localhost / 127.0.0.1 and plain HTTP to them (UrlRules).
+    allow-local-urls: ${CATALOG_ALLOW_LOCAL_URLS:false}
+  security:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  identity:
+    # Verified email that becomes the first SUPER_ADMIN on first login; clear it once used.
+    bootstrap-super-admin-email: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:}
+    mfa:
+      platform-required: ${MFA_PLATFORM_REQUIRED:true}
+    keycloak:
+      # Admin REST API (service account occpl-core-admin). Empty disables IdP admin features.
+      base-url: ${KEYCLOAK_BASE_URL:}
+      realm: ${KEYCLOAK_REALM:occpl}
+      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:occpl-core-admin}
+      client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  openapi:
+    # Browser-facing realm URL; enables "Authorize" with Keycloak in Swagger UI (non-production only).
+    oidc-issuer: ${OPENAPI_OIDC_ISSUER:}
+  notifications:
+    from: ${MAIL_FROM:OCCPL Innovations <no-reply@occpl.local>}
+  invitations:
+    # Portal page that completes an invitation; the token is appended as ?token=…
+    accept-url: ${INVITATION_ACCEPT_URL:http://localhost:4200/invitations/accept}
+    validity: ${INVITATION_VALIDITY:7d}
+    portal-client-id: ${OIDC_PORTAL_CLIENT_ID:occpl-admin-portal}
+  subscriptions:
+    # Business decision D-5 (2026-10-13).
+    grace-period: ${SUBSCRIPTION_GRACE_PERIOD:7d}
+    suspended-expiry: ${SUBSCRIPTION_SUSPENDED_EXPIRY:90d}
+    data-retention: ${SUBSCRIPTION_DATA_RETENTION:90d}
+  provisioning:
+    # Product tenants are removed after the data-retention period (D-5) once the entitlement ends.
+    deprovision-delay: ${SUBSCRIPTION_DATA_RETENTION:90d}
+    callback-timeout: ${PROVISIONING_CALLBACK_TIMEOUT:15m}
+    # Core's URL as reachable by product services (sent so ASYNC products know where to report completion).
+    callback-base-url: ${PROVISIONING_CALLBACK_BASE_URL:}
+    alert-recipients: ${PROVISIONING_ALERT_RECIPIENTS:}
+    # Core's own service client (client-credentials) used to call product provisioning endpoints.
+    token-uri: ${PROVISIONING_TOKEN_URI:${KEYCLOAK_BASE_URL:}/realms/${KEYCLOAK_REALM:occpl}/protocol/openid-connect/token}
+    client-id: ${PROVISIONING_CLIENT_ID:occpl-core-services}
+    client-secret: ${PROVISIONING_CLIENT_SECRET:}
+  billing:
+    # Razorpay (D-3/D-4). Billing stays disabled until both API keys are set; webhooks need the secret.
+    razorpay-api-url: ${RAZORPAY_API_URL:https://api.razorpay.com}
+    razorpay-key-id: ${RAZORPAY_KEY_ID:}
+    razorpay-key-secret: ${RAZORPAY_KEY_SECRET:}
+    razorpay-webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+    invoice-lead-time: ${BILLING_INVOICE_LEAD_TIME:7d}
+    payment-window: ${BILLING_PAYMENT_WINDOW:14d}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    redis-url: ${REDIS_URL:redis://localhost:6379}
+    authenticated-per-minute: ${RATE_LIMIT_USER_PER_MINUTE:600}
+    anonymous-per-minute: ${RATE_LIMIT_ANONYMOUS_PER_MINUTE:60}
+    service-per-minute: ${RATE_LIMIT_SERVICE_PER_MINUTE:6000}

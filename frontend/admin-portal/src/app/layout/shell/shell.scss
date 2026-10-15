@@ -1,0 +1,222 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--occpl-space-3);
+  top: calc(-1 * var(--occpl-space-8));
+  padding: var(--occpl-space-2) var(--occpl-space-3);
+  background: var(--occpl-color-surface);
+  color: var(--occpl-color-primary);
+  border-radius: var(--occpl-radius-sm);
+  z-index: 10;
+
+  &:focus {
+    top: var(--occpl-space-3);
+  }
+}
+
+.shell-header {
+  display: flex;
+  align-items: center;
+  gap: var(--occpl-space-3);
+  height: var(--occpl-header-height);
+  padding: 0 var(--occpl-space-4);
+  background: var(--occpl-color-primary);
+  color: var(--occpl-color-on-primary);
+}
+
+.nav-toggle,
+.sign-out {
+  border: 1px solid rgb(255 255 255 / 40%);
+  background: transparent;
+  color: inherit;
+  border-radius: var(--occpl-radius-sm);
+  min-height: 2.25rem;
+  padding: 0 var(--occpl-space-3);
+  font: inherit;
+  cursor: pointer;
+}
+
+.nav-toggle {
+  display: none;
+
+  @media (max-width: 56rem) {
+    display: inline-block;
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--occpl-space-2);
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--occpl-radius-sm);
+  background: var(--occpl-color-accent);
+  color: var(--occpl-color-on-accent);
+  font-weight: 700;
+}
+
+.brand-name {
+  font-weight: 600;
+  white-space: nowrap;
+
+  @media (max-width: 26rem) {
+    display: none;
+  }
+}
+
+.brand-product {
+  opacity: 0.8;
+  white-space: nowrap;
+
+  @media (max-width: 40rem) {
+    display: none;
+  }
+}
+
+.spacer {
+  flex: 1;
+}
+
+.user {
+  color: inherit;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: 34rem) {
+    display: none;
+  }
+}
+
+.banner {
+  margin: var(--occpl-space-3) var(--occpl-space-4) 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--occpl-space-2);
+  align-items: center;
+}
+
+.alert {
+  position: relative;
+  margin: var(--occpl-space-3) var(--occpl-space-4) 0;
+  padding: var(--occpl-space-3) var(--occpl-space-8) var(--occpl-space-3) var(--occpl-space-4);
+  border: 1px solid var(--occpl-color-danger);
+  border-radius: var(--occpl-radius-md);
+  background: var(--occpl-color-danger-surface);
+  color: var(--occpl-color-text);
+}
+
+.alert-message,
+.alert-reference {
+  margin: 0;
+}
+
+.alert-reference {
+  margin-top: var(--occpl-space-1);
+  font-size: var(--occpl-font-size-sm);
+  color: var(--occpl-color-text-muted);
+}
+
+.alert-dismiss {
+  position: absolute;
+  top: var(--occpl-space-2);
+  right: var(--occpl-space-2);
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.shell-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.shell-nav {
+  flex: 0 0 var(--occpl-nav-width);
+  padding: var(--occpl-space-4) var(--occpl-space-2);
+  border-right: 1px solid var(--occpl-color-border);
+  background: var(--occpl-color-surface);
+
+  ul {
+    list-style: none;
+    margin: 0 0 var(--occpl-space-4);
+    padding: 0;
+  }
+
+  a {
+    display: block;
+    padding: var(--occpl-space-2) var(--occpl-space-3);
+    border-radius: var(--occpl-radius-sm);
+    color: var(--occpl-color-text);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--occpl-color-neutral-surface);
+    }
+
+    &.active {
+      background: var(--occpl-color-info-surface);
+      color: var(--occpl-color-primary);
+      font-weight: 600;
+    }
+  }
+
+  @media (max-width: 56rem) {
+    display: none;
+    position: absolute;
+    top: var(--occpl-header-height);
+    left: 0;
+    bottom: 0;
+    width: min(80vw, var(--occpl-nav-width));
+    z-index: 5;
+    box-shadow: var(--occpl-shadow-sm);
+
+    &.open {
+      display: block;
+    }
+  }
+}
+
+.nav-heading {
+  margin: 0 0 var(--occpl-space-1);
+  padding: 0 var(--occpl-space-3);
+  font-size: var(--occpl-font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--occpl-color-text-muted);
+}
+
+.nav-note {
+  font-size: var(--occpl-font-size-sm);
+  color: var(--occpl-color-text-muted);
+}
+
+.shell-main {
+  flex: 1;
+  min-width: 0;
+  max-width: var(--occpl-content-max-width);
+  padding: var(--occpl-space-6) var(--occpl-space-4);
+  outline: none;
+}

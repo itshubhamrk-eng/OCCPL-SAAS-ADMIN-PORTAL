@@ -1,0 +1,56 @@
+# Production services on each app instance (ADR-0011). Started by bin/deploy.sh with
+# REGISTRY, RELEASE and OCCPL_ENV set; configuration comes from /etc/occpl/*.env, written by
+# bin/render-env.sh from Secrets Manager and SSM. TLS terminates at the load balancer.
+name: occpl
+
+services:
+  core-platform:
+    image: ${REGISTRY}/occpl/core-platform:${RELEASE}
+    restart: unless-stopped
+    env_file: /etc/occpl/core.env
+    ports:
+      - "8080:8080" # API (load balancer target)
+      - "8081:8081" # actuator: health for the load balancer, prometheus for the CloudWatch agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Keycloak on the host network
+    mem_limit: ${CORE_MEM_LIMIT:-3500m}
+    stop_grace_period: 40s
+    logging:
+      driver: awslogs # stream per container in /occpl/<env>/<service>
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: /occpl/${OCCPL_ENV}/core-platform
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"
+
+  admin-portal:
+    image: ${REGISTRY}/occpl/admin-portal:${RELEASE}
+    restart: unless-stopped
+    env_file: /etc/occpl/portal.env
+    ports:
+      - "8088:8080"
+    mem_limit: 256m
+    logging:
+      driver: awslogs # stream per container in /occpl/<env>/<service>
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: /occpl/${OCCPL_ENV}/admin-portal
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"
+
+  keycloak:
+    image: ${REGISTRY}/occpl/keycloak:${RELEASE}
+    restart: unless-stopped
+    # Host network: the cluster members find each other by the instances' private addresses
+    # (JGroups, discovery through the database), which a bridge network would hide.
+    network_mode: host
+    env_file: /etc/occpl/keycloak.env
+    mem_limit: ${KEYCLOAK_MEM_LIMIT:-2g}
+    stop_grace_period: 30s
+    logging:
+      driver: awslogs # stream per container in /occpl/<env>/<service>
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: /occpl/${OCCPL_ENV}/keycloak
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"

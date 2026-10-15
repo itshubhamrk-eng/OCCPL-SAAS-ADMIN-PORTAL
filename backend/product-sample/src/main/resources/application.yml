@@ -1,0 +1,52 @@
+# Sample product service (reference implementation of the product integration contract).
+spring:
+  application:
+    name: product-sample
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/occpl_sample}
+    username: ${DB_USERNAME:sample_app}
+    password: ${DB_PASSWORD:}
+  flyway:
+    user: ${DB_MIGRATOR_USERNAME:${spring.datasource.username}}
+    password: ${DB_MIGRATOR_PASSWORD:${spring.datasource.password}}
+  mvc:
+    problemdetails:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+          # User tokens (client product-sample-web) and Core's provisioning tokens both carry this audience.
+          audiences: ${OIDC_AUDIENCE:product-sample}
+
+server:
+  port: ${PORT:8090}
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8091}
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+sample:
+  # Only tokens of this client may call the provisioning endpoints (Core's service client).
+  provisioning-client-id: ${PROVISIONING_CLIENT_ID:occpl-core-services}
+  core:
+    base-url: ${CORE_BASE_URL:http://localhost:8080}
+    token-uri: ${CORE_TOKEN_URI:http://localhost:8180/realms/occpl/protocol/openid-connect/token}
+    client-id: ${CORE_CLIENT_ID:product-sample-service}
+    client-secret: ${CORE_CLIENT_SECRET:}

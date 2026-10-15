@@ -1,0 +1,7 @@
+{
+  "apiBaseUrl": "http://localhost:8080/api/v1",
+  "oidc": {
+    "issuer": "http://localhost:8180/realms/occpl",
+    "clientId": "occpl-admin-portal"
+  }
+}

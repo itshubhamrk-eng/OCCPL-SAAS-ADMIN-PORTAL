@@ -1,0 +1,270 @@
+@if (context.company(); as c) {
+  @for (message of errors(); track message) {
+    <p class="field-error" role="alert">{{ message }}</p>
+  }
+  <div class="stack">
+    @if (context.isPlatform('platform.companies.manage')) {
+      <section class="card">
+        <h2>Company status</h2>
+        <p class="muted small">
+          Suspended companies keep read-only access and lose product access; deactivated companies
+          lose all access.
+        </p>
+        <div class="row">
+          @if (c.status !== 'ACTIVE') {
+            <button type="button" class="btn primary" (click)="activateDialog.open()">
+              {{ c.status === 'PENDING' ? 'Activate' : 'Reactivate' }}
+            </button>
+          }
+          @if (c.status === 'ACTIVE') {
+            <button type="button" class="btn danger" (click)="suspendDialog.open()">Suspend</button>
+          }
+          @if (c.status !== 'DEACTIVATED') {
+            <button type="button" class="btn danger" (click)="deactivateDialog.open()">
+              Deactivate
+            </button>
+          }
+        </div>
+      </section>
+      <occpl-action-dialog
+        #activateDialog
+        heading="Activate company"
+        confirmLabel="Activate"
+        reason="optional"
+        (confirmed)="changeStatus('activate', $event)"
+      />
+      <occpl-action-dialog
+        #suspendDialog
+        heading="Suspend company"
+        confirmLabel="Suspend"
+        [danger]="true"
+        reason="required"
+        message="Members keep read-only access; product access stops immediately."
+        (confirmed)="changeStatus('suspend', $event)"
+      />
+      <occpl-action-dialog
+        #deactivateDialog
+        heading="Deactivate company"
+        confirmLabel="Deactivate"
+        [danger]="true"
+        reason="required"
+        message="All member access ends until the company is reactivated."
+        (confirmed)="changeStatus('deactivate', $event)"
+      />
+    }
+
+    <section class="card">
+      <div class="row">
+        <h2>Details</h2>
+        <span class="spacer"></span>
+        @if (canManageProfile() && !editingDetails()) {
+          <button type="button" class="btn small" (click)="editDetails()">Edit</button>
+        }
+      </div>
+      @if (editingDetails()) {
+        <form class="form" [formGroup]="detailsForm" (ngSubmit)="saveDetails()">
+          <div class="field">
+            <label for="d-displayName">Display name</label>
+            <input
+              id="d-displayName"
+              formControlName="displayName"
+              aria-describedby="d-displayName-error"
+            />
+            <occpl-field-error
+              [control]="detailsForm.controls.displayName"
+              errorId="d-displayName-error"
+            />
+          </div>
+          <div class="field">
+            <label for="d-legalName">Legal name</label>
+            <input
+              id="d-legalName"
+              formControlName="legalName"
+              aria-describedby="d-legalName-error"
+            />
+            <occpl-field-error
+              [control]="detailsForm.controls.legalName"
+              errorId="d-legalName-error"
+            />
+          </div>
+          <div class="field">
+            <label for="d-country">Country</label>
+            <input id="d-country" formControlName="country" maxlength="2" />
+          </div>
+          <div class="field">
+            <label for="d-taxId">Tax ID</label>
+            <input id="d-taxId" formControlName="taxId" />
+          </div>
+          @if (!canEditLegal()) {
+            <p class="hint full muted small">
+              Legal name, country and tax ID can only be changed by OCCPL.
+            </p>
+          }
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save</button>
+            <button type="button" class="btn" (click)="editingDetails.set(false)">Cancel</button>
+          </div>
+        </form>
+      } @else {
+        <dl class="details">
+          <dt>Legal name</dt>
+          <dd>{{ c.legalName }}</dd>
+          <dt>Display name</dt>
+          <dd>{{ c.displayName }}</dd>
+          <dt>Country</dt>
+          <dd>{{ c.country }}</dd>
+          <dt>Tax ID</dt>
+          <dd>{{ c.taxId ?? '—' }}</dd>
+          <dt>Created</dt>
+          <dd>{{ c.createdAt | date: 'medium' }}</dd>
+        </dl>
+      }
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>Settings</h2>
+        <span class="spacer"></span>
+        @if (canManageProfile() && !editingSettings()) {
+          <button type="button" class="btn small" (click)="editSettings()">Edit</button>
+        }
+      </div>
+      @if (editingSettings()) {
+        <form class="form" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <div class="field">
+            <label for="s-tz">Time zone</label>
+            <input id="s-tz" formControlName="timeZone" aria-describedby="s-tz-error" />
+            <occpl-field-error [control]="settingsForm.controls.timeZone" errorId="s-tz-error" />
+          </div>
+          <div class="field">
+            <label for="s-locale">Language</label>
+            <input id="s-locale" formControlName="locale" aria-describedby="s-locale-error" />
+            <occpl-field-error [control]="settingsForm.controls.locale" errorId="s-locale-error" />
+          </div>
+          <div class="field full">
+            <label for="s-domains">Allowed invitation email domains</label>
+            <input
+              id="s-domains"
+              formControlName="domains"
+              placeholder="acme.com, acme.in"
+              aria-describedby="s-domains-hint s-domains-error"
+            />
+            <span class="hint" id="s-domains-hint"
+              >Leave empty to allow invitations to any email address.</span
+            >
+            <occpl-field-error
+              [control]="settingsForm.controls.domains"
+              errorId="s-domains-error"
+            />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save</button>
+            <button type="button" class="btn" (click)="editingSettings.set(false)">Cancel</button>
+          </div>
+        </form>
+      } @else if (settings(); as s) {
+        <dl class="details">
+          <dt>Time zone</dt>
+          <dd>{{ s.timeZone }}</dd>
+          <dt>Language</dt>
+          <dd>{{ s.locale }}</dd>
+          <dt>Invitation domains</dt>
+          <dd>{{ s.allowedEmailDomains.join(', ') || 'Any' }}</dd>
+        </dl>
+      }
+    </section>
+
+    <section class="card">
+      <h2>Contacts</h2>
+      <div class="grid">
+        @for (type of contactTypes; track type) {
+          <div>
+            <h3>{{ type | humanize }} contact</h3>
+            @if (editingContact() === type) {
+              <form class="stack" [formGroup]="contactForm" (ngSubmit)="saveContact()">
+                <div class="field">
+                  <label [for]="'c-name-' + type">Name</label>
+                  <input [id]="'c-name-' + type" formControlName="name" />
+                  <occpl-field-error [control]="contactForm.controls.name" />
+                </div>
+                <div class="field">
+                  <label [for]="'c-email-' + type">Email</label>
+                  <input [id]="'c-email-' + type" type="email" formControlName="email" />
+                  <occpl-field-error [control]="contactForm.controls.email" />
+                </div>
+                <div class="field">
+                  <label [for]="'c-phone-' + type">Phone</label>
+                  <input
+                    [id]="'c-phone-' + type"
+                    formControlName="phone"
+                    placeholder="+919876543210"
+                  />
+                  <occpl-field-error [control]="contactForm.controls.phone" />
+                </div>
+                <div class="row">
+                  <button type="submit" class="btn primary small">Save</button>
+                  <button type="button" class="btn small" (click)="editingContact.set(null)">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            } @else {
+              @if (contact(type); as ct) {
+                <p>
+                  {{ ct.name }}<br /><a [href]="'mailto:' + ct.email">{{ ct.email }}</a>
+                  @if (ct.phone) {
+                    <br />{{ ct.phone }}
+                  }
+                </p>
+              } @else {
+                <p class="muted">Not set</p>
+              }
+              @if (canManageProfile()) {
+                <div class="row">
+                  <button type="button" class="btn small" (click)="editContact(type)">
+                    {{ contact(type) ? 'Edit' : 'Add' }}
+                  </button>
+                  @if (contact(type) && type !== 'PRIMARY') {
+                    <button type="button" class="btn small link" (click)="removeContact(type)">
+                      Remove
+                    </button>
+                  }
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Status history</h2>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Change</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of history(); track h.changedAt) {
+              <tr>
+                <td data-label="When">{{ h.changedAt | date: 'medium' }}</td>
+                <td data-label="Change">
+                  {{ h.fromStatus | humanize }} → {{ h.toStatus | humanize }}
+                </td>
+                <td data-label="Reason">{{ h.reason ?? '—' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="muted">No changes yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+}

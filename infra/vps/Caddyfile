@@ -1,0 +1,26 @@
+# TLS certificates are obtained and renewed automatically (Let's Encrypt) once the DNS records of
+# the three hosts point at this server and ports 80/443 are open. HTTP is redirected to HTTPS.
+{
+	email {$ACME_EMAIL}
+}
+
+{$ADMIN_HOST} {
+	encode zstd gzip
+	reverse_proxy admin-portal:8080
+}
+
+{$API_HOST} {
+	encode zstd gzip
+	reverse_proxy core-platform:8080
+}
+
+{$AUTH_HOST} {
+	encode zstd gzip
+	# The Keycloak administration console and the master realm are reachable only from ADMIN_IPS.
+	@ops_only {
+		path /admin /admin/* /realms/master /realms/master/*
+		not remote_ip {$ADMIN_IPS}
+	}
+	respond @ops_only 403
+	reverse_proxy keycloak:8080
+}

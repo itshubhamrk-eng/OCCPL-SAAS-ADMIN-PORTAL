@@ -1,0 +1,74 @@
+// OCCPL design tokens. Components must use these custom properties, never literal colours.
+// Brand colours are provisional until OCCPL supplies its brand guide.
+:root {
+  color-scheme: light dark;
+
+  --occpl-color-primary: #0b3d6e;
+  --occpl-color-on-primary: #ffffff;
+  --occpl-color-accent: #f2a900;
+  --occpl-color-on-accent: #1a1a1a;
+  --occpl-color-background: #f5f7fa;
+  --occpl-color-surface: #ffffff;
+  --occpl-color-border: #d6dce4;
+  --occpl-color-text: #1b2430;
+  --occpl-color-text-muted: #5a6778;
+  --occpl-color-danger: #c0392b;
+  --occpl-color-danger-surface: #fdecea;
+  --occpl-color-success: #1e8e3e;
+  --occpl-color-warning: #b26a00;
+  --occpl-color-focus: #2f80ed;
+
+  --occpl-font-family:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --occpl-font-size-sm: 0.875rem;
+  --occpl-font-size-md: 1rem;
+  --occpl-font-size-lg: 1.25rem;
+
+  --occpl-space-1: 0.25rem;
+  --occpl-space-2: 0.5rem;
+  --occpl-space-3: 0.75rem;
+  --occpl-space-4: 1rem;
+  --occpl-space-6: 1.5rem;
+  --occpl-space-8: 2.5rem;
+
+  --occpl-radius-sm: 4px;
+  --occpl-radius-md: 8px;
+  --occpl-header-height: 3.5rem;
+  --occpl-content-max-width: 80rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --occpl-color-primary: #0f2a47;
+    --occpl-color-background: #10161d;
+    --occpl-color-surface: #18212b;
+    --occpl-color-border: #2c3a4a;
+    --occpl-color-text: #e6ebf1;
+    --occpl-color-text-muted: #9aa8b8;
+    --occpl-color-danger-surface: #3a1d1a;
+  }
+}
+
+:root {
+  --occpl-color-info: #1f6feb;
+  --occpl-color-success-surface: #e6f4ea;
+  --occpl-color-warning-surface: #fff4e0;
+  --occpl-color-info-surface: #e8f0fe;
+  --occpl-color-neutral-surface: #eef1f5;
+  --occpl-nav-width: 15rem;
+  --occpl-shadow-sm: 0 1px 2px rgb(16 22 29 / 8%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --occpl-color-success-surface: #1b3324;
+    --occpl-color-warning-surface: #3a2c12;
+    --occpl-color-info-surface: #1b2a44;
+    --occpl-color-neutral-surface: #232e3a;
+    --occpl-color-success: #5cc27a;
+    --occpl-color-warning: #e3a33b;
+    --occpl-color-danger: #f0776a;
+    --occpl-color-info: #79a8ff;
+    --occpl-color-focus: #79a8ff;
+  }
+}
