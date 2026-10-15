@@ -133,3 +133,30 @@ nightly backup.
 `infra/aws` is ready (ADR-0011). Restore the latest backup into RDS with `backup/restore.sh`
 (RUNBOOK of `infra/aws` §3), point DNS at the load balancer, switch the pipeline to
 `deploy-aws.yml`.
+
+## 9. Development/test server on EC2 (D-17)
+
+The same stack runs on one EC2 instance at `admin.dev.occplsoftech.com`, `api.dev…`, `auth.dev…`
+(about $85 a month while running; **stop the instance in the console when not in use**: compute stops
+billing, the disk and the public address still do). It is the place to try a release before approving
+the production deploy. Outgoing email is real (the same SMTP mailbox): use test addresses.
+
+1. **[Mac]** `cd infra/aws/dev && cp terraform.tfvars.example terraform.tfvars`; fill in your public
+   key (`cat ~/.ssh/occpl_vps.pub`) and your public IP (`curl -s https://checkip.amazonaws.com`,
+   as `x.x.x.x/32`). `terraform init && terraform apply` (needs the bootstrap stack; creates the
+   instance, a fixed public address, firewall rules, an S3-backup role and the three DNS records).
+   Optional but recommended: apply `infra/aws/shared` first (backup bucket).
+2. Copy the bundle (the login user on Ubuntu is `ubuntu`):
+   ```bash
+   scp -i ~/.ssh/occpl_vps -r infra/vps ubuntu@<ip>:/tmp/occpl
+   scp -i ~/.ssh/occpl_vps -r infra/backup ubuntu@<ip>:/tmp/occpl/backup
+   ssh -i ~/.ssh/occpl_vps ubuntu@<ip> 'sudo mkdir -p /opt/occpl && sudo cp -r /tmp/occpl/. /opt/occpl/ && sudo bash /opt/occpl/bin/install.sh'
+   ```
+3. `ssh -i ~/.ssh/occpl_vps occpl@<ip>`, then `cd /opt/occpl && bin/init-env.sh` with domain
+   `dev.occplsoftech.com` (the `domain_for_env` output) and your IP as ADMIN_IPS. For backups add
+   `BACKUP_S3_URI=<backup_s3_uri output>` to `.env` (the instance role grants access; no `aws configure`).
+4. GitHub environment **dev** (no reviewers needed): variables `VPS_HOST` = the public address and
+   `HOST_SUFFIX` = `dev.`; secrets `VPS_SSH_KEY` and `VPS_KNOWN_HOSTS` as in §3. After a merge to `main`
+   the *Release* workflow deploys to dev automatically and smoke-tests it; production only follows when
+   the repository variable `DEPLOY_PRODUCTION` is `true` and the reviewers approve.
+5. The first Super Admin and the rest work as in §5, with the `.dev.` hostnames.

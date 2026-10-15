@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Dev/test server on EC2 (2026-10-15, D-17)
+- `infra/aws/dev`: one `t3.large` (Ubuntu 24.04, default VPC, fixed address, firewall, S3-backup role,
+  Route 53 records for `*.dev.occplsoftech.com`) running the VPS stack; `release.yml` now deploys every
+  release to the `dev` environment first and to production (approval, `DEPLOY_PRODUCTION`) afterwards.
+  `install.sh` also works on EC2 (uses the sudo user's SSH keys). Replaces D-15.
+
 ### Single-VPS deployment (2026-10-15, D-16, ADR-0012)
 - `infra/vps`: Caddy (automatic HTTPS), MySQL 8.4, Redis, Keycloak (production image), Core, portal on one
   server; scripts for server preparation, `.env` generation, deploy with automatic rollback, backups

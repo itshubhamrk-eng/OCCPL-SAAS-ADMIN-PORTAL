@@ -8,7 +8,8 @@ Status: Local stack, Dockerfiles and CI implemented in Phase 2; sample product s
 |---|---|---|---|
 | local | Development | Docker Compose on developer machine | Synthetic seed |
 | test (CI) | Automated tests | Testcontainers (MySQL, Keycloak, Redis) | Ephemeral |
-| pre-release check | Try a release before approving it for production (D-15) | Local Docker Compose stack (`infra/docker`), built from the release commit | Synthetic seed |
+| local | Development, first check of a release | Docker Compose on the developer machine (`infra/docker`) | Synthetic seed |
+| dev (test) | Every release is deployed here first (D-17) | One EC2 instance (`t3.large`) with the same stack as production (`infra/vps`, `infra/aws/dev`), `*.dev.occplsoftech.com` | Test data |
 | production | Customers | **One VPS** with Docker Compose (D-16, ADR-0012, `infra/vps`); the AWS design of ADR-0011 (`infra/aws`) is ready for later | Real |
 
 Configuration: Spring profiles `local` and `test` exist (production uses the production-safe defaults in
@@ -196,9 +197,9 @@ Route 53 (occplsoftech.com) → AWS WAF → Application Load Balancer (ACM *.occ
 Product services: own hosts and databases, reached at <product>.occplsoftech.com
 ```
 
-No AWS staging environment (D-15): releases are verified by CI and on the local compose stack. The
-Terraform module is environment-neutral, so a staging environment can be added later
-(infra/aws/RUNBOOK.md §6).
+Dev/test environment (D-17): the same stack on one EC2 instance at `*.dev.occplsoftech.com`
+(`infra/aws/dev`, `infra/vps/RUNBOOK.md` §9); releases go there first. No staging on the full AWS
+stack (D-15 superseded).
 Kubernetes and ECS are not used initially (ADR-0004, ADR-0011); the containers would move unchanged.
 
 ### Hostnames (decision D-12: domain `occplsoftech.com`)
@@ -209,7 +210,7 @@ Kubernetes and ECS are not used initially (ADR-0004, ADR-0011); the containers w
 | `api.occplsoftech.com` | Core Platform API (`/api/v1/**`) | Razorpay webhook `https://api.occplsoftech.com/api/v1/webhooks/payments/razorpay`; `PROVISIONING_CALLBACK_BASE_URL`; problem `type` URIs and the product-config schema `$id` use this host |
 | `auth.occplsoftech.com` | Keycloak (realm `occpl`) | `OIDC_ISSUER_URI=https://auth.occplsoftech.com/realms/occpl`; admin console reachable only from the operations network |
 | `<product>.occplsoftech.com` | Product services (e.g. `notes.occplsoftech.com`) | Each product's `appUrl`; its API may sit on the same host or `<product>-api.` |
-| `*.staging.occplsoftech.com` | Reserved for a staging environment if one is added later | Not in use (D-15) |
+| `*.dev.occplsoftech.com` | Dev/test server (`admin.dev.…`, `api.dev.…`, `auth.dev.…`) | Own database and realm (D-17) |
 | `occplsoftech.com` | Company website (not part of this platform) | |
 
 TLS: one certificate per host or a wildcard `*.occplsoftech.com`,
@@ -230,10 +231,10 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
 2. **Main, after CI passed** (`.github/workflows/release.yml`): build and push `core-platform`,
    `admin-portal` and `keycloak` to the GitHub container registry, tagged with the commit SHA
    (a release always means the same images); the production realm file is checked against the dev realm.
-3. **Pre-release check (manual)**: run the release commit on the local compose stack
-   (`cd infra/docker && docker compose up --build`) and try the changed features.
-4. **Production**: after approval by the `production` environment's reviewers: copy `infra/vps` to the
-   server over SSH, `bin/deploy.sh <sha>` (pull, start, wait until Keycloak, Core and the portal are
+3. **Dev server (automatic, D-17)**: the same steps on the EC2 test server (`dev` environment), then the
+   smoke test; a failure stops the pipeline before production. Try the changed features there.
+4. **Production** (once `DEPLOY_PRODUCTION` is set): after approval by the `production` environment's
+   reviewers: copy `infra/vps` to the server over SSH, `bin/deploy.sh <sha>` (pull, start, wait until Keycloak, Core and the portal are
    ready; automatic rollback to the previous release on failure) → `infra/scripts/smoke-test.sh`
    through the public addresses.
 5. **Redeploy / rollback**: run *Release* manually with a release SHA (infra/vps/RUNBOOK.md §7).

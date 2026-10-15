@@ -13,6 +13,8 @@ GST D-11, …), H-5 (pre-launch load test on production), H-6, H-7, D-1e, D-2 dr
 
 **Launch hosting (D-16, ADR-0012)**: ONE VPS, Docker Compose + Caddy (`infra/vps`, runbook there), images from GHCR via `release.yml` (approval → SSH → `bin/deploy.sh`, auto-rollback), backups with the infra/backup scripts (MySQL Shell 9.7 client) + S3 copy, email via the Hostinger SMTP mailbox for now. AWS design below is ready but not used.
 
+**Dev/test (D-17)**: one EC2 `t3.large` (`infra/aws/dev`, `*.dev.occplsoftech.com`) with the same stack; `release.yml` deploys to environment `dev` first, then `production` when repo variable `DEPLOY_PRODUCTION=true` (approval).
+
 **AWS design (D-13/D-14, ADR-0011)**: AWS ap-south-1, EC2 + Docker Compose behind an ALB, RDS MySQL 8.4 LTS, ElastiCache, SES, Secrets Manager, ECR, Terraform.
 
 **Domain (D-12)**: `occplsoftech.com` — admin., api., auth., `<product>.`, `*.staging.` reserved (DEPLOYMENT.md §2).

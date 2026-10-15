@@ -221,6 +221,8 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
   rehearsed on local Docker: first deploy 96 s, upgrade 31 s, failed release rolled back, full +
   incremental backup and restore, browser sign-in with MFA through the public hostnames.
 - ☑ **V-2** Runbook (`infra/vps/RUNBOOK.md`), ADR-0012, off-host backup bucket (Terraform, validated).
+- ☐ **V-6** Dev/test server on EC2 (`infra/aws/dev`, D-17): validated, not applied (needs the AWS account's EC2 access, still
+  in verification); apply, GitHub environment `dev`, first deploy, then use it for release checks.
 - ☐ **V-3** Go live: order the VPS, DNS A records, GitHub environment, first deploy, first Super Admin,
   backups to S3, heartbeat/uptime monitors, rollback and restore drill on the real server.
 - ☐ **V-4** Email: SMTP over Hostinger is configured but untested from the real server (port 465 SSL

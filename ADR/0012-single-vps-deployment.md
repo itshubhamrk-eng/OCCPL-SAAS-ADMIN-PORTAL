@@ -29,3 +29,11 @@ write-only S3 bucket (`infra/aws/shared/backups.tf`). DNS stays in Route 53.
   the 8.4 server (tested). The server and the backups are our responsibility: patching, disk space,
   monitoring (heartbeat + external uptime check).
 Revisit (move to `infra/aws`) when availability requirements or load exceed one machine.
+
+## Amendment (2026-10-15): development/test server on EC2 (D-17)
+While the production VPS is not ordered yet, one EC2 instance runs the same stack as the
+development/test environment (`infra/aws/dev`, default VPC, no NAT or load balancer, `t3.large`,
+about $85 a month, stoppable) at `*.dev.occplsoftech.com`. The pipeline deploys every release to it
+first (GitHub environment `dev`, automatically) and to production afterwards (approval), so releases are
+tried on a real server with real DNS, TLS and email before production. This replaces D-15 (no
+staging). The instance role writes backups to S3, so no access keys are stored on the machine.

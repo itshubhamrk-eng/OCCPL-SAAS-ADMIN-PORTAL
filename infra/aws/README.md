@@ -8,7 +8,8 @@ Operations: [RUNBOOK.md](RUNBOOK.md).
 ```
 infra/aws/
 ├── bootstrap/            S3 bucket for the Terraform state (applied once, local state)
-├── shared/               ECR repositories, artifacts bucket, GitHub OIDC + build role, SES
+├── dev/                  one EC2 instance: dev/test server running the infra/vps stack (D-17)
+├── shared/               ECR repositories, artifacts bucket, GitHub OIDC + build role, SES, backups bucket
 ├── modules/platform/     one environment: VPC, ALB + WAF + ACM, EC2 Auto Scaling group,
 │                         RDS, ElastiCache (Valkey), secrets, alarms, backups, deploy role
 ├── envs/production/      module call with production sizes (*.occplsoftech.com)

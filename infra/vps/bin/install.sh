@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time preparation of a fresh Ubuntu 24.04 server (run as root, over SSH):
+# One-time preparation of a fresh Ubuntu 24.04 server (run as root, or with sudo, over SSH):
 #   Docker + Compose, firewall (SSH, 80, 443), fail2ban, automatic security updates, a 2 GB swap
 #   file, the unprivileged "occpl" user that owns /opt/occpl, and the backup/heartbeat cron jobs.
 # Idempotent. Copy the bundle first:  scp -r infra/vps root@<server>:/opt/occpl
@@ -39,9 +39,13 @@ fi
 
 id occpl >/dev/null 2>&1 || useradd --create-home --shell /bin/bash --groups docker occpl
 usermod -aG docker occpl
-if [ -s /root/.ssh/authorized_keys ]; then # same keys as root, so deployments do not need root
+# The deploy user gets the SSH keys of whoever prepared the server (the sudo user on EC2/Ubuntu,
+# otherwise root); root's file on Ubuntu cloud images carries a "log in as ubuntu" forced command.
+keys=/root/.ssh/authorized_keys
+if [ -n "${SUDO_USER:-}" ] && [ -s "/home/$SUDO_USER/.ssh/authorized_keys" ]; then keys="/home/$SUDO_USER/.ssh/authorized_keys"; fi
+if [ -s "$keys" ]; then
   install -d -m 700 -o occpl -g occpl /home/occpl/.ssh
-  install -m 600 -o occpl -g occpl /root/.ssh/authorized_keys /home/occpl/.ssh/authorized_keys
+  install -m 600 -o occpl -g occpl "$keys" /home/occpl/.ssh/authorized_keys
 fi
 chown -R occpl:occpl "$root"
 chmod +x "$root"/bin/*.sh "$root"/backup/*.sh 2>/dev/null || true

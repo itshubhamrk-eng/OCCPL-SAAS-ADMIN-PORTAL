@@ -1,17 +1,21 @@
 name: Release
 
-# Continuous delivery to the production VPS (ADR-0012, D-16): after CI passed on main, publish the
-# images to GitHub's container registry tagged with the commit SHA; then, after a manual approval on
-# the "production" GitHub environment, copy the compose bundle to the server, start the release
-# (bin/deploy.sh, with automatic rollback) and smoke-test it through the public address.
+# Continuous delivery (ADR-0012, D-16/D-17): after CI passed on main, publish the images to GitHub's
+# container registry tagged with the commit SHA, deploy them to the development server (GitHub
+# environment "dev", EC2) and smoke-test, then — once DEPLOY_PRODUCTION is "true" — to the production
+# VPS (environment "production", after the reviewers' approval). Each deploy copies the compose
+# bundle over SSH, runs bin/deploy.sh (automatic rollback) and smoke-tests the public addresses.
 #
-# Run it by hand to redeploy or roll back to a release whose images already exist: Actions →
-# Release → Run workflow, with the full SHA of that commit.
+# Run it by hand to redeploy or roll back one target to a release whose images already exist:
+# Actions → Release → Run workflow (full SHA + target).
 #
-# "production" environment (Settings → Environments): required reviewers, deployment branch main.
-#   Variables: VPS_HOST (server address, e.g. 203.0.113.5)
-#   Secrets:   VPS_SSH_KEY (private key of the deploy key authorised for user "occpl"),
+# Each environment (Settings → Environments) has the same names:
+#   Variables: VPS_HOST (server address), HOST_SUFFIX ("dev." for dev, empty for production)
+#   Secrets:   VPS_SSH_KEY (private key authorised for user "occpl"),
 #              VPS_KNOWN_HOSTS (output of `ssh-keyscan -t ed25519 <VPS_HOST>`)
+#   "production" additionally: required reviewers, deployment branch main.
+# Repository variable DEPLOY_PRODUCTION = true switches the production step on (leave it unset until
+# the production server exists).
 
 on:
   workflow_run:
@@ -23,6 +27,11 @@ on:
       release:
         description: Full git SHA to deploy (its images must already be in the registry)
         required: true
+      target:
+        description: Where to deploy it
+        type: choice
+        options: [dev, production]
+        default: dev
 
 permissions:
   contents: read
@@ -79,18 +88,48 @@ jobs:
           provenance: false
           tags: ${{ steps.meta.outputs.prefix }}-keycloak:${{ steps.meta.outputs.release }}
 
-  deploy:
-    name: Deploy to production
+  plan:
+    name: Plan the rollout
     needs: build
-    # After a successful build, or a manual redeploy/rollback (build skipped). Either way the
-    # "production" environment's required reviewers must approve before this job starts.
+    # After a successful build, or a manual redeploy/rollback (build skipped).
     if: always() && (needs.build.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.build.result == 'skipped'))
     runs-on: ubuntu-24.04
-    environment: production
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      targets: ${{ steps.plan.outputs.targets }}
+    steps:
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BUILT: ${{ needs.build.outputs.release }}
+          INPUT_RELEASE: ${{ inputs.release }}
+          INPUT_TARGET: ${{ inputs.target }}
+          PRODUCTION: ${{ vars.DEPLOY_PRODUCTION }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            release=$INPUT_RELEASE; targets="[\"$INPUT_TARGET\"]"
+          else
+            release=$BUILT; targets='["dev"]'
+            [ "$PRODUCTION" != true ] || targets='["dev","production"]'
+          fi
+          [[ "$release" =~ ^[0-9a-f]{40}$ ]] || { echo "release must be a full git SHA: $release"; exit 1; }
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy to ${{ matrix.target }}
+    needs: plan
+    strategy:
+      fail-fast: true # a failed dev deploy stops the production deploy
+      max-parallel: 1 # dev first, then production
+      matrix:
+        target: ${{ fromJSON(needs.plan.outputs.targets) }}
+    runs-on: ubuntu-24.04
+    environment: ${{ matrix.target }} # "production" waits for its reviewers
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.release }}
+          ref: ${{ needs.plan.outputs.release }}
       - name: SSH access
         env:
           KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -109,14 +148,15 @@ jobs:
       - name: Deploy
         env:
           HOST: ${{ vars.VPS_HOST }}
-          RELEASE: ${{ needs.build.outputs.release || inputs.release }}
+          RELEASE: ${{ needs.plan.outputs.release }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
         run: |
-          [[ "$RELEASE" =~ ^[0-9a-f]{40}$ ]] || { echo "release must be a full git SHA: $RELEASE"; exit 1; }
           # The job's token lets the server pull the private images for this deployment.
           printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/id_deploy "occpl@$HOST" \
             "docker login ghcr.io -u '$REGISTRY_USER' --password-stdin >/dev/null"
           ssh -i ~/.ssh/id_deploy "occpl@$HOST" "chmod +x /opt/occpl/bin/*.sh /opt/occpl/backup/*.sh && /opt/occpl/bin/deploy.sh $RELEASE"
       - name: Smoke test
-        run: infra/scripts/smoke-test.sh
+        env:
+          HOST_SUFFIX: ${{ vars.HOST_SUFFIX }}
+        run: infra/scripts/smoke-test.sh "$HOST_SUFFIX"
