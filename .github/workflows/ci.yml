@@ -90,17 +90,22 @@ jobs:
           load: true
           tags: occpl/admin-portal:${{ github.sha }}
       # Known vulnerabilities in the images (OS packages and bundled libraries). Fails on HIGH or
-      # CRITICAL findings that have a fix; Trivy is built from a pinned release.
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
+      # CRITICAL findings that have a fix. Trivy is the pinned release binary, verified against the
+      # release's checksum file (building it from source needs a newer Go than the runner has).
       - name: Install Trivy
-        run: go install github.com/aquasecurity/trivy/cmd/trivy@v0.74.0
+        run: |
+          v=0.74.0
+          base="https://github.com/aquasecurity/trivy/releases/download/v$v"
+          curl -fsSL -o /tmp/trivy.tar.gz "$base/trivy_${v}_Linux-64bit.tar.gz"
+          curl -fsSL -o /tmp/trivy_checksums.txt "$base/trivy_${v}_checksums.txt"
+          (cd /tmp && grep " trivy_${v}_Linux-64bit.tar.gz\$" trivy_checksums.txt | sed "s# trivy_${v}_Linux-64bit.tar.gz# trivy.tar.gz#" | sha256sum -c -)
+          tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+          sudo install /tmp/trivy /usr/local/bin/trivy
+          trivy --version
       - name: Scan images
         run: |
           for image in core-platform product-sample admin-portal; do
-            "$(go env GOPATH)/bin/trivy" image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
+            trivy image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
               --exit-code 1 "occpl/$image:${{ github.sha }}"
           done
 
