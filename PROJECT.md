@@ -121,6 +121,7 @@ release and a newer-than-previous LTS line, the **latest LTS** is used for produ
 | D-15 | Staging environment | **Decided (2026-10-14): none on AWS (superseded by D-17: a dev/test EC2 server).** Releases are tried on the local Docker Compose stack, then approved for production; first deploy, rollback and restore drills run on production before launch (ADR-0011 amendment). |
 | D-16 | Launch hosting | **Decided (2026-10-15): one VPS** (Docker Compose, Caddy, MySQL 8.4 and Redis in containers) instead of the AWS stack; AWS design kept ready (ADR-0012). AWS keeps DNS (Route 53), the off-host backup bucket and (later) SES. |
 | D-17 | Development/test environment | **Decided (2026-10-15): one EC2 instance** (`infra/aws/dev`, `*.dev.occplsoftech.com`) runs the same stack; releases deploy there first, production (Hostinger VPS, later) after approval. Replaces D-15. |
+| D-18 | Portal visual design | **Decided (2026-10-15): "Sunrise Mesh Glass"** (crimson `#D61F45`, indigo `#4338CA`, light grey, glass cards, crimson side menu), chosen from sample boards; all colours live in design tokens so the brand guide can replace them. |
 | D-11 | GST on invoices: are plan prices tax-inclusive or exclusive, which GST rate/HSN-SAC code, and is the company's GSTIN printed on invoices? | **Open — needed before live payments.** Today the plan price is sent to Razorpay as the line amount with no tax fields; the company's tax id is stored but not sent. |
 
 ## 6. Risks

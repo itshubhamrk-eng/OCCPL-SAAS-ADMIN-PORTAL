@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Portal redesign: "Sunrise Mesh Glass" (2026-10-15, D-18)
+- Design chosen by the owner from 24 sample boards: crimson + indigo on light grey, frosted-glass cards, crimson side menu with icons,
+  header bar (environment chip on dev/local, user pill, sign out), colourful dashboard tiles and a companies-by-status donut built from real totals.
+- Implemented through design tokens (`styles/_tokens.scss`), global components, the shell layout and the dashboard; automatic dark mode kept.
+  System fonts only (the CSP allows no external font host). No fake features: no search box, bell or assistant until the backend has them.
+- Mobile: the menu becomes a drawer. Component-style warning budget raised from 4 kB to 6 kB for the shell.
+
 ### Dev server live; CI fixes (2026-10-15)
 - First release deployed to the EC2 dev server by the pipeline; sign-in with MFA verified at admin.dev.occplsoftech.com.
 - CI fixes found on the first GitHub runs: shellcheck SC2015 rewrites, AWS compose check with empty env-file stand-ins, Trivy installed
