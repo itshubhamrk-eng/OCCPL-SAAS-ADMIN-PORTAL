@@ -1,22 +1,42 @@
-// OCCPL design tokens. Components must use these custom properties, never literal colours.
-// Brand colours are provisional until OCCPL supplies its brand guide.
+// OCCPL design tokens ("Sunrise Mesh Glass"): crimson + indigo on light grey.
+// Components must use these custom properties, never literal colours.
 :root {
   color-scheme: light dark;
 
-  --occpl-color-primary: #0b3d6e;
+  --occpl-color-primary: #d61f45; // crimson
+  --occpl-color-primary-strong: #b3123a;
   --occpl-color-on-primary: #ffffff;
-  --occpl-color-accent: #f2a900;
-  --occpl-color-on-accent: #1a1a1a;
-  --occpl-color-background: #f5f7fa;
+  --occpl-color-accent: #4338ca; // indigo
+  --occpl-color-on-accent: #ffffff;
+  --occpl-color-background: #edeff3;
   --occpl-color-surface: #ffffff;
-  --occpl-color-border: #d6dce4;
-  --occpl-color-text: #1b2430;
-  --occpl-color-text-muted: #5a6778;
-  --occpl-color-danger: #c0392b;
-  --occpl-color-danger-surface: #fdecea;
-  --occpl-color-success: #1e8e3e;
-  --occpl-color-warning: #b26a00;
-  --occpl-color-focus: #2f80ed;
+  --occpl-color-surface-glass: rgb(255 255 255 / 72%);
+  --occpl-color-border: #e0e3ec;
+  --occpl-color-text: #1e2140;
+  --occpl-color-text-muted: #5d6285;
+  --occpl-color-link: #b3123a;
+  --occpl-color-danger: #b42318;
+  --occpl-color-danger-surface: #fde7ec;
+  --occpl-color-success: #0b7a55;
+  --occpl-color-warning: #a35f00;
+  --occpl-color-focus: #4338ca;
+  --occpl-color-info: #4338ca;
+  --occpl-color-success-surface: #e3f5ee;
+  --occpl-color-warning-surface: #fff3dc;
+  --occpl-color-info-surface: #ecebfb;
+  --occpl-color-neutral-surface: #eef0f5;
+
+  // Colourful dashboard accents
+  --occpl-color-sky: #0284c7;
+  --occpl-color-teal: #0e9f8e;
+  --occpl-color-amber: #c77700;
+  --occpl-color-plum: #8b1a3a;
+
+  --occpl-gradient-brand: linear-gradient(170deg, #e02550 0%, #b3123a 55%, #7a0e33 100%);
+  --occpl-gradient-button: linear-gradient(135deg, #e02550, #b3123a);
+  --occpl-page-glow:
+    radial-gradient(900px 640px at 0% 0%, rgb(214 31 69 / 20%) 0%, transparent 62%),
+    radial-gradient(760px 560px at 100% 100%, rgb(67 56 202 / 16%) 0%, transparent 60%);
 
   --occpl-font-family:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -31,44 +51,44 @@
   --occpl-space-6: 1.5rem;
   --occpl-space-8: 2.5rem;
 
-  --occpl-radius-sm: 4px;
-  --occpl-radius-md: 8px;
-  --occpl-header-height: 3.5rem;
-  --occpl-content-max-width: 80rem;
+  --occpl-radius-sm: 10px;
+  --occpl-radius-md: 18px;
+  --occpl-header-height: 4rem;
+  --occpl-content-max-width: 82rem;
+  --occpl-nav-width: 16rem;
+  --occpl-shadow-sm: 0 6px 24px rgb(214 31 69 / 8%);
+  --occpl-shadow-md: 0 10px 40px rgb(67 56 202 / 12%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --occpl-color-primary: #0f2a47;
-    --occpl-color-background: #10161d;
-    --occpl-color-surface: #18212b;
-    --occpl-color-border: #2c3a4a;
-    --occpl-color-text: #e6ebf1;
-    --occpl-color-text-muted: #9aa8b8;
-    --occpl-color-danger-surface: #3a1d1a;
-  }
-}
-
-:root {
-  --occpl-color-info: #1f6feb;
-  --occpl-color-success-surface: #e6f4ea;
-  --occpl-color-warning-surface: #fff4e0;
-  --occpl-color-info-surface: #e8f0fe;
-  --occpl-color-neutral-surface: #eef1f5;
-  --occpl-nav-width: 15rem;
-  --occpl-shadow-sm: 0 1px 2px rgb(16 22 29 / 8%);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --occpl-color-success-surface: #1b3324;
+    --occpl-color-primary: #e8456a;
+    --occpl-color-primary-strong: #d61f45;
+    --occpl-color-background: #12121f;
+    --occpl-color-surface: #1c1c2e;
+    --occpl-color-surface-glass: rgb(28 28 46 / 78%);
+    --occpl-color-border: #2e2e48;
+    --occpl-color-text: #ececf7;
+    --occpl-color-text-muted: #a3a4c4;
+    --occpl-color-link: #ff7d9a;
+    --occpl-color-danger: #ff8a7a;
+    --occpl-color-danger-surface: #3d1820;
+    --occpl-color-success: #4fd1a1;
+    --occpl-color-warning: #f0b04a;
+    --occpl-color-info: #9d96ff;
+    --occpl-color-focus: #9d96ff;
+    --occpl-color-success-surface: #153327;
     --occpl-color-warning-surface: #3a2c12;
-    --occpl-color-info-surface: #1b2a44;
-    --occpl-color-neutral-surface: #232e3a;
-    --occpl-color-success: #5cc27a;
-    --occpl-color-warning: #e3a33b;
-    --occpl-color-danger: #f0776a;
-    --occpl-color-info: #79a8ff;
-    --occpl-color-focus: #79a8ff;
+    --occpl-color-info-surface: #25234a;
+    --occpl-color-neutral-surface: #25253b;
+    --occpl-color-sky: #5cc2f5;
+    --occpl-color-teal: #43d1c0;
+    --occpl-color-amber: #f0b04a;
+    --occpl-color-plum: #ff8aa8;
+    --occpl-page-glow:
+      radial-gradient(900px 640px at 0% 0%, rgb(214 31 69 / 22%) 0%, transparent 62%),
+      radial-gradient(760px 560px at 100% 100%, rgb(67 56 202 / 26%) 0%, transparent 60%);
+    --occpl-shadow-sm: 0 6px 24px rgb(0 0 0 / 30%);
+    --occpl-shadow-md: 0 10px 40px rgb(0 0 0 / 35%);
   }
 }

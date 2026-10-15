@@ -1,7 +1,9 @@
 // Shared building blocks used by every page (kept global to stay within component style budgets).
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
@@ -53,7 +55,8 @@ h3 {
 }
 
 .card {
-  background: var(--occpl-color-surface);
+  background: var(--occpl-color-surface-glass);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--occpl-color-border);
   border-radius: var(--occpl-radius-md);
   padding: var(--occpl-space-4);
@@ -62,8 +65,8 @@ h3 {
 }
 
 .stat {
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: 2.125rem;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -87,6 +90,7 @@ h3 {
 
   &:hover:not(:disabled) {
     border-color: var(--occpl-color-primary);
+    box-shadow: var(--occpl-shadow-sm);
   }
 
   &:disabled {
@@ -95,9 +99,10 @@ h3 {
   }
 
   &.primary {
-    background: var(--occpl-color-primary);
-    border-color: var(--occpl-color-primary);
+    background: var(--occpl-gradient-button);
+    border-color: var(--occpl-color-primary-strong);
     color: var(--occpl-color-on-primary);
+    font-weight: 600;
   }
 
   &.danger {
@@ -113,7 +118,7 @@ h3 {
   &.link {
     border-color: transparent;
     background: transparent;
-    color: var(--occpl-color-primary);
+    color: var(--occpl-color-link);
     padding: 0 var(--occpl-space-2);
   }
 }
@@ -160,6 +165,12 @@ textarea {
   background: var(--occpl-color-surface);
   color: var(--occpl-color-text);
   font: inherit;
+
+  &:focus-visible {
+    border-color: var(--occpl-color-accent);
+    box-shadow: 0 0 0 4px var(--occpl-color-info-surface);
+    outline: none;
+  }
 
   &.ng-invalid.ng-touched {
     border-color: var(--occpl-color-danger);
@@ -214,7 +225,8 @@ textarea.code {
   overflow-x: auto;
   border: 1px solid var(--occpl-color-border);
   border-radius: var(--occpl-radius-md);
-  background: var(--occpl-color-surface);
+  background: var(--occpl-color-surface-glass);
+  box-shadow: var(--occpl-shadow-sm);
 }
 
 table.data {
@@ -234,6 +246,11 @@ table.data {
     color: var(--occpl-color-text-muted);
     font-weight: 600;
     white-space: nowrap;
+    background: var(--occpl-color-neutral-surface);
+  }
+
+  tbody tr:hover {
+    background: var(--occpl-color-info-surface);
   }
 
   tbody tr:last-child td {
@@ -311,7 +328,7 @@ dl.details {
     white-space: nowrap;
 
     &.active {
-      color: var(--occpl-color-primary);
+      color: var(--occpl-color-link);
       border-bottom-color: var(--occpl-color-primary);
       font-weight: 600;
     }
@@ -344,7 +361,7 @@ dl.details {
   > span {
     display: block;
     height: 100%;
-    background: var(--occpl-color-primary);
+    background: var(--occpl-gradient-button);
   }
 
   &.full > span {

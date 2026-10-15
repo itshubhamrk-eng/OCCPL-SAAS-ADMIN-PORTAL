@@ -10,7 +10,9 @@
 html,
 body {
   margin: 0;
-  background: var(--occpl-color-background);
+  background:
+    var(--occpl-page-glow) fixed,
+    var(--occpl-color-background);
   color: var(--occpl-color-text);
   font-family: var(--occpl-font-family);
   font-size: var(--occpl-font-size-md);
@@ -18,7 +20,7 @@ body {
 }
 
 a {
-  color: var(--occpl-color-primary);
+  color: var(--occpl-color-link);
 }
 
 :focus-visible {

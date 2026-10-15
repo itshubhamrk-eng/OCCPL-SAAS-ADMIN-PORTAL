@@ -221,13 +221,18 @@ Priority follows the phase order in the master prompt. Each item lists acceptanc
   rehearsed on local Docker: first deploy 96 s, upgrade 31 s, failed release rolled back, full +
   incremental backup and restore, browser sign-in with MFA through the public hostnames.
 - ☑ **V-2** Runbook (`infra/vps/RUNBOOK.md`), ADR-0012, off-host backup bucket (Terraform, validated).
-- ☐ **V-6** Dev/test server on EC2 (`infra/aws/dev`, D-17): validated, not applied (needs the AWS account's EC2 access, still
-  in verification); apply, GitHub environment `dev`, first deploy, then use it for release checks.
+- ☑ **V-6** Dev/test server on EC2 (D-17): live since 2026-10-15 at `*.dev.occplsoftech.com` (t3.large created by hand in the
+  console with an Elastic IP, security group SSH/HTTP/HTTPS open to the internet so the GitHub runners can deploy; key-only SSH).
+  First release deployed by `release.yml` (images → GHCR → SSH deploy → smoke test, 6 min); Super Admin created and signed in with
+  MFA. `infra/aws/dev` (Terraform) stays validated but unused for this instance.
+- ☐ **V-7** Dev server follow-ups: S3 backups (apply `infra/aws/shared`, instance role or keys), healthchecks.io heartbeat, replace
+  the temporary Keycloak `bootstrap-admin`, email delivery test through the Hostinger SMTP mailbox (V-4), Dependabot PRs (several
+  major version jumps: TypeScript 7, Node 26, Java 26 images, action majors).
 - ☐ **V-3** Go live: order the VPS, DNS A records, GitHub environment, first deploy, first Super Admin,
   backups to S3, heartbeat/uptime monitors, rollback and restore drill on the real server.
 - ☐ **V-4** Email: SMTP over Hostinger is configured but untested from the real server (port 465 SSL
   or 587 STARTTLS); switch to SES when production access is approved.
-- ☐ **V-5** Not exercised yet: Let's Encrypt issuance, the S3 upload, GHCR pull from the real server.
+- ☐ **V-5** Verified on the dev server: Let's Encrypt issuance, GHCR pull, SSH deploy, smoke test. Not yet: the S3 backup upload.
 
 - ◐ **D-1** AWS deployment (ADR-0011), code complete; not yet applied to an AWS account:
   - ☑ **D-1a** Terraform: state bucket; shared stack (ECR, artifacts bucket, GitHub OIDC, SES with
