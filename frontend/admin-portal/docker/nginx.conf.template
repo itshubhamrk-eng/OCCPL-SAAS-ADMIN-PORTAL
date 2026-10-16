@@ -1,4 +1,4 @@
-# Rendered by the nginx image's envsubst step (only ${CSP_CONNECT_SRC} is substituted).
+# Rendered by the nginx image's envsubst step (environment variables, e.g. ${CSP_CONNECT_SRC} and ${CSP_IMG_SRC}).
 # Invitation links carry a one-time token in the query string: never write them to the access log.
 map $request_uri $occpl_loggable {
     ~^/invitations/ 0;
@@ -14,7 +14,7 @@ server {
 
     # nginx drops these server-level headers in any location that sets its own add_header, so every
     # such location below repeats the full set (verified with curl in Phase 9).
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${CSP_IMG_SRC}; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
@@ -29,7 +29,7 @@ server {
     # Never cache the entry point or runtime config so deployments take effect immediately.
     location = /index.html {
         add_header Cache-Control "no-store" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${CSP_IMG_SRC}; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
@@ -38,7 +38,7 @@ server {
 
     location = /config.json {
         add_header Cache-Control "no-store" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${CSP_IMG_SRC}; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
@@ -49,7 +49,7 @@ server {
     # one-year "immutable" cache kept showing the previous icon after it was replaced.
     location ~* ^/(?:favicon[^/]*|apple-touch-icon)\.(?:ico|png)$ {
         add_header Cache-Control "public, max-age=3600, must-revalidate" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${CSP_IMG_SRC}; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
@@ -61,7 +61,7 @@ server {
     # (The icons above are the exception: they are not hashed.)
     location ~* \.(?:js|css|woff2?|svg|png|ico)$ {
         add_header Cache-Control "public, max-age=31536000, immutable" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${CSP_IMG_SRC}; connect-src 'self' ${CSP_CONNECT_SRC}; frame-src ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${CSP_CONNECT_SRC}; object-src 'none'" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;

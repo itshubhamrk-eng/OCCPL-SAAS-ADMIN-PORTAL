@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Portal allows company images from the S3 bucket (2026-10-16)
+- The portal's content-security policy only allowed images from itself, so logos and favicons served from the private S3 bucket through signed links would have been blocked by the browser. The policy now also allows the bucket (`CSP_IMG_SRC`, set automatically from `FILES_S3_BUCKET` in the VPS compose file; empty elsewhere).
+
 ### Round favicon (2026-10-16)
 - The OC logo favicon is now a circle (transparent corners) on the portal and the sign-in page, instead of a white square. The icon links use `?v=3` so browsers fetch it again.
 

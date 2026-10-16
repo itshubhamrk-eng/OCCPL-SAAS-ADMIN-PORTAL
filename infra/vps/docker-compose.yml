@@ -182,6 +182,8 @@ services:
       OIDC_ISSUER: https://auth.${DOMAIN}/realms/occpl
       OIDC_CLIENT_ID: occpl-admin-portal
       CSP_CONNECT_SRC: https://api.${DOMAIN} https://auth.${DOMAIN}
+      # Company logos and favicons come from the private S3 bucket through signed links: allow images from it.
+      CSP_IMG_SRC: ${FILES_S3_BUCKET:+https://${FILES_S3_BUCKET}.s3.${FILES_S3_REGION:-ap-south-1}.amazonaws.com}
     ports:
       - "127.0.0.1:8088:8080"
     mem_limit: 128m

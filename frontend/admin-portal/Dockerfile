@@ -18,6 +18,7 @@ USER 101
 ENV API_BASE_URL=http://localhost:8080/api/v1 \
     OIDC_ISSUER=http://localhost:8180/realms/occpl \
     OIDC_CLIENT_ID=occpl-admin-portal \
-    CSP_CONNECT_SRC="http://localhost:8080 http://localhost:8180"
+    CSP_CONNECT_SRC="http://localhost:8080 http://localhost:8180" \
+    CSP_IMG_SRC=""
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=3s CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1
