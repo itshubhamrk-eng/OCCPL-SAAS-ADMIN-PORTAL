@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Light/dark theme switch and phone layout polish (2026-10-16)
+- A sun/moon button in the portal header switches between light and dark. Until someone picks, the browser setting decides; a pick is remembered in that browser
+  (`ThemeService`, `data-theme` on the root element, dark values in a shared mixin in `styles/_tokens.scss`). Tested in `theme.service.spec.ts`.
+- Phones: the header fits the brand, theme button and avatar; Sign out moves into the menu drawer (it stays in the header when there is no menu); long codes in card-style tables wrap.
+- The Keycloak sign-in page still follows the browser setting only (it is a separate application).
+
 ### Dev opt-out for the admin-console check (2026-10-16)
 - The smoke test still fails when the Keycloak admin console answers from the internet. The development environment can opt out with the
   GitHub environment variable `ALLOW_PUBLIC_ADMIN_CONSOLE=true` (warning in the log); production never sets it. See `infra/vps/RUNBOOK.md` §9 step 9.

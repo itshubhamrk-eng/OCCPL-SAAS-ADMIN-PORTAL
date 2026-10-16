@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth/auth.service';
 import { ErrorNotifier } from '../../core/errors/error-notifier';
 import { SessionService } from '../../core/session/session.service';
+import { ThemeService } from '../../core/theme/theme.service';
 
 interface NavItem {
   readonly label: string;
@@ -81,6 +82,7 @@ const PLATFORM_NAV: (NavItem & { permission?: string })[] = [
 export class Shell {
   protected readonly notifier = inject(ErrorNotifier);
   protected readonly session = inject(SessionService);
+  protected readonly theme = inject(ThemeService);
   private readonly auth = inject(AuthService);
 
   protected readonly navOpen = signal(false);
