@@ -2,7 +2,11 @@ package com.occpl.platform.company.internal;
 
 import com.occpl.platform.company.api.BillingProfile;
 import com.occpl.platform.company.api.CompanyDirectory;
+import com.occpl.platform.company.api.CompanyProfile;
 import com.occpl.platform.company.api.CompanySummary;
+import com.occpl.platform.shared.storage.FileStorage;
+import java.time.Duration;
+import com.occpl.platform.company.api.PrimaryContact;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -20,9 +24,11 @@ class JpaCompanyDirectory implements CompanyDirectory {
     private final CompanyRepository repository;
     private final CompanySettingsRepository settings;
     private final CompanyContactRepository contacts;
+    private final FileStorage files;
 
     JpaCompanyDirectory(CompanyRepository repository, CompanySettingsRepository settings,
-            CompanyContactRepository contacts) {
+            CompanyContactRepository contacts, FileStorage files) {
+        this.files = files;
         this.repository = repository;
         this.settings = settings;
         this.contacts = contacts;
@@ -46,6 +52,25 @@ class JpaCompanyDirectory implements CompanyDirectory {
     @Override
     public List<String> allowedEmailDomains(UUID companyId) {
         return settings.findById(companyId).map(CompanySettings::allowedEmailDomains).orElse(List.of());
+    }
+
+    @Override
+    public Optional<CompanyProfile> profile(UUID companyId) {
+        return repository.findById(companyId).map(c -> new CompanyProfile(c.country(), c.website(), c.addressLine1(),
+                c.addressLine2(), c.city(), c.state(), c.postalCode(), c.gstNumber(), c.panNumber(),
+                sign(c.logoKey()), sign(c.faviconKey()),
+                contacts.findByCompanyIdAndType(companyId, CompanyContact.Type.SUPPORT)
+                        .map(k -> new PrimaryContact(k.name(), k.email(), k.phone())).orElse(null)));
+    }
+
+    private String sign(String key) {
+        return key == null ? null : files.signedUrl(key, Duration.ofHours(24)).orElse(null);
+    }
+
+    @Override
+    public Optional<PrimaryContact> primaryContact(UUID companyId) {
+        return contacts.findByCompanyIdAndType(companyId, CompanyContact.Type.PRIMARY)
+                .map(k -> new PrimaryContact(k.name(), k.email(), k.phone()));
     }
 
     @Override

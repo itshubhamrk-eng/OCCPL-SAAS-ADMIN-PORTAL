@@ -99,6 +99,12 @@ springdoc:
       scopes: openid
 
 occpl:
+  storage:
+    s3:
+      # Private bucket for company logos and favicons. Blank turns uploads off (the rest of the portal works).
+      bucket: ${FILES_S3_BUCKET:}
+      region: ${FILES_S3_REGION:ap-south-1}
+      endpoint: ${FILES_S3_ENDPOINT:}
   catalog:
     # Development only: product URLs on localhost / 127.0.0.1 and plain HTTP to them (UrlRules).
     allow-local-urls: ${CATALOG_ALLOW_LOCAL_URLS:false}

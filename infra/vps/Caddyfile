@@ -11,6 +11,10 @@
 
 {$API_HOST} {
 	encode zstd gzip
+	# Company logos are sent as the request body (at most 512 KB); nothing else needs more than a few KB.
+	request_body {
+		max_size 2MB
+	}
 	reverse_proxy core-platform:8080
 }
 

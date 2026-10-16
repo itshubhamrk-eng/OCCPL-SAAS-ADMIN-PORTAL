@@ -29,6 +29,7 @@ public enum ErrorCode {
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error"),
     PAYMENT_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY, "Payment gateway error"),
     BILLING_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "Billing is not configured"),
+    STORAGE_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "File storage is not configured"),
     SERVICE_BUSY(HttpStatus.SERVICE_UNAVAILABLE, "Service busy");
 
     private static final String TYPE_BASE = "https://api.occplsoftech.com/problems/";

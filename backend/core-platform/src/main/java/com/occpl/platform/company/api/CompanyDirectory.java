@@ -17,6 +17,12 @@ public interface CompanyDirectory {
     /** Lower-case email domains allowed for invitations; empty means unrestricted. */
     List<String> allowedEmailDomains(UUID companyId);
 
+    /** Profile for provisioning (address, GST/PAN, signed logo links, support contact); empty if no such company. */
+    Optional<CompanyProfile> profile(UUID companyId);
+
+    /** The company's primary contact; empty when the company has none. */
+    Optional<PrimaryContact> primaryContact(UUID companyId);
+
     /** Empty when the company does not exist or has neither a billing nor a primary contact. */
     Optional<BillingProfile> billingProfile(UUID companyId);
 }

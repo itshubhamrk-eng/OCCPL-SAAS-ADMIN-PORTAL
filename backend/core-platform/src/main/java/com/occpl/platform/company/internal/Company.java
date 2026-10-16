@@ -42,6 +42,33 @@ public class Company {
     @Column(name = "tax_id")
     private String taxId;
 
+    private String website;
+
+    @Column(name = "address_line1")
+    private String addressLine1;
+
+    @Column(name = "address_line2")
+    private String addressLine2;
+
+    private String city;
+
+    private String state;
+
+    @Column(name = "postal_code")
+    private String postalCode;
+
+    @Column(name = "gst_number")
+    private String gstNumber;
+
+    @Column(name = "pan_number")
+    private String panNumber;
+
+    @Column(name = "logo_key")
+    private String logoKey;
+
+    @Column(name = "favicon_key")
+    private String faviconKey;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -109,6 +136,30 @@ public class Company {
         touch(actor, now);
     }
 
+    /** Sets the optional profile fields; null clears a field. */
+    void updateProfile(String website, String addressLine1, String addressLine2, String city, String state,
+            String postalCode, String gstNumber, String panNumber, UUID actor, Instant now) {
+        this.website = website;
+        this.addressLine1 = addressLine1;
+        this.addressLine2 = addressLine2;
+        this.city = city;
+        this.state = state;
+        this.postalCode = postalCode;
+        this.gstNumber = gstNumber;
+        this.panNumber = panNumber;
+        touch(actor, now);
+    }
+
+    void setLogoKey(String key, UUID actor, Instant now) {
+        this.logoKey = key;
+        touch(actor, now);
+    }
+
+    void setFaviconKey(String key, UUID actor, Instant now) {
+        this.faviconKey = key;
+        touch(actor, now);
+    }
+
     private void touch(UUID actor, Instant now) {
         this.updatedBy = actor;
         this.updatedAt = now;
@@ -121,6 +172,16 @@ public class Company {
     CompanyStatus status() { return status; }
     String country() { return country; }
     String taxId() { return taxId; }
+    String website() { return website; }
+    String addressLine1() { return addressLine1; }
+    String addressLine2() { return addressLine2; }
+    String city() { return city; }
+    String state() { return state; }
+    String postalCode() { return postalCode; }
+    String gstNumber() { return gstNumber; }
+    String panNumber() { return panNumber; }
+    String logoKey() { return logoKey; }
+    String faviconKey() { return faviconKey; }
     Instant createdAt() { return createdAt; }
     Instant updatedAt() { return updatedAt; }
     long version() { return version; }

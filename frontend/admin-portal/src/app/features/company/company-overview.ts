@@ -10,12 +10,14 @@ import { applyServerErrors } from '../../shared/forms/server-errors';
 import { ActionDialog } from '../../shared/ui/action-dialog';
 import { HumanizePipe } from '../../shared/ui/format.pipes';
 import { CompanyContext } from './company-context';
+import { CompanyProfile } from './company-profile';
 
 const DOMAIN = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+const PHONE_PATTERN = /^\+[1-9][0-9]{6,14}$/;
 
 @Component({
   selector: 'occpl-company-overview',
-  imports: [ReactiveFormsModule, ActionDialog, FieldError, DatePipe, HumanizePipe],
+  imports: [ReactiveFormsModule, ActionDialog, FieldError, DatePipe, HumanizePipe, CompanyProfile],
   templateUrl: './company-overview.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -25,7 +27,7 @@ export class CompanyOverview implements OnInit {
   protected readonly context = inject(CompanyContext);
   protected readonly session = inject(SessionService);
 
-  protected readonly contactTypes: ContactType[] = ['PRIMARY', 'BILLING', 'TECHNICAL'];
+  protected readonly contactTypes: ContactType[] = ['PRIMARY', 'BILLING', 'TECHNICAL', 'SUPPORT'];
   protected readonly settings = signal<CompanySettings | null>(null);
   protected readonly contacts = signal<CompanyContact[]>([]);
   protected readonly history = signal<StatusChange[]>([]);
@@ -50,7 +52,7 @@ export class CompanyOverview implements OnInit {
   protected readonly contactForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(200)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
-    phone: ['', Validators.pattern(/^\+[1-9][0-9]{6,14}$/)],
+    phone: ['', Validators.pattern(PHONE_PATTERN)],
   });
 
   ngOnInit(): void {
@@ -183,6 +185,14 @@ export class CompanyOverview implements OnInit {
       email: existing?.email ?? '',
       phone: existing?.phone ?? '',
     });
+    // Provisioned products create the first administrator from the primary contact, so it needs a phone.
+    const phone = this.contactForm.controls.phone;
+    phone.setValidators(
+      type === 'PRIMARY'
+        ? [Validators.required, Validators.pattern(PHONE_PATTERN)]
+        : [Validators.pattern(PHONE_PATTERN)],
+    );
+    phone.updateValueAndValidity();
     this.errors.set([]);
     this.editingContact.set(type);
   }

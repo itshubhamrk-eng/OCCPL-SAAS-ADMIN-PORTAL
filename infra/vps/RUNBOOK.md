@@ -182,3 +182,36 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    `docker compose up -d --force-recreate caddy`; then add the variable `ALLOW_PUBLIC_ADMIN_CONSOLE` = `true` to the GitHub
    environment **dev** (Settings, Environments, dev), otherwise the smoke test reports the open console as a failure. Anyone can then reach
    the Keycloak administrator sign-in page, so keep `KEYCLOAK_ADMIN_PASSWORD` long and random. Never on production.
+10. **Register the courier product (dev).** Two parts; do the Keycloak part first. Use your own hostnames if they differ.
+    *Keycloak* (on the server, after the `kcadm config credentials` line from step 7). This creates a client scope named
+    like the product's `apiAudience`, gives it an audience mapper, and lets `occpl-core-services` request it per call:
+    ```bash
+    SCOPE=$($K create client-scopes -r occpl -i -s name=courier-api -s protocol=openid-connect \
+      -s 'attributes."include.in.token.scope"=false')
+    $K create client-scopes/$SCOPE/protocol-mappers/models -r occpl -s name=courier-api-audience \
+      -s protocol=openid-connect -s protocolMapper=oidc-audience-mapper \
+      -s 'config."included.custom.audience"=courier-api' -s 'config."access.token.claim"=true' \
+      -s 'config."id.token.claim"=false'
+    CID=$($K get clients -r occpl -q clientId=occpl-core-services --fields id --format csv --noquotes)
+    $K update clients/$CID/optional-client-scopes/$SCOPE -r occpl
+    ```
+    *Portal* (Super Admin, Products, New product): code `courier`, name `Courier Management`, app URL
+    `https://courier.dev.occplsoftech.com`, API base URL `https://courier-api.dev.occplsoftech.com`, API audience
+    `courier-api`. Then add a configuration version
+    `{"schemaVersion":1,"launch":{"path":"/"},"provisioning":{"mode":"SYNC","path":"/provisioning/v1/tenants/{companyId}"}}`,
+    publish it and activate the product. On the courier side set `OCCPL_PLATFORM_AUDIENCE=courier-api`,
+    `OCCPL_PLATFORM_ISSUER_URI` and `OCCPL_PLATFORM_JWK_SET_URI` to the realm's, and `OCCPL_PLATFORM_ENABLED=true`.
+12. **Company logos and favicons in S3 (dev).** Optional; without it the company pages work and only image upload answers
+    "File storage is not configured".
+    1. In the AWS console create a **private** bucket in the same region as the server (for example `occpl-dev-files`,
+       region `ap-south-1`) with *Block all public access* on. No CORS or public policy is needed: the portal shows images
+       through short-lived signed links.
+    2. Create an IAM user (or role, if the instance has one) with only this policy, replacing the bucket name:
+       ```json
+       {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject","s3:GetObject","s3:DeleteObject"],
+         "Resource":"arn:aws:s3:::occpl-dev-files/companies/*"}]}
+       ```
+    3. On the server add to `/opt/occpl/.env`: `FILES_S3_BUCKET=occpl-dev-files`, `FILES_S3_REGION=ap-south-1` and, for an IAM user,
+       `FILES_AWS_ACCESS_KEY_ID=...` and `FILES_AWS_SECRET_ACCESS_KEY=...` (leave both out when the instance role has the policy).
+       Then `docker compose up -d core-platform`.
+    4. Check: open a company, Profile, upload a logo; it should appear. A signed link stops working after an hour, so reload the page to get a new one.

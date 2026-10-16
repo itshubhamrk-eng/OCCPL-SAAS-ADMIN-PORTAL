@@ -70,7 +70,7 @@ outbox_event, audit_log, notification, idempotency_key, shedlock
 
 | Table | Key columns / constraints |
 |---|---|
-| `company` | id, `code` (slug) UK, legal_name, display_name, `status` (PENDING, ACTIVE, SUSPENDED, DEACTIVATED), country, tax_id, version; IX(status, created_at), IX(display_name) |
+| `company` | id, `code` (slug) UK, legal_name, display_name, `status` (PENDING, ACTIVE, SUSPENDED, DEACTIVATED), country, tax_id, website, address_line1/2, city, state, postal_code, gst_number, pan_number, logo_key, favicon_key (S3 object keys), version; IX(status, created_at), IX(display_name) |
 | `company_settings` | company_id PK/FK, time_zone, locale, `allowed_email_domains` (comma-separated, empty = any), updated_by, version (branding later) |
 | `company_contact` | id, company_id FK, type (PRIMARY, BILLING, TECHNICAL) — **UK(company_id, type)**, name, email, phone, version |
 | `company_status_history` | id, company_id, from_status, to_status, reason, changed_by, changed_at |
