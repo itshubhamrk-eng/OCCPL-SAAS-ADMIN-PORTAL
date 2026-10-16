@@ -101,21 +101,21 @@ jobs:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v4
       - name: Build core-platform image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend/core-platform
           push: false
           load: true
           tags: occpl/core-platform:${{ github.sha }}
       - name: Build product-sample image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend/product-sample
           push: false
           load: true
           tags: occpl/product-sample:${{ github.sha }}
       - name: Build admin-portal image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend/admin-portal
           push: false
