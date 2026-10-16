@@ -389,7 +389,17 @@ pre.json {
 .status-page {
   max-width: 36rem;
   margin: var(--occpl-space-8) auto;
-  padding: 0 var(--occpl-space-4);
+  padding: var(--occpl-space-6);
+  background: var(--occpl-color-surface-glass);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--occpl-color-border);
+  border-top: 5px solid var(--occpl-color-primary);
+  border-radius: 24px;
+  box-shadow: var(--occpl-shadow-md);
+
+  > p {
+    margin: var(--occpl-space-3) 0 var(--occpl-space-6);
+  }
 }
 
 .sr-only {

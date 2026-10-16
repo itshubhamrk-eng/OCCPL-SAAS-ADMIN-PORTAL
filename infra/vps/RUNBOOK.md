@@ -174,3 +174,7 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    $K update realms/occpl -s loginTheme=occpl
    ```
    New installs get it from the generated production realm.
+8. **One-time code off on dev only (optional).** Add `MFA_PLATFORM_REQUIRED=false` to `/opt/occpl/.env`, then
+   `docker compose up -d core-platform`. Core then gives platform staff their permissions without the authenticator
+   code. To stop Keycloak asking for the code, delete the user's *otp* credential (Keycloak admin console, realm
+   occpl, Users, Credentials). Do not do this on production: MFA for platform roles is a security requirement (D-2).

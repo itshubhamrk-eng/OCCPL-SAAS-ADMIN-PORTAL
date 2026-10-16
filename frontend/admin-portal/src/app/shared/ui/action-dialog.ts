@@ -61,13 +61,19 @@ import { FormsModule } from '@angular/forms';
     dialog {
       width: min(32rem, calc(100vw - 2rem));
       border: 1px solid var(--occpl-color-border);
-      border-radius: var(--occpl-radius-md);
+      border-top: 5px solid var(--occpl-color-primary);
+      border-radius: 24px;
       background: var(--occpl-color-surface);
       color: var(--occpl-color-text);
+      box-shadow: var(--occpl-shadow-md);
       padding: var(--occpl-space-6);
     }
     dialog::backdrop {
-      background: rgb(0 0 0 / 45%);
+      background: rgb(30 33 64 / 45%);
+      backdrop-filter: blur(4px);
+    }
+    dialog textarea {
+      min-height: 5rem;
     }
     .actions {
       margin-top: var(--occpl-space-4);
