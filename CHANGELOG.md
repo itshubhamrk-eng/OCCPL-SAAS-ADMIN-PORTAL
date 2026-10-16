@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Portal favicon (2026-10-16)
 - The browser tab, bookmarks and phone home screen now show the OC logo (`favicon.ico` with 16/32/48 px, 32 and 192 px PNGs, Apple touch icon), replacing the default icon.
-- The Keycloak sign-in page still has Keycloak's own icon.
+- The sign-in page (Keycloak, `occpl` theme) uses the same icon, so the whole platform shows one tab icon. Only the sign-in pages are themed; Keycloak's admin console keeps its own.
 
 ### Dashboard and font now match the chosen design (2026-10-16)
 - The portal uses the Outfit font from the design (self-hosted through `@fontsource-variable/outfit`, so the strict content-security policy still holds).
