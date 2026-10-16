@@ -224,6 +224,10 @@ Kubernetes is not used initially (ADR-0004 rationale); the containers are k8s-re
 
 ## 3. Build & release pipeline (CI/CD)
 
+0. **What changed decides the work** (`infra/scripts/changed-paths.sh`): CI runs only the backend, frontend and infra jobs
+   whose files changed (a pipeline change runs everything), and Release re-tags an image whose sources did not change
+   from the previous release instead of rebuilding it (`infra/scripts/retag-image.sh`: same digest, so the server leaves
+   that container running; a missing earlier image is built).
 1. **Every PR and push** (`.github/workflows/ci.yml`): backend `mvn verify` on MySQL 8.4 and 9.7
    (unit, Testcontainers integration, Modulith verification, Core ↔ sample end-to-end); frontend
    format, lint, tests, production build, `npm audit`; image builds with a Trivy scan; infra job

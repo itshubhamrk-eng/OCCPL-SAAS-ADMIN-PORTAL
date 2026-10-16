@@ -6,6 +6,10 @@ name: Release
 # VPS (environment "production", after the reviewers' approval). Each deploy copies the compose
 # bundle over SSH, runs bin/deploy.sh (automatic rollback) and smoke-tests the public addresses.
 #
+# Only what changed is rebuilt: infra/scripts/changed-paths.sh compares the commit with the one before it
+# on main. An image whose sources did not change is re-tagged from the previous release (seconds, same
+# digest, so the server leaves that container running); if that earlier image is missing it is built.
+#
 # Run it by hand to redeploy or roll back one target to a release whose images already exist:
 # Actions → Release → Run workflow (full SHA + target).
 #
@@ -52,12 +56,17 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2 # the commit and its parent, to see what changed
       - id: meta
         env:
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           echo "release=$SHA" >> "$GITHUB_OUTPUT"
           echo "prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/occpl" >> "$GITHUB_OUTPUT"
+          echo "previous=$(git rev-parse --verify -q HEAD^1 || true)" >> "$GITHUB_OUTPUT"
+      - name: What changed since the previous commit
+        id: changes
+        run: infra/scripts/changed-paths.sh "${{ steps.meta.outputs.previous }}" HEAD | tee -a "$GITHUB_OUTPUT"
       - name: Production realm is in sync with the development realm
         run: python3 infra/aws/compose/keycloak/make-production-realm.py --check
       - uses: docker/login-action@v3
@@ -66,26 +75,110 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
-      - name: core-platform
+      - name: core-platform (reuse the previous image when unchanged)
+        id: reuse_core_platform
+        if: steps.changes.outputs.core != 'true'
+        env:
+          REPOSITORY: ${{ github.repository_owner }}/occpl-core-platform
+          RELEASE: ${{ steps.meta.outputs.release }}
+          PREVIOUS: ${{ steps.meta.outputs.previous }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Same manifest under the new tag (digest unchanged), so the server leaves the container alone.
+          repo=$(echo "$REPOSITORY" | tr 'A-Z' 'a-z')
+          status=0
+          if [ -n "$PREVIOUS" ]; then
+            infra/scripts/retag-image.sh ghcr.io "$repo" "$PREVIOUS" "$RELEASE" || status=$?
+          else
+            status=2
+          fi
+          if [ "$status" = 0 ]; then
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+            echo "core-platform: unchanged, re-tagged from $PREVIOUS" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "reused=false" >> "$GITHUB_OUTPUT"
+            echo "core-platform: no earlier image to reuse (status $status), building" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: core-platform (build)
+        if: steps.changes.outputs.core == 'true' || steps.reuse_core_platform.outputs.reused != 'true'
         uses: docker/build-push-action@v6
         with:
           context: backend/core-platform
           push: true
           provenance: false
+          cache-from: type=gha,scope=core-platform
+          cache-to: type=gha,mode=max,scope=core-platform
           tags: ${{ steps.meta.outputs.prefix }}-core-platform:${{ steps.meta.outputs.release }}
-      - name: admin-portal
+      - name: admin-portal (reuse the previous image when unchanged)
+        id: reuse_admin_portal
+        if: steps.changes.outputs.portal != 'true'
+        env:
+          REPOSITORY: ${{ github.repository_owner }}/occpl-admin-portal
+          RELEASE: ${{ steps.meta.outputs.release }}
+          PREVIOUS: ${{ steps.meta.outputs.previous }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Same manifest under the new tag (digest unchanged), so the server leaves the container alone.
+          repo=$(echo "$REPOSITORY" | tr 'A-Z' 'a-z')
+          status=0
+          if [ -n "$PREVIOUS" ]; then
+            infra/scripts/retag-image.sh ghcr.io "$repo" "$PREVIOUS" "$RELEASE" || status=$?
+          else
+            status=2
+          fi
+          if [ "$status" = 0 ]; then
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+            echo "admin-portal: unchanged, re-tagged from $PREVIOUS" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "reused=false" >> "$GITHUB_OUTPUT"
+            echo "admin-portal: no earlier image to reuse (status $status), building" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: admin-portal (build)
+        if: steps.changes.outputs.portal == 'true' || steps.reuse_admin_portal.outputs.reused != 'true'
         uses: docker/build-push-action@v6
         with:
           context: frontend/admin-portal
           push: true
           provenance: false
+          cache-from: type=gha,scope=admin-portal
+          cache-to: type=gha,mode=max,scope=admin-portal
           tags: ${{ steps.meta.outputs.prefix }}-admin-portal:${{ steps.meta.outputs.release }}
-      - name: keycloak
+      - name: keycloak (reuse the previous image when unchanged)
+        id: reuse_keycloak
+        if: steps.changes.outputs.keycloak != 'true'
+        env:
+          REPOSITORY: ${{ github.repository_owner }}/occpl-keycloak
+          RELEASE: ${{ steps.meta.outputs.release }}
+          PREVIOUS: ${{ steps.meta.outputs.previous }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Same manifest under the new tag (digest unchanged), so the server leaves the container alone.
+          repo=$(echo "$REPOSITORY" | tr 'A-Z' 'a-z')
+          status=0
+          if [ -n "$PREVIOUS" ]; then
+            infra/scripts/retag-image.sh ghcr.io "$repo" "$PREVIOUS" "$RELEASE" || status=$?
+          else
+            status=2
+          fi
+          if [ "$status" = 0 ]; then
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+            echo "keycloak: unchanged, re-tagged from $PREVIOUS" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "reused=false" >> "$GITHUB_OUTPUT"
+            echo "keycloak: no earlier image to reuse (status $status), building" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: keycloak (build)
+        if: steps.changes.outputs.keycloak == 'true' || steps.reuse_keycloak.outputs.reused != 'true'
         uses: docker/build-push-action@v6
         with:
           context: infra/aws/compose/keycloak
           push: true
           provenance: false
+          cache-from: type=gha,scope=keycloak
+          cache-to: type=gha,mode=max,scope=keycloak
           tags: ${{ steps.meta.outputs.prefix }}-keycloak:${{ steps.meta.outputs.release }}
 
   plan:
@@ -159,4 +252,6 @@ jobs:
       - name: Smoke test
         env:
           HOST_SUFFIX: ${{ vars.HOST_SUFFIX }}
+          # Set the variable to "true" on the dev environment only, if the Keycloak admin console is opened to all addresses.
+          ALLOW_PUBLIC_ADMIN_CONSOLE: ${{ vars.ALLOW_PUBLIC_ADMIN_CONSOLE }}
         run: infra/scripts/smoke-test.sh "$HOST_SUFFIX"

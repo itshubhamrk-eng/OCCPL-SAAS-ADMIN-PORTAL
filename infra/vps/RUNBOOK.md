@@ -178,3 +178,7 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    `docker compose up -d core-platform`. Core then gives platform staff their permissions without the authenticator
    code. To stop Keycloak asking for the code, delete the user's *otp* credential (Keycloak admin console, realm
    occpl, Users, Credentials). Do not do this on production: MFA for platform roles is a security requirement (D-2).
+9. **Admin console open to every address on dev (optional, dev only).** Set `ADMIN_IPS=0.0.0.0/0 ::/0` in `/opt/occpl/.env` and
+   `docker compose up -d --force-recreate caddy`; then add the variable `ALLOW_PUBLIC_ADMIN_CONSOLE` = `true` to the GitHub
+   environment **dev** (Settings, Environments, dev), otherwise the smoke test reports the open console as a failure. Anyone can then reach
+   the Keycloak administrator sign-in page, so keep `KEYCLOAK_ADMIN_PASSWORD` long and random. Never on production.
