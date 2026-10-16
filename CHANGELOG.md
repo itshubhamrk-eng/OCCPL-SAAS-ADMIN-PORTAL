@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Provisioning calls now carry the company's admin contact (2026-10-16)
+- The body Core sends to a product's `PUT /provisioning/v1/tenants/{companyId}` gains optional `adminEmail`, `adminName` and `adminPhone`,
+  taken from the company's PRIMARY contact (`CompanyDirectory.primaryContact`). Fields that are empty are left out; a company with no
+  primary contact still provisions. Existing products ignore the extra fields (the sample product does). Unit test: `ProvisioningBodyTest`.
+
 ### Light/dark theme switch and phone layout polish (2026-10-16)
 - A sun/moon button in the portal header switches between light and dark. Until someone picks, the browser setting decides; a pick is remembered in that browser
   (`ThemeService`, `data-theme` on the root element, dark values in a shared mixin in `styles/_tokens.scss`). Tested in `theme.service.spec.ts`.

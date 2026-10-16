@@ -3,6 +3,7 @@ package com.occpl.platform.company.internal;
 import com.occpl.platform.company.api.BillingProfile;
 import com.occpl.platform.company.api.CompanyDirectory;
 import com.occpl.platform.company.api.CompanySummary;
+import com.occpl.platform.company.api.PrimaryContact;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,12 @@ class JpaCompanyDirectory implements CompanyDirectory {
     @Override
     public List<String> allowedEmailDomains(UUID companyId) {
         return settings.findById(companyId).map(CompanySettings::allowedEmailDomains).orElse(List.of());
+    }
+
+    @Override
+    public Optional<PrimaryContact> primaryContact(UUID companyId) {
+        return contacts.findByCompanyIdAndType(companyId, CompanyContact.Type.PRIMARY)
+                .map(k -> new PrimaryContact(k.name(), k.email(), k.phone()));
     }
 
     @Override
