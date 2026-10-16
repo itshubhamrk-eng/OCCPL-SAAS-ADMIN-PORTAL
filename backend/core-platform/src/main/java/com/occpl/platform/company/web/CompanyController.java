@@ -10,21 +10,26 @@ import com.occpl.platform.shared.web.Etags;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/companies")
@@ -43,12 +48,19 @@ class CompanyController {
         CompanyService.ContactData contact = request.primaryContact() == null ? null
                 : new CompanyService.ContactData(request.primaryContact().name(), request.primaryContact().email(),
                         request.primaryContact().phone());
+        CompanyService.ContactData support = request.supportContact() == null ? null
+                : new CompanyService.ContactData(request.supportContact().name(), request.supportContact().email(),
+                        request.supportContact().phone());
+        CompanyRequests.Profile p = request.profile();
+        CompanyService.ProfileData profile = p == null ? null
+                : new CompanyService.ProfileData(p.website(), p.addressLine1(), p.addressLine2(), p.city(), p.state(),
+                        p.postalCode(), p.gstNumber(), p.panNumber());
         CompanyView created = companies.create(new CompanyService.NewCompany(request.code(), request.legalName().strip(),
                 request.displayName().strip(), request.country(), blankToNull(request.taxId()),
                 request.timeZone() == null ? "Asia/Kolkata" : request.timeZone(),
                 request.locale() == null ? "en-IN" : request.locale(), contact,
                 request.initialAdmin().email().strip().toLowerCase(), request.initialAdmin().firstName(),
-                request.initialAdmin().lastName()));
+                request.initialAdmin().lastName(), profile, support));
         return ResponseEntity.created(URI.create("/api/v1/companies/" + created.id()))
                 .eTag(Etags.of(created.version())).body(created);
     }
@@ -77,9 +89,33 @@ class CompanyController {
     ResponseEntity<CompanyView> update(@PathVariable UUID companyId,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody CompanyRequests.UpdateCompany request) {
+        CompanyRequests.Profile p = request.profile();
+        CompanyService.ProfileChanges profile = p == null ? null
+                : new CompanyService.ProfileChanges(p.website(), p.addressLine1(), p.addressLine2(), p.city(), p.state(),
+                        p.postalCode(), p.gstNumber(), p.panNumber());
         CompanyView company = companies.update(companyId, new CompanyService.CompanyChanges(request.legalName(),
-                request.displayName(), request.country(), request.taxId()), ifMatch);
+                request.displayName(), request.country(), request.taxId(), profile), ifMatch);
         return ResponseEntity.ok().eTag(Etags.of(company.version())).body(company);
+    }
+
+    @PutMapping(value = "/{companyId}/{image:logo|favicon}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    @Operation(summary = "Set the company logo or favicon",
+            description = "Multipart field 'file'. Logo: PNG, JPEG or WebP up to 512 KB. Favicon: also ICO, up to 128 KB. "
+                    + "503 when file storage is not configured.")
+    CompanyView setImage(@PathVariable UUID companyId, @PathVariable String image,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        return companies.setImage(companyId, imageOf(image), file.getBytes());
+    }
+
+    @DeleteMapping("/{companyId}/{image:logo|favicon}")
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    CompanyView removeImage(@PathVariable UUID companyId, @PathVariable String image) {
+        return companies.removeImage(companyId, imageOf(image));
+    }
+
+    private static CompanyService.Image imageOf(String image) {
+        return "logo".equals(image) ? CompanyService.Image.LOGO : CompanyService.Image.FAVICON;
     }
 
     @PostMapping("/{companyId}/activate")

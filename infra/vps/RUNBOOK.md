@@ -201,3 +201,17 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
     `{"schemaVersion":1,"launch":{"path":"/"},"provisioning":{"mode":"SYNC","path":"/provisioning/v1/tenants/{companyId}"}}`,
     publish it and activate the product. On the courier side set `OCCPL_PLATFORM_AUDIENCE=courier-api`,
     `OCCPL_PLATFORM_ISSUER_URI` and `OCCPL_PLATFORM_JWK_SET_URI` to the realm's, and `OCCPL_PLATFORM_ENABLED=true`.
+12. **Company logos and favicons in S3 (dev).** Optional; without it the company pages work and only image upload answers
+    "File storage is not configured".
+    1. In the AWS console create a **private** bucket in the same region as the server (for example `occpl-dev-files`,
+       region `ap-south-1`) with *Block all public access* on. No CORS or public policy is needed: the portal shows images
+       through short-lived signed links.
+    2. Create an IAM user (or role, if the instance has one) with only this policy, replacing the bucket name:
+       ```json
+       {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject","s3:GetObject","s3:DeleteObject"],
+         "Resource":"arn:aws:s3:::occpl-dev-files/companies/*"}]}
+       ```
+    3. On the server add to `/opt/occpl/.env`: `FILES_S3_BUCKET=occpl-dev-files`, `FILES_S3_REGION=ap-south-1` and, for an IAM user,
+       `FILES_AWS_ACCESS_KEY_ID=...` and `FILES_AWS_SECRET_ACCESS_KEY=...` (leave both out when the instance role has the policy).
+       Then `docker compose up -d core-platform`.
+    4. Check: open a company, Profile, upload a logo; it should appear. A signed link stops working after an hour, so reload the page to get a new one.

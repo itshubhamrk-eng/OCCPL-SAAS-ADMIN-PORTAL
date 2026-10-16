@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Company profile: website, address, GST/PAN, support contact, logo and favicon (2026-10-16)
+- New optional fields when creating or editing a company in the portal: website, address (two lines, city, state, postal code), GST number, PAN,
+  a **support contact** (name, email, phone; new contact type `SUPPORT`) and a logo and favicon. All optional. GST and PAN can be changed only by OCCPL staff,
+  like the tax id; company admins can change the rest.
+- Images go to a private S3 bucket (`FILES_S3_BUCKET`, see RUNBOOK §9 step 12) and are shown through one-hour signed links. Logo: PNG, JPEG or WebP up to 512 KB; favicon also ICO, up to 128 KB.
+  The type is checked from the file content, SVG is refused. Without a bucket, upload answers 503 and the rest of the portal is unchanged.
+- API: `profile` object on create/update/get (`CompanyView.profile`), `PUT|DELETE /companies/{id}/logo` and `/favicon` (multipart field `file`), `supportContact` on create.
+  Migration `V202610161000__company_profile.sql`.
+- Provisioning calls now also carry country, website, address, GST, PAN, support contact and 24-hour signed logo/favicon links (only fields that are set).
+- Tests: `ImageTypesTest`, `ProvisioningBodyTest`, `profile-validators.spec.ts`. The integration tests need Docker and were not run here.
+
 ### Provisioning calls now carry the company's admin contact (2026-10-16)
 - The body Core sends to a product's `PUT /provisioning/v1/tenants/{companyId}` gains optional `adminEmail`, `adminName` and `adminPhone`,
   taken from the company's PRIMARY contact (`CompanyDirectory.primaryContact`). Fields that are empty are left out; a company with no

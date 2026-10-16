@@ -84,6 +84,32 @@ export interface UserMembership {
 
 // ---------------------------------------------------------------- companies & members
 
+/** Optional company profile; image links are signed and expire, so they are not stored. */
+export interface CompanyProfile {
+  readonly website: string | null;
+  readonly addressLine1: string | null;
+  readonly addressLine2: string | null;
+  readonly city: string | null;
+  readonly state: string | null;
+  readonly postalCode: string | null;
+  readonly gstNumber: string | null;
+  readonly panNumber: string | null;
+  readonly logoUrl: string | null;
+  readonly faviconUrl: string | null;
+}
+
+/** Profile fields to send; on update an absent field is unchanged and '' clears it. */
+export interface ProfileInput {
+  website?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  gstNumber?: string;
+  panNumber?: string;
+}
+
 export interface Company {
   readonly id: string;
   readonly code: string;
@@ -92,6 +118,7 @@ export interface Company {
   readonly status: CompanyStatus;
   readonly country: string;
   readonly taxId: string | null;
+  readonly profile: CompanyProfile;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly version: number;
@@ -106,6 +133,8 @@ export interface NewCompany {
   timeZone?: string | null;
   locale?: string | null;
   primaryContact?: Contact | null;
+  supportContact?: Contact | null;
+  profile?: ProfileInput | null;
   initialAdmin: { email: string; firstName?: string | null; lastName?: string | null };
 }
 
@@ -114,6 +143,7 @@ export interface CompanyChanges {
   displayName?: string;
   country?: string;
   taxId?: string;
+  profile?: ProfileInput;
 }
 
 export interface CompanySettings {
@@ -123,7 +153,7 @@ export interface CompanySettings {
   readonly version: number;
 }
 
-export type ContactType = 'PRIMARY' | 'BILLING' | 'TECHNICAL';
+export type ContactType = 'PRIMARY' | 'BILLING' | 'TECHNICAL' | 'SUPPORT';
 
 export interface Contact {
   name: string;

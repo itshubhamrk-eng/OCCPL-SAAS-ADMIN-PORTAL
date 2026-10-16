@@ -71,7 +71,8 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 | POST | `/companies` | P:`platform.companies.manage` | Create company, settings, primary contact and the initial Company Admin invitation (one transaction) |
 | GET | `/companies` | P:`platform.companies.read` | `q` (code/name prefix), `status`, `country`, `page`, `size`, `sort=createdAt\|displayName\|code\|status,(asc\|desc)` |
 | GET | `/companies/{companyId}` | P:`platform.companies.read` or C:`company.profile.read` | Details + `ETag` |
-| PATCH | `/companies/{companyId}` | P:`platform.companies.manage` or C:`company.profile.manage` | Omitted fields unchanged; company admins may change `displayName` only; optional `If-Match` |
+| PATCH | `/companies/{companyId}` | P:`platform.companies.manage` or C:`company.profile.manage` | Omitted fields unchanged; company admins may change `displayName` and the profile (website, address) but not GST/PAN or legal identity; optional `If-Match`. `profile` object: website, addressLine1/2, city, state, postalCode, gstNumber, panNumber (`""` clears), plus read-only signed `logoUrl`/`faviconUrl` |
+| PUT / DELETE | `/companies/{companyId}/logo` · `/favicon` | P:`platform.companies.manage` or C:`company.profile.manage` | Multipart `file`; logo PNG/JPEG/WebP ≤ 512 KB, favicon also ICO ≤ 128 KB; 400 for wrong content, 503 when `FILES_S3_BUCKET` is not set |
 | POST | `/companies/{companyId}/activate` · `/suspend` · `/deactivate` | P:`platform.companies.manage` | Lifecycle; `{"reason"}` required for suspend/deactivate; 422 on invalid transition |
 | GET | `/companies/{companyId}/status-history` | P or C:`company.profile.read` | Lifecycle history, newest first |
 | GET/PUT | `/companies/{companyId}/settings` | read: `company.profile.read`; write: `company.profile.manage` (or platform) | `timeZone`, `locale`, `allowedEmailDomains` (restricts invitations); `ETag`/`If-Match` |

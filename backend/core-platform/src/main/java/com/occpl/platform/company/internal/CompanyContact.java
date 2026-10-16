@@ -14,7 +14,7 @@ import java.util.UUID;
 @Table(name = "company_contact")
 class CompanyContact {
 
-    enum Type { PRIMARY, BILLING, TECHNICAL }
+    enum Type { PRIMARY, BILLING, TECHNICAL, SUPPORT }
 
     @Id
     private UUID id;

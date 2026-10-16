@@ -161,6 +161,11 @@ services:
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      # Company logos and favicons (private S3 bucket). Blank bucket = uploads answer 503, nothing else changes.
+      FILES_S3_BUCKET: ${FILES_S3_BUCKET:-}
+      FILES_S3_REGION: ${FILES_S3_REGION:-ap-south-1}
+      AWS_ACCESS_KEY_ID: ${FILES_AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${FILES_AWS_SECRET_ACCESS_KEY:-}
       BOOTSTRAP_SUPER_ADMIN_EMAIL: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:-}
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError
     ports:
