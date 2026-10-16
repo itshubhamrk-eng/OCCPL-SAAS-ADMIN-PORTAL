@@ -29,7 +29,7 @@ h3 {
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--occpl-font-size-sm);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .stack {
@@ -466,4 +466,45 @@ fieldset.plain {
 .invite {
   margin-bottom: var(--occpl-space-4);
   background: var(--occpl-color-background);
+}
+
+// Notices shown above the page content by the shell
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--occpl-space-2);
+  align-items: center;
+}
+
+.alert {
+  position: relative;
+  padding: var(--occpl-space-3) var(--occpl-space-8) var(--occpl-space-3) var(--occpl-space-4);
+  border: 1px solid var(--occpl-color-danger);
+  border-radius: var(--occpl-radius-md);
+  background: var(--occpl-color-danger-surface);
+  color: var(--occpl-color-text);
+}
+
+.alert-message,
+.alert-reference {
+  margin: 0;
+}
+
+.alert-reference {
+  margin-top: var(--occpl-space-1);
+  font-size: var(--occpl-font-size-sm);
+  color: var(--occpl-color-text-muted);
+}
+
+.alert-dismiss {
+  position: absolute;
+  top: var(--occpl-space-2);
+  right: var(--occpl-space-2);
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
 }

@@ -46,6 +46,32 @@ describe('Shell', () => {
     expect(links).toEqual(['Dashboard', 'Companies', 'Audit log']);
   });
 
+  it('collapses the menu to icons and remembers it', async () => {
+    localStorage.removeItem('occpl.nav-collapsed');
+    const fixture = await render(
+      me({
+        platform: {
+          roles: ['SUPER_ADMIN'],
+          permissions: ['platform.companies.read'],
+          mfaRequired: false,
+        },
+      }),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    const side = el.querySelector('.shell-side') as HTMLElement;
+    expect(side.classList.contains('collapsed')).toBe(false);
+    (el.querySelector('.collapse-toggle') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(side.classList.contains('collapsed')).toBe(true);
+    expect(localStorage.getItem('occpl.nav-collapsed')).toBe('true');
+    expect(el.querySelector('#main-nav a')?.getAttribute('title')).toBe('Dashboard');
+    (el.querySelector('.collapse-toggle') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(side.classList.contains('collapsed')).toBe(false);
+    expect(localStorage.getItem('occpl.nav-collapsed')).toBe('false');
+    localStorage.removeItem('occpl.nav-collapsed');
+  });
+
   it('lists the companies of a company user and no platform section', async () => {
     const fixture = await render(me({ memberships: [ACME_ADMIN] }));
     const el = fixture.nativeElement as HTMLElement;

@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth/auth.service';
 import { ErrorNotifier } from '../../core/errors/error-notifier';
 import { SessionService } from '../../core/session/session.service';
+import { ThemeService } from '../../core/theme/theme.service';
 
 interface NavItem {
   readonly label: string;
@@ -13,6 +14,8 @@ interface NavItem {
   readonly icon: string;
   readonly exact?: boolean;
 }
+
+const NAV_KEY = 'occpl.nav-collapsed';
 
 const ICONS = {
   dashboard: 'M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10',
@@ -81,9 +84,13 @@ const PLATFORM_NAV: (NavItem & { permission?: string })[] = [
 export class Shell {
   protected readonly notifier = inject(ErrorNotifier);
   protected readonly session = inject(SessionService);
+  protected readonly theme = inject(ThemeService);
   private readonly auth = inject(AuthService);
 
+  private readonly storage = inject(DOCUMENT).defaultView?.localStorage;
   protected readonly navOpen = signal(false);
+  /** Wide screens: the menu shows icons only. Remembered in this browser. */
+  protected readonly collapsed = signal(this.readCollapsed());
   private readonly url = signal('');
   /** The MFA page already explains the situation; no banner there. */
   protected readonly showMfaBanner = computed(
@@ -140,6 +147,23 @@ export class Shell {
         this.navOpen.set(false);
         this.url.set((e as NavigationEnd).urlAfterRedirects);
       });
+  }
+
+  protected toggleCollapsed(): void {
+    this.collapsed.update((value) => !value);
+    try {
+      this.storage?.setItem(NAV_KEY, String(this.collapsed()));
+    } catch {
+      // Storage can be blocked; the menu then keeps its state until the page is closed.
+    }
+  }
+
+  private readCollapsed(): boolean {
+    try {
+      return this.storage?.getItem(NAV_KEY) === 'true';
+    } catch {
+      return false;
+    }
   }
 
   protected signOut(): void {

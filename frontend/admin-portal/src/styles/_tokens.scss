@@ -60,35 +60,51 @@
   --occpl-shadow-md: 0 10px 40px rgb(67 56 202 / 12%);
 }
 
+// Dark values: used when the browser prefers dark (unless the user picked light) and when the user picked dark.
+@mixin dark-tokens {
+  --occpl-color-primary: #e8456a;
+  --occpl-color-primary-strong: #d61f45;
+  --occpl-color-background: #12121f;
+  --occpl-color-surface: #1c1c2e;
+  --occpl-color-surface-glass: rgb(28 28 46 / 78%);
+  --occpl-color-border: #2e2e48;
+  --occpl-color-text: #ececf7;
+  --occpl-color-text-muted: #a3a4c4;
+  --occpl-color-link: #ff7d9a;
+  --occpl-color-danger: #ff8a7a;
+  --occpl-color-danger-surface: #3d1820;
+  --occpl-color-success: #4fd1a1;
+  --occpl-color-warning: #f0b04a;
+  --occpl-color-info: #9d96ff;
+  --occpl-color-focus: #9d96ff;
+  --occpl-color-success-surface: #153327;
+  --occpl-color-warning-surface: #3a2c12;
+  --occpl-color-info-surface: #25234a;
+  --occpl-color-neutral-surface: #25253b;
+  --occpl-color-accent: #8c86ff;
+  --occpl-color-sky: #5cc2f5;
+  --occpl-color-teal: #43d1c0;
+  --occpl-color-amber: #f0b04a;
+  --occpl-color-plum: #ff8aa8;
+  --occpl-page-glow:
+    radial-gradient(900px 640px at 0% 0%, rgb(214 31 69 / 22%) 0%, transparent 62%),
+    radial-gradient(760px 560px at 100% 100%, rgb(67 56 202 / 26%) 0%, transparent 60%);
+  --occpl-shadow-sm: 0 6px 24px rgb(0 0 0 / 30%);
+  --occpl-shadow-md: 0 10px 40px rgb(0 0 0 / 35%);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    --occpl-color-primary: #e8456a;
-    --occpl-color-primary-strong: #d61f45;
-    --occpl-color-background: #12121f;
-    --occpl-color-surface: #1c1c2e;
-    --occpl-color-surface-glass: rgb(28 28 46 / 78%);
-    --occpl-color-border: #2e2e48;
-    --occpl-color-text: #ececf7;
-    --occpl-color-text-muted: #a3a4c4;
-    --occpl-color-link: #ff7d9a;
-    --occpl-color-danger: #ff8a7a;
-    --occpl-color-danger-surface: #3d1820;
-    --occpl-color-success: #4fd1a1;
-    --occpl-color-warning: #f0b04a;
-    --occpl-color-info: #9d96ff;
-    --occpl-color-focus: #9d96ff;
-    --occpl-color-success-surface: #153327;
-    --occpl-color-warning-surface: #3a2c12;
-    --occpl-color-info-surface: #25234a;
-    --occpl-color-neutral-surface: #25253b;
-    --occpl-color-sky: #5cc2f5;
-    --occpl-color-teal: #43d1c0;
-    --occpl-color-amber: #f0b04a;
-    --occpl-color-plum: #ff8aa8;
-    --occpl-page-glow:
-      radial-gradient(900px 640px at 0% 0%, rgb(214 31 69 / 22%) 0%, transparent 62%),
-      radial-gradient(760px 560px at 100% 100%, rgb(67 56 202 / 26%) 0%, transparent 60%);
-    --occpl-shadow-sm: 0 6px 24px rgb(0 0 0 / 30%);
-    --occpl-shadow-md: 0 10px 40px rgb(0 0 0 / 35%);
+  :root:not([data-theme='light']) {
+    @include dark-tokens;
   }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  @include dark-tokens;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }

@@ -1,5 +1,10 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import {
   RouteReuseStrategy,
   TitleStrategy,
@@ -13,12 +18,14 @@ import { APP_CONFIG, AppConfig } from './core/config/app-config';
 import { apiErrorInterceptor } from './core/http/api-error.interceptor';
 import { correlationIdInterceptor } from './core/http/correlation-id.interceptor';
 import { ParamAwareRouteReuseStrategy } from './core/route-reuse';
+import { ThemeService } from './core/theme/theme.service';
 import { PortalTitleStrategy } from './core/title-strategy';
 
 export function createAppConfig(runtimeConfig: AppConfig): ApplicationConfig {
   return {
     providers: [
       provideBrowserGlobalErrorListeners(),
+      provideAppInitializer(() => inject(ThemeService).init()),
       { provide: APP_CONFIG, useValue: runtimeConfig },
       // Child pages receive :companyId as an input too.
       provideRouter(
