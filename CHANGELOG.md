@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Build and deploy only what changed (2026-10-16)
+- `infra/scripts/changed-paths.sh` tells the pipeline which parts a change touches (backend, frontend, infra; the core-platform, admin-portal and keycloak images).
+- CI: a frontend-only change no longer runs the backend tests (and the other way round); a skipped job counts as passed. Changes to `.github/` or the script itself run everything.
+- Release: an image whose sources did not change is re-tagged from the previous release with `infra/scripts/retag-image.sh` (same manifest and digest, a few seconds)
+  instead of rebuilt, so the server sees no new image and leaves that container running. If the earlier image is missing, it is built. Builds use the GitHub layer cache.
+- Not changed: every release still gets all three tags, so rollback and `deploy.sh <sha>` work as before.
+
 ### Optional MFA switch for the dev server (2026-10-16)
 - `MFA_PLATFORM_REQUIRED` is now passed from `/opt/occpl/.env` to Core (default `true`). Setting it to `false` on the dev server lets platform
   staff work without an authenticator code; production keeps it on (D-2). See `infra/vps/RUNBOOK.md` §9 step 8.

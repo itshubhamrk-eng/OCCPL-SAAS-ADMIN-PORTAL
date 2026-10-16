@@ -13,8 +13,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Decides which parts a change touches (infra/scripts/changed-paths.sh), so a frontend-only change does
+  # not run the backend tests and vice versa. A skipped job counts as passed. Changes to the pipeline
+  # itself run everything.
+  changes:
+    name: What changed
+    runs-on: ubuntu-24.04
+    outputs:
+      backend: ${{ steps.paths.outputs.backend }}
+      frontend: ${{ steps.paths.outputs.frontend }}
+      infra: ${{ steps.paths.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            base=$(git merge-base "origin/$BASE_REF" HEAD || true)
+          else
+            base=$(git rev-parse --verify -q HEAD^1 || true) # the commit before this push
+          fi
+          infra/scripts/changed-paths.sh "$base" HEAD | tee -a "$GITHUB_OUTPUT"
+
   backend:
     name: Backend (Java 25, ${{ matrix.mysql }})
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -43,6 +71,8 @@ jobs:
 
   frontend:
     name: Frontend (Angular 22)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -63,7 +93,9 @@ jobs:
 
   images:
     name: Container images
-    needs: [backend, frontend]
+    needs: [changes, backend, frontend]
+    # Skipped test jobs must not block it; a failed one must.
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -111,6 +143,8 @@ jobs:
 
   infra:
     name: Infrastructure (Terraform, deploy bundle)
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
