@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Remaining forms and dialogs reviewed in the new design (2026-10-16)
+- Checked product, plan (new/edit/detail), company overview, members/invitations, subscription, billing, usage, provisioning and
+  invitation pages in light, dark and phone width against a mocked API; they inherit the new look from the shared styles.
+- Confirmation dialogs: rounded card with crimson top edge, tinted blurred backdrop, shorter reason box.
+- Message pages (access denied, invitation problems, not found): shown as a glass card instead of bare text.
+
 ### Sign-in page theme and form spacing (2026-10-15)
 - Keycloak sign-in page restyled to the portal design: `infra/aws/compose/keycloak/themes/occpl` (extends `keycloak.v2`; crimson/indigo mesh background,
   glass card, crimson button, OCCPL mark, dark mode). Baked into the Keycloak image; the generated production realm sets `loginTheme=occpl`.
