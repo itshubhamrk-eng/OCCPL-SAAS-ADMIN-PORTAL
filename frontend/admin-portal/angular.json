@@ -33,6 +33,7 @@
               }
             ],
             "styles": [
+              "node_modules/@fontsource-variable/outfit/index.css",
               "src/styles.scss"
             ]
           },
