@@ -14,8 +14,14 @@ config=$(curl -fsS --max-time 10 "$admin/config.json")
 [ "$(jq -r .apiBaseUrl <<< "$config")" = "$api/api/v1" ] || fail "portal apiBaseUrl: $config"
 issuer=$(curl -fsS --max-time 10 "$auth/realms/occpl/.well-known/openid-configuration" | jq -r .issuer)
 [ "$issuer" = "$auth/realms/occpl" ] || fail "issuer $issuer"
+# The admin console must stay closed to the internet unless this environment explicitly opts out
+# (ALLOW_PUBLIC_ADMIN_CONSOLE=true, meant for the development server only; never set it for production).
 status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$auth/admin/master/console/")
-[ "$status" = 403 ] || fail "Keycloak admin console reachable from the internet ($status)"
+if [ "${ALLOW_PUBLIC_ADMIN_CONSOLE:-}" = true ]; then
+  echo "WARNING: the Keycloak admin console is allowed from the internet here ($status); acceptable on the development server only" >&2
+else
+  [ "$status" = 403 ] || fail "Keycloak admin console reachable from the internet ($status)"
+fi
 headers=$(curl -s -D - -o /dev/null --max-time 10 "$api/api/v1/me")
 grep -q '^HTTP/[0-9.]* 401' <<< "$headers" || fail "API without token: $(head -1 <<< "$headers")"
 grep -qi '^strict-transport-security' <<< "$headers" || fail "API sends no HSTS (proxy headers not trusted?)"

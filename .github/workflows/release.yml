@@ -252,4 +252,6 @@ jobs:
       - name: Smoke test
         env:
           HOST_SUFFIX: ${{ vars.HOST_SUFFIX }}
+          # Set the variable to "true" on the dev environment only, if the Keycloak admin console is opened to all addresses.
+          ALLOW_PUBLIC_ADMIN_CONSOLE: ${{ vars.ALLOW_PUBLIC_ADMIN_CONSOLE }}
         run: infra/scripts/smoke-test.sh "$HOST_SUFFIX"
