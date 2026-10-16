@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Round favicon (2026-10-16)
+- The OC logo favicon is now a circle (transparent corners) on the portal and the sign-in page, instead of a white square. The icon links use `?v=3` so browsers fetch it again.
+
 ### Company profile: website, address, GST/PAN, support contact, logo and favicon (2026-10-16)
 - New optional fields when creating or editing a company in the portal: website, address (two lines, city, state, postal code), GST number, PAN,
   a **support contact** (name, email, phone; new contact type `SUPPORT`) and a logo and favicon. All optional. GST and PAN can be changed only by OCCPL staff,
