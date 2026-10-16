@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Dev opt-out for the admin-console check (2026-10-16)
+- The smoke test still fails when the Keycloak admin console answers from the internet. The development environment can opt out with the
+  GitHub environment variable `ALLOW_PUBLIC_ADMIN_CONSOLE=true` (warning in the log); production never sets it. See `infra/vps/RUNBOOK.md` §9 step 9.
+
 ### Build and deploy only what changed (2026-10-16)
 - `infra/scripts/changed-paths.sh` tells the pipeline which parts a change touches (backend, frontend, infra; the core-platform, admin-portal and keycloak images).
 - CI: a frontend-only change no longer runs the backend tests (and the other way round); a skipped job counts as passed. Changes to `.github/` or the script itself run everything.
