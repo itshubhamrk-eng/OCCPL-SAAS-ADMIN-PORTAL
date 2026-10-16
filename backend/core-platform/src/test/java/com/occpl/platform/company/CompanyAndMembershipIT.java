@@ -198,6 +198,10 @@ class CompanyAndMembershipIT {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("billing@acme.test"));
         perform(get("/api/v1/companies/" + companyId + "/contacts"), "admin", null)
                 .andExpect(jsonPath("$.length()").value(2));
+        // The primary contact must carry a phone: provisioned products create their first admin from it.
+        perform(put("/api/v1/companies/" + companyId + "/contacts/PRIMARY"), "admin",
+                "{\"name\":\"Owner\",\"email\":\"owner@acme.test\"}")
+                .andExpect(status().isBadRequest());
         perform(delete("/api/v1/companies/" + companyId + "/contacts/PRIMARY"), "admin", null)
                 .andExpect(status().isConflict());
         perform(delete("/api/v1/companies/" + companyId + "/contacts/BILLING"), "admin", null)
@@ -435,7 +439,7 @@ class CompanyAndMembershipIT {
 
     private String companyBody(String code, String adminEmail) {
         return "{\"code\":\"" + code + "\",\"legalName\":\"" + code + " Pvt Ltd\",\"displayName\":\"" + code + "\","
-                + "\"country\":\"IN\",\"primaryContact\":{\"name\":\"Owner\",\"email\":\"owner@acme.test\"},"
+                + "\"country\":\"IN\",\"primaryContact\":{\"name\":\"Owner\",\"email\":\"owner@acme.test\",\"phone\":\"+919876543210\"},"
                 + "\"initialAdmin\":{\"email\":\"" + adminEmail + "\",\"firstName\":\"First\",\"lastName\":\"Admin\"}}";
     }
 

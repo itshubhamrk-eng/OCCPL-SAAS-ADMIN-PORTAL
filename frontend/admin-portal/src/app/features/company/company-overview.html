@@ -193,7 +193,7 @@
                   <occpl-field-error [control]="contactForm.controls.email" />
                 </div>
                 <div class="field">
-                  <label [for]="'c-phone-' + type">Phone</label>
+                  <label [for]="'c-phone-' + type">Phone{{ type === 'PRIMARY' ? ' (required)' : '' }}</label>
                   <input
                     [id]="'c-phone-' + type"
                     formControlName="phone"

@@ -7,7 +7,9 @@ All notable changes to this project are documented here.
 ### Provisioning calls now carry the company's admin contact (2026-10-16)
 - The body Core sends to a product's `PUT /provisioning/v1/tenants/{companyId}` gains optional `adminEmail`, `adminName` and `adminPhone`,
   taken from the company's PRIMARY contact (`CompanyDirectory.primaryContact`). Fields that are empty are left out; a company with no
-  primary contact still provisions. Existing products ignore the extra fields (the sample product does). Unit test: `ProvisioningBodyTest`.
+  primary contact still provisions.
+- The primary contact now requires a phone number (international format) when it is created or saved, in the API and in the company
+  page ("Phone (required)"). Billing and technical contacts stay optional. Existing primary contacts without a phone must get one the next time they are edited. Existing products ignore the extra fields (the sample product does). Unit test: `ProvisioningBodyTest`.
 
 ### Light/dark theme switch and phone layout polish (2026-10-16)
 - A sun/moon button in the portal header switches between light and dark. Until someone picks, the browser setting decides; a pick is remembered in that browser

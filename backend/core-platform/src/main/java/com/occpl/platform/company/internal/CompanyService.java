@@ -216,6 +216,11 @@ public class CompanyService {
     }
 
     private CompanyContact saveContact(UUID companyId, CompanyContact.Type type, ContactData data, Instant now) {
+        if (type == CompanyContact.Type.PRIMARY && (data.phone() == null || data.phone().isBlank())) {
+            // Products such as the courier app create the company's first administrator from this
+            // contact and need a phone number to do it.
+            throw ApiException.validation("The primary contact needs a phone number in international format.");
+        }
         CompanyContact contact = contacts.findByCompanyIdAndType(companyId, type)
                 .orElseGet(() -> new CompanyContact(UuidV7.generate(clock), companyId, type));
         contact.update(data.name(), data.email().strip().toLowerCase(), data.phone(), now);
