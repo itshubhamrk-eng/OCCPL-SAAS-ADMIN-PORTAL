@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Dashboard and font now match the chosen design (2026-10-16)
+- The portal uses the Outfit font from the design (self-hosted through `@fontsource-variable/outfit`, so the strict content-security policy still holds).
+- Dashboard: larger greeting with the name in crimson, plus the design's "Recent companies" (latest five, status, date) and "Provisioning" (latest five jobs with a coloured dot) panels.
+  Each panel shows only when the signed-in role may read that data.
+
 ### Light/dark theme switch and phone layout polish (2026-10-16)
 - A sun/moon button in the portal header switches between light and dark. Until someone picks, the browser setting decides; a pick is remembered in that browser
   (`ThemeService`, `data-theme` on the root element, dark values in a shared mixin in `styles/_tokens.scss`). Tested in `theme.service.spec.ts`.

@@ -6,6 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Observable, catchError, firstValueFrom, map, of } from 'rxjs';
 import { CatalogApi } from '../../core/api/catalog.api';
@@ -13,7 +14,8 @@ import { CompaniesApi } from '../../core/api/companies.api';
 import { PlatformApi } from '../../core/api/platform.api';
 import { SubscriptionsApi } from '../../core/api/subscriptions.api';
 import { SessionService } from '../../core/session/session.service';
-import { PageHeader } from '../../shared/ui/page-header';
+import { Company, ProvisioningJob } from '../../core/api/models';
+import { StatusBadge } from '../../shared/ui/status-badge';
 
 interface Tile {
   readonly label: string;
@@ -32,12 +34,19 @@ interface Slice {
 /** Platform overview built from list totals (each tile needs the matching read permission). */
 @Component({
   selector: 'occpl-platform-dashboard',
-  imports: [RouterLink, PageHeader],
+  imports: [RouterLink, DatePipe, StatusBadge],
   template: `
-    <occpl-page-header
-      [heading]="greeting()"
-      subtitle="Current state of companies, subscriptions and provisioning"
-    />
+    <header class="hello">
+      <h1>
+        {{ greeting().text }}
+        @if (greeting().name) {
+          , <span class="name">{{ greeting().name }}</span>
+        }
+      </h1>
+      <p class="muted subtitle">
+        Here is the current state of companies, subscriptions and provisioning
+      </p>
+    </header>
     @if (donut(); as chart) {
       <section class="card overview" aria-label="Companies by status">
         <div
@@ -74,6 +83,48 @@ interface Slice {
         </a>
       }
     </div>
+    @if (recent().length > 0 || jobs().length > 0) {
+      <div class="lists">
+        @if (recent().length > 0) {
+          <section class="card panel crimson-top" aria-label="Recent companies">
+            <div class="panel-head">
+              <h2>Recent companies</h2>
+              <a routerLink="/platform/companies">View all</a>
+            </div>
+            @for (company of recent(); track company.id) {
+              <a class="row-item" [routerLink]="['/companies', company.id]">
+                <strong>{{ company.displayName }}</strong>
+                <occpl-status-badge [status]="company.status" />
+                <span class="muted">{{ company.createdAt | date: 'dd MMM yyyy' }}</span>
+              </a>
+            }
+          </section>
+        }
+        @if (jobs().length > 0) {
+          <section class="card panel indigo-top" aria-label="Provisioning">
+            <div class="panel-head">
+              <h2>Provisioning</h2>
+              <a routerLink="/platform/provisioning">View all</a>
+            </div>
+            @for (job of jobs(); track job.id) {
+              <a class="row-item job" routerLink="/platform/provisioning">
+                <span class="dot" [class]="'dot ' + job.status.toLowerCase()"></span>
+                <span class="job-text">
+                  <strong
+                    >{{ job.operation === 'PROVISION' ? 'Provision' : 'Deprovision' }}
+                    {{ job.productCode }}</strong
+                  >
+                  <span class="muted small">
+                    {{ job.companyCode }} · {{ jobStatus(job) }} ·
+                    {{ job.updatedAt | date: 'dd MMM, HH:mm' }}
+                  </span>
+                </span>
+              </a>
+            }
+          </section>
+        }
+      </div>
+    }
     @if (tiles().length === 0 && loaded()) {
       <p class="muted">Your platform role has no dashboard information.</p>
     }
@@ -81,6 +132,93 @@ interface Slice {
   styles: `
     :host {
       display: block;
+    }
+    .hello {
+      margin-bottom: var(--occpl-space-6);
+    }
+    .hello h1 {
+      font-size: 2.375rem;
+      letter-spacing: -0.03em;
+    }
+    .name {
+      color: var(--occpl-color-primary);
+    }
+    .subtitle {
+      margin: var(--occpl-space-1) 0 0;
+      font-size: 1.0625rem;
+    }
+    .lists {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--occpl-space-4);
+      margin-top: var(--occpl-space-4);
+      align-items: flex-start;
+    }
+    .panel {
+      flex: 1 1 18rem;
+      min-width: 0;
+    }
+    .panel:first-child {
+      flex-grow: 3;
+    }
+    .crimson-top {
+      border-top: 5px solid var(--occpl-color-primary);
+    }
+    .indigo-top {
+      border-top: 5px solid var(--occpl-color-accent);
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--occpl-space-2);
+    }
+    .panel-head h2 {
+      margin: 0;
+    }
+    .panel-head a {
+      font-weight: 600;
+    }
+    .row-item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--occpl-space-2) var(--occpl-space-4);
+      padding: var(--occpl-space-3) 0;
+      border-top: 1px solid var(--occpl-color-border);
+      color: inherit;
+      text-decoration: none;
+    }
+    .row-item strong:first-child {
+      flex: 2 1 9rem;
+    }
+    .job {
+      flex-wrap: nowrap;
+      align-items: flex-start;
+    }
+    .job-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .dot {
+      flex: none;
+      width: 0.625rem;
+      height: 0.625rem;
+      margin-top: 0.4rem;
+      border-radius: 50%;
+      background: var(--occpl-color-text-muted);
+    }
+    .dot.succeeded {
+      background: var(--occpl-color-teal);
+    }
+    .dot.failed {
+      background: var(--occpl-color-primary);
+    }
+    .dot.running,
+    .dot.pending,
+    .dot.awaiting_callback {
+      background: var(--occpl-color-amber);
     }
     .overview {
       display: flex;
@@ -190,13 +328,21 @@ export class PlatformDashboard implements OnInit {
 
   protected readonly tiles = signal<Tile[]>([]);
   protected readonly loaded = signal(false);
+  protected readonly recent = signal<Company[]>([]);
+  protected readonly jobs = signal<ProvisioningJob[]>([]);
+
+  protected jobStatus(job: ProvisioningJob): string {
+    return job.status === 'FAILED'
+      ? `failed, attempt ${job.attempts} of ${job.maxAttempts}`
+      : job.status.toLowerCase().replace('_', ' ');
+  }
 
   protected readonly greeting = computed(() => {
     const hour = new Date().getHours();
     const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
     const me = this.session.me();
     const name = (me?.displayName || '').split(' ')[0];
-    return name ? `Good ${part}, ${name}` : `Good ${part}`;
+    return { text: `Good ${part}`, name };
   });
 
   /** Companies by status, drawn from the same totals as the tiles (only when the user may read companies). */
@@ -325,6 +471,18 @@ export class PlatformDashboard implements OnInit {
       },
       total(this.platform.jobs({ status: 'FAILED', size: 1 })),
     );
+    if (this.session.hasPlatform('platform.companies.read')) {
+      this.companies
+        .search({ size: 5 })
+        .pipe(catchError(() => of(null)))
+        .subscribe((page) => this.recent.set(page?.items ?? []));
+    }
+    if (this.session.hasPlatform('platform.provisioning.read')) {
+      this.platform
+        .jobs({ size: 5 })
+        .pipe(catchError(() => of(null)))
+        .subscribe((page) => this.jobs.set(page?.items ?? []));
+    }
     this.tiles.set(await Promise.all(requests));
     this.loaded.set(true);
   }
