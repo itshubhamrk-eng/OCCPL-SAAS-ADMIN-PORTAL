@@ -74,7 +74,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: core-platform (reuse the previous image when unchanged)
         id: reuse_core_platform
         if: steps.changes.outputs.core != 'true'
@@ -102,7 +102,7 @@ jobs:
           fi
       - name: core-platform (build)
         if: steps.changes.outputs.core == 'true' || steps.reuse_core_platform.outputs.reused != 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend/core-platform
           push: true
@@ -137,7 +137,7 @@ jobs:
           fi
       - name: admin-portal (build)
         if: steps.changes.outputs.portal == 'true' || steps.reuse_admin_portal.outputs.reused != 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend/admin-portal
           push: true
@@ -172,7 +172,7 @@ jobs:
           fi
       - name: keycloak (build)
         if: steps.changes.outputs.keycloak == 'true' || steps.reuse_keycloak.outputs.reused != 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: infra/aws/compose/keycloak
           push: true

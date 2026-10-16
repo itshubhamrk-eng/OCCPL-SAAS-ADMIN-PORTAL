@@ -2,7 +2,7 @@
 # One-time (safe to repeat) setup of the Courier Management product on this server:
 #   - adds its settings and generated secrets to .env (existing values are kept)
 #   - creates its MySQL database and user
-# Afterwards: docker compose pull && docker compose up -d   (images come from the courier repository's workflow)
+# Afterwards: docker compose pull && docker compose up -d   (images come from the courier-service and courier-web repositories' Image workflow)
 #   bin/courier-setup.sh <courier-host> <default-plan-code>      e.g. courier.dev.occplsoftech.com STARTER
 set -euo pipefail
 cd "$(dirname "$0")/.."

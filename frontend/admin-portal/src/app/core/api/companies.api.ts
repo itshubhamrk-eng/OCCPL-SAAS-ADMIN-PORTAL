@@ -45,6 +45,17 @@ export class CompaniesApi {
     });
   }
 
+  setImage(id: string, kind: 'logo' | 'favicon', file: File): Observable<Company> {
+    // The request body is the image itself; the server checks the real file type.
+    return this.http.put<Company>(this.api('/companies', id, `/${kind}`), file, {
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    });
+  }
+
+  removeImage(id: string, kind: 'logo' | 'favicon'): Observable<Company> {
+    return this.http.delete<Company>(this.api('/companies', id, `/${kind}`));
+  }
+
   changeStatus(
     id: string,
     action: 'activate' | 'suspend' | 'deactivate',

@@ -4,12 +4,43 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Courier hosting uses the split repositories; Sign in with OCCPL setup (2026-10-16)
+- The courier app now lives in two repositories, `courier-service` (API) and `courier-web` (web app); the optional hosting profile pulls `ghcr.io/itshubhamrk-eng/courier-service` and `courier-web`.
+- The courier backend gets the settings for "Sign in with OCCPL", and the runbook (section 9, step 13) lists the two Keycloak clients and the product launch path it needs.
+
+### Round favicon (2026-10-16)
+- The OC logo favicon is now a circle (transparent corners) on the portal and the sign-in page, instead of a white square. The icon links use `?v=3` so browsers fetch it again.
+
+### Company profile: website, address, GST/PAN, support contact, logo and favicon (2026-10-16)
+- New optional fields when creating or editing a company in the portal: website, address (two lines, city, state, postal code), GST number, PAN,
+  a **support contact** (name, email, phone; new contact type `SUPPORT`) and a logo and favicon. All optional. GST and PAN can be changed only by OCCPL staff,
+  like the tax id; company admins can change the rest.
+- Images go to a private S3 bucket (`FILES_S3_BUCKET`, see RUNBOOK §9 step 12) and are shown through one-hour signed links. Logo: PNG, JPEG or WebP up to 512 KB; favicon also ICO, up to 128 KB.
+  The type is checked from the file content, SVG is refused. Without a bucket, upload answers 503 and the rest of the portal is unchanged.
+- API: `profile` object on create/update/get (`CompanyView.profile`), `PUT|DELETE /companies/{id}/logo` and `/favicon` (the request body is the image), `supportContact` on create.
+  Migration `V202610161000__company_profile.sql`.
+- Provisioning calls now also carry country, website, address, GST, PAN, support contact and 24-hour signed logo/favicon links (only fields that are set).
+- Tests: `ImageTypesTest`, `ProvisioningBodyTest`, `profile-validators.spec.ts`. The integration tests need Docker and were not run here.
+
 ### Provisioning calls now carry the company's admin contact (2026-10-16)
 - The body Core sends to a product's `PUT /provisioning/v1/tenants/{companyId}` gains optional `adminEmail`, `adminName` and `adminPhone`,
   taken from the company's PRIMARY contact (`CompanyDirectory.primaryContact`). Fields that are empty are left out; a company with no
   primary contact still provisions.
 - The primary contact now requires a phone number (international format) when it is created or saved, in the API and in the company
   page ("Phone (required)"). Billing and technical contacts stay optional. Existing primary contacts without a phone must get one the next time they are edited. Existing products ignore the extra fields (the sample product does). Unit test: `ProvisioningBodyTest`.
+
+### Favicon cache fix (2026-10-16)
+- The web server cached every `.ico` and `.png` for a year as "immutable", so browsers kept showing the previous (Angular) icon after the OC logo was deployed.
+  The icons now revalidate hourly and their links carry `?v=2`, which makes browsers fetch the new files straight away. Hashed build files keep the long cache.
+
+### Portal favicon (2026-10-16)
+- The browser tab, bookmarks and phone home screen now show the OC logo (`favicon.ico` with 16/32/48 px, 32 and 192 px PNGs, Apple touch icon), replacing the default icon.
+- The sign-in page (Keycloak, `occpl` theme) uses the same icon, so the whole platform shows one tab icon. Only the sign-in pages are themed; Keycloak's admin console keeps its own.
+
+### Dashboard and font now match the chosen design (2026-10-16)
+- The portal uses the Outfit font from the design (self-hosted through `@fontsource-variable/outfit`, so the strict content-security policy still holds).
+- Dashboard: larger greeting with the name in crimson, plus the design's "Recent companies" (latest five, status, date) and "Provisioning" (latest five jobs with a coloured dot) panels.
+  Each panel shows only when the signed-in role may read that data.
 
 ### Light/dark theme switch and phone layout polish (2026-10-16)
 - A sun/moon button in the portal header switches between light and dark. Until someone picks, the browser setting decides; a pick is remembered in that browser

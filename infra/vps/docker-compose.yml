@@ -162,6 +162,11 @@ services:
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      # Company logos and favicons (private S3 bucket). Blank bucket = uploads answer 503, nothing else changes.
+      FILES_S3_BUCKET: ${FILES_S3_BUCKET:-}
+      FILES_S3_REGION: ${FILES_S3_REGION:-ap-south-1}
+      AWS_ACCESS_KEY_ID: ${FILES_AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${FILES_AWS_SECRET_ACCESS_KEY:-}
       BOOTSTRAP_SUPER_ADMIN_EMAIL: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:-}
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError
     ports:
@@ -187,7 +192,7 @@ services:
   # Uses this server's MySQL (own database and user) and Redis. Set up once with bin/courier-setup.sh.
   courier-backend:
     profiles: [courier]
-    image: ${COURIER_BACKEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-backend}:${COURIER_RELEASE:-dev}
+    image: ${COURIER_BACKEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-service}:${COURIER_RELEASE:-dev}
     restart: unless-stopped
     depends_on:
       mysql:
@@ -213,6 +218,12 @@ services:
       OCCPL_PLATFORM_JWK_SET_URI: http://keycloak:8080/realms/occpl/protocol/openid-connect/certs
       OCCPL_PLATFORM_AUDIENCE: courier-api
       OCCPL_PLATFORM_DEFAULT_PLAN_CODE: ${COURIER_DEFAULT_PLAN_CODE:-}
+      # "Sign in with OCCPL": the web client people use, and this app's service client for asking Core who may sign in.
+      OCCPL_PLATFORM_WEB_CLIENT_ID: courier-web
+      OCCPL_PLATFORM_CORE_BASE_URL: ${OCCPL_PLATFORM_CORE_BASE_URL:-}
+      OCCPL_PLATFORM_CORE_TOKEN_URI: ${OCCPL_PLATFORM_CORE_TOKEN_URI:-}
+      OCCPL_PLATFORM_SERVICE_CLIENT_ID: courier-service
+      OCCPL_PLATFORM_SERVICE_CLIENT_SECRET: ${OCCPL_PLATFORM_SERVICE_CLIENT_SECRET:-}
       JAVA_OPTS: -XX:MaxRAMPercentage=70 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError
     networks:
       default:
@@ -223,7 +234,7 @@ services:
 
   courier-frontend:
     profiles: [courier]
-    image: ${COURIER_FRONTEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-frontend}:${COURIER_RELEASE:-dev}
+    image: ${COURIER_FRONTEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-web}:${COURIER_RELEASE:-dev}
     restart: unless-stopped
     depends_on:
       - courier-backend

@@ -53,23 +53,23 @@ jobs:
           role-to-assume: ${{ vars.AWS_BUILD_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
       - uses: aws-actions/amazon-ecr-login@v2
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: core-platform
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend/core-platform
           push: true
           provenance: false
           tags: ${{ vars.ECR_REGISTRY }}/occpl/core-platform:${{ steps.release.outputs.release }}
       - name: admin-portal
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend/admin-portal
           push: true
           provenance: false
           tags: ${{ vars.ECR_REGISTRY }}/occpl/admin-portal:${{ steps.release.outputs.release }}
       - name: keycloak
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: infra/aws/compose/keycloak
           push: true
