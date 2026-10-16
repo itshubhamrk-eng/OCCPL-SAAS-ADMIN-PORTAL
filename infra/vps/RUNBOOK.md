@@ -196,8 +196,29 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
     $K update clients/$CID/optional-client-scopes/$SCOPE -r occpl
     ```
     *Portal* (Super Admin, Products, New product): code `courier`, name `Courier Management`, app URL
-    `https://courier.dev.occplsoftech.com`, API base URL `https://courier-api.dev.occplsoftech.com`, API audience
+    `https://courier.dev.occplsoftech.com`, API base URL `https://courier.dev.occplsoftech.com` (the same host: Caddy sends `/provisioning/*` to the backend), API audience
     `courier-api`. Then add a configuration version
     `{"schemaVersion":1,"launch":{"path":"/"},"provisioning":{"mode":"SYNC","path":"/provisioning/v1/tenants/{companyId}"}}`,
-    publish it and activate the product. On the courier side set `OCCPL_PLATFORM_AUDIENCE=courier-api`,
-    `OCCPL_PLATFORM_ISSUER_URI` and `OCCPL_PLATFORM_JWK_SET_URI` to the realm's, and `OCCPL_PLATFORM_ENABLED=true`.
+    publish it and activate the product.
+11. **Host the courier app (dev).** It runs beside the platform on this server, using this server's MySQL (own database
+    `courier_db` and user) and Redis, and is off unless `COMPOSE_PROFILES` contains `courier`.
+    1. DNS: add an A record `courier.dev.occplsoftech.com` pointing at the server (same address as the other hosts).
+    2. Images: the courier repository's workflow *Courier images* publishes `ghcr.io/itshubhamrk-eng/courier-backend` and
+       `courier-frontend` (tags: the commit SHA and `dev`). The server's `docker login ghcr.io` must be able to read them
+       (a token with `read:packages` on that GitHub account; the packages are private by default).
+    3. Settings and database, once. The plan code is the courier plan you create in step 3 below (it must exist before
+       the first company is provisioned):
+       ```bash
+       cd /opt/occpl && bin/courier-setup.sh courier.dev.occplsoftech.com STARTER
+       docker compose pull && docker compose up -d
+       docker compose logs --tail 80 courier-backend      # Flyway runs the migrations on first start
+       ```
+       The script keeps existing values in `.env`, generates the courier's database password, JWT secret and encryption key,
+       and adds `courier` to `COMPOSE_PROFILES`. From then on every `bin/deploy.sh` also pulls and starts the courier
+       containers (tag `dev`), so push courier images before relying on a deploy.
+    4. Check: `https://courier.dev.occplsoftech.com` shows the courier sign-in page, and
+       `curl -i https://courier.dev.occplsoftech.com/provisioning/v1/tenants/x` answers 401 (the endpoint exists and wants a token).
+    5. Memory: with Core, Keycloak, MySQL, Redis, the portal and the courier backend on one `t3.large`, watch
+       `docker stats`; lower `COURIER_MEM_LIMIT` or move up an instance size if the server swaps.
+    6. The courier app starts with no users and no plans. Its first Super Admin and the plan (`default-plan-code`) are created
+       in the courier app itself; see the courier repository's notes (`MEMORY/modules/platform-integration.md`).

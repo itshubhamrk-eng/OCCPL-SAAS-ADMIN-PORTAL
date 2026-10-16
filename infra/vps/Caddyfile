@@ -24,3 +24,16 @@
 	respond @ops_only 403
 	reverse_proxy keycloak:8080
 }
+
+# Courier Management product (only answers when the courier containers are running). One host:
+# the platform's provisioning calls go to the backend, everything else to the web image, whose
+# nginx forwards /api/ to the backend.
+{$COURIER_HOST} {
+	encode zstd gzip
+	handle /provisioning/* {
+		reverse_proxy courier-backend:8080
+	}
+	handle {
+		reverse_proxy courier-frontend:80
+	}
+}
