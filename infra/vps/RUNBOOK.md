@@ -182,3 +182,22 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    `docker compose up -d --force-recreate caddy`; then add the variable `ALLOW_PUBLIC_ADMIN_CONSOLE` = `true` to the GitHub
    environment **dev** (Settings, Environments, dev), otherwise the smoke test reports the open console as a failure. Anyone can then reach
    the Keycloak administrator sign-in page, so keep `KEYCLOAK_ADMIN_PASSWORD` long and random. Never on production.
+10. **Register the courier product (dev).** Two parts; do the Keycloak part first. Use your own hostnames if they differ.
+    *Keycloak* (on the server, after the `kcadm config credentials` line from step 7). This creates a client scope named
+    like the product's `apiAudience`, gives it an audience mapper, and lets `occpl-core-services` request it per call:
+    ```bash
+    SCOPE=$($K create client-scopes -r occpl -i -s name=courier-api -s protocol=openid-connect \
+      -s 'attributes."include.in.token.scope"=false')
+    $K create client-scopes/$SCOPE/protocol-mappers/models -r occpl -s name=courier-api-audience \
+      -s protocol=openid-connect -s protocolMapper=oidc-audience-mapper \
+      -s 'config."included.custom.audience"=courier-api' -s 'config."access.token.claim"=true' \
+      -s 'config."id.token.claim"=false'
+    CID=$($K get clients -r occpl -q clientId=occpl-core-services --fields id --format csv --noquotes)
+    $K update clients/$CID/optional-client-scopes/$SCOPE -r occpl
+    ```
+    *Portal* (Super Admin, Products, New product): code `courier`, name `Courier Management`, app URL
+    `https://courier.dev.occplsoftech.com`, API base URL `https://courier-api.dev.occplsoftech.com`, API audience
+    `courier-api`. Then add a configuration version
+    `{"schemaVersion":1,"launch":{"path":"/"},"provisioning":{"mode":"SYNC","path":"/provisioning/v1/tenants/{companyId}"}}`,
+    publish it and activate the product. On the courier side set `OCCPL_PLATFORM_AUDIENCE=courier-api`,
+    `OCCPL_PLATFORM_ISSUER_URI` and `OCCPL_PLATFORM_JWK_SET_URI` to the realm's, and `OCCPL_PLATFORM_ENABLED=true`.
