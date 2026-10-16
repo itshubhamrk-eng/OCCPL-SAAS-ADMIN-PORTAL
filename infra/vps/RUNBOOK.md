@@ -220,8 +220,12 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
        `curl -i https://courier.dev.occplsoftech.com/provisioning/v1/tenants/x` answers 401 (the endpoint exists and wants a token).
     5. Memory: with Core, Keycloak, MySQL, Redis, the portal and the courier backend on one `t3.large`, watch
        `docker stats`; lower `COURIER_MEM_LIMIT` or move up an instance size if the server swaps.
-    6. The courier app starts with no users and no plans. Its first Super Admin and the plan (`default-plan-code`) are created
-       in the courier app itself; see `MEMORY/modules/platform-integration.md` in the `courier-service` repository.
+    6. The courier app starts with no users and no plans. Create the first Super Admin without SQL or sharing a password: add
+       `COURIER_BOOTSTRAP_SUPER_ADMIN_EMAIL=you@company.com` and `COURIER_BOOTSTRAP_SUPER_ADMIN_PASSWORD=<a strong password>` to `/opt/occpl/.env`
+       (the `courier-service` image must include the `SuperAdminBootstrap` change), run `docker compose up -d courier-backend`, check
+       `docker compose logs courier-backend | grep -i bootstrap`, then **delete both lines** from `.env` and run `docker compose up -d courier-backend` again.
+       Sign in at the courier host with that account and create the subscription plan whose code you gave to `bin/courier-setup.sh`
+       (details: `MEMORY/modules/platform-integration.md` in the `courier-service` repository.
 12. **Company logos and favicons in S3 (dev).** Optional; without it the company pages work and only image upload answers
     "File storage is not configured".
     1. In the AWS console create a **private** bucket in the same region as the server (for example `occpl-dev-files`,

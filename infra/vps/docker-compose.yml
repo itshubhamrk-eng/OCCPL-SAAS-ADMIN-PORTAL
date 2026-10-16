@@ -219,6 +219,9 @@ services:
       OCCPL_PLATFORM_AUDIENCE: courier-api
       OCCPL_PLATFORM_DEFAULT_PLAN_CODE: ${COURIER_DEFAULT_PLAN_CODE:-}
       # "Sign in with OCCPL": the web client people use, and this app's service client for asking Core who may sign in.
+      # First start only: creates the courier's first Super Admin; remove both from .env once it exists.
+      BOOTSTRAP_SUPER_ADMIN_EMAIL: ${COURIER_BOOTSTRAP_SUPER_ADMIN_EMAIL:-}
+      BOOTSTRAP_SUPER_ADMIN_PASSWORD: ${COURIER_BOOTSTRAP_SUPER_ADMIN_PASSWORD:-}
       OCCPL_PLATFORM_WEB_CLIENT_ID: courier-web
       OCCPL_PLATFORM_CORE_BASE_URL: ${OCCPL_PLATFORM_CORE_BASE_URL:-}
       OCCPL_PLATFORM_CORE_TOKEN_URI: ${OCCPL_PLATFORM_CORE_TOKEN_URI:-}
