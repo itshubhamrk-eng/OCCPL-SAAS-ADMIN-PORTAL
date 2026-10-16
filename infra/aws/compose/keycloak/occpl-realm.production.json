@@ -874,5 +874,6 @@
     "phone",
     "microprofile-jwt",
     "organization"
-  ]
+  ],
+  "loginTheme": "occpl"
 }

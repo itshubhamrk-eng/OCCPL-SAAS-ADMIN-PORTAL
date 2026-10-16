@@ -4,7 +4,8 @@
 One source of truth for flows, policies, roles and mappers; production differs only in:
 - portal client: https://${KC_PORTAL_URL} redirect/web origins, no Swagger UI redirect;
 - no sample-product clients or client scope (each product is registered on its own);
-- SES SMTP through placeholders, HTTPS required for every request.
+- SES SMTP through placeholders, HTTPS required for every request;
+- the OCCPL sign-in theme (themes/occpl).
 Keycloak substitutes ${VAR} from the environment at import time (first start only).
 
 Usage: python3 make-production-realm.py [--check]   (--check fails if the committed file is stale)
@@ -23,6 +24,7 @@ SAMPLE_SCOPES = {"product-sample"}
 def production(realm: dict) -> dict:
     realm = json.loads(json.dumps(realm))  # deep copy
     realm["sslRequired"] = "all"
+    realm["loginTheme"] = "occpl"  # themes/occpl, copied into the image (Dockerfile)
     realm["smtpServer"] = {
         "host": "${KC_SMTP_HOST}", "port": "${KC_SMTP_PORT}", "starttls": "${KC_SMTP_STARTTLS}", "ssl": "${KC_SMTP_SSL}",
         "auth": "true", "user": "${KC_SMTP_USER}", "password": "${KC_SMTP_PASSWORD}",

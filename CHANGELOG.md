@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Sign-in page theme and form spacing (2026-10-15)
+- Keycloak sign-in page restyled to the portal design: `infra/aws/compose/keycloak/themes/occpl` (extends `keycloak.v2`; crimson/indigo mesh background,
+  glass card, crimson button, OCCPL mark, dark mode). Baked into the Keycloak image; the generated production realm sets `loginTheme=occpl`.
+  A realm that already exists (the dev server) keeps its old theme until it is set once: see `infra/vps/RUNBOOK.md` §9.
+- Portal forms and tables: roomier card padding, taller inputs/buttons, filter rows aligned with space above the table, phone header no longer wraps.
+
 ### Portal redesign: "Sunrise Mesh Glass" (2026-10-15, D-18)
 - Design chosen by the owner from 24 sample boards: crimson + indigo on light grey, frosted-glass cards, crimson side menu with icons,
   header bar (environment chip on dev/local, user pill, sign out), colourful dashboard tiles and a companies-by-status donut built from real totals.
