@@ -10,7 +10,7 @@ All notable changes to this project are documented here.
   like the tax id; company admins can change the rest.
 - Images go to a private S3 bucket (`FILES_S3_BUCKET`, see RUNBOOK §9 step 12) and are shown through one-hour signed links. Logo: PNG, JPEG or WebP up to 512 KB; favicon also ICO, up to 128 KB.
   The type is checked from the file content, SVG is refused. Without a bucket, upload answers 503 and the rest of the portal is unchanged.
-- API: `profile` object on create/update/get (`CompanyView.profile`), `PUT|DELETE /companies/{id}/logo` and `/favicon` (multipart field `file`), `supportContact` on create.
+- API: `profile` object on create/update/get (`CompanyView.profile`), `PUT|DELETE /companies/{id}/logo` and `/favicon` (the request body is the image), `supportContact` on create.
   Migration `V202610161000__company_profile.sql`.
 - Provisioning calls now also carry country, website, address, GST, PAN, support contact and 24-hour signed logo/favicon links (only fields that are set).
 - Tests: `ImageTypesTest`, `ProvisioningBodyTest`, `profile-validators.spec.ts`. The integration tests need Docker and were not run here.

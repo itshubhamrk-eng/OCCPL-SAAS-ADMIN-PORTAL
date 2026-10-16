@@ -10,12 +10,10 @@ import com.occpl.platform.shared.web.Etags;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
-import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/companies")
@@ -98,24 +95,33 @@ class CompanyController {
         return ResponseEntity.ok().eTag(Etags.of(company.version())).body(company);
     }
 
-    @PutMapping(value = "/{companyId}/{image:logo|favicon}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping("/{companyId}/logo")
     @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
-    @Operation(summary = "Set the company logo or favicon",
-            description = "Multipart field 'file'. Logo: PNG, JPEG or WebP up to 512 KB. Favicon: also ICO, up to 128 KB. "
+    @Operation(summary = "Set the company logo",
+            description = "The request body is the image itself (PNG, JPEG or WebP, up to 512 KB). "
                     + "503 when file storage is not configured.")
-    CompanyView setImage(@PathVariable UUID companyId, @PathVariable String image,
-            @RequestParam("file") MultipartFile file) throws IOException {
-        return companies.setImage(companyId, imageOf(image), file.getBytes());
+    CompanyView setLogo(@PathVariable UUID companyId, @RequestBody byte[] image) {
+        return companies.setImage(companyId, CompanyService.Image.LOGO, image);
     }
 
-    @DeleteMapping("/{companyId}/{image:logo|favicon}")
+    @PutMapping("/{companyId}/favicon")
     @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
-    CompanyView removeImage(@PathVariable UUID companyId, @PathVariable String image) {
-        return companies.removeImage(companyId, imageOf(image));
+    @Operation(summary = "Set the company favicon",
+            description = "The request body is the image itself (PNG, JPEG, WebP or ICO, up to 128 KB).")
+    CompanyView setFavicon(@PathVariable UUID companyId, @RequestBody byte[] image) {
+        return companies.setImage(companyId, CompanyService.Image.FAVICON, image);
     }
 
-    private static CompanyService.Image imageOf(String image) {
-        return "logo".equals(image) ? CompanyService.Image.LOGO : CompanyService.Image.FAVICON;
+    @DeleteMapping("/{companyId}/logo")
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    CompanyView removeLogo(@PathVariable UUID companyId) {
+        return companies.removeImage(companyId, CompanyService.Image.LOGO);
+    }
+
+    @DeleteMapping("/{companyId}/favicon")
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    CompanyView removeFavicon(@PathVariable UUID companyId) {
+        return companies.removeImage(companyId, CompanyService.Image.FAVICON);
     }
 
     @PostMapping("/{companyId}/activate")
