@@ -226,6 +226,74 @@
   }
 }
 
+.collapse-toggle {
+  display: none;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--occpl-color-border);
+  border-radius: 50%;
+  background: var(--occpl-color-surface);
+  color: var(--occpl-color-text);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--occpl-color-primary);
+  }
+
+  svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  @media (min-width: 56.0625rem) {
+    display: grid;
+  }
+}
+
+// Wide screens only: icons-only menu (the phone drawer is always full width).
+@media (min-width: 56.0625rem) {
+  .shell-side {
+    transition: flex-basis 0.2s ease;
+
+    &.collapsed {
+      flex-basis: 4.75rem;
+      padding-inline: var(--occpl-space-2);
+
+      .brand {
+        justify-content: center;
+        padding: 0;
+      }
+
+      .brand-text,
+      .nav-label,
+      .drawer-signout {
+        display: none;
+      }
+
+      .nav-heading {
+        height: 1px;
+        margin: var(--occpl-space-2) var(--occpl-space-2) var(--occpl-space-3);
+        padding: 0;
+        background: rgb(255 255 255 / 30%);
+        font-size: 0;
+      }
+
+      .shell-nav a {
+        justify-content: center;
+        padding-inline: 0;
+      }
+    }
+  }
+}
+
 .theme-toggle {
   display: grid;
   place-items: center;

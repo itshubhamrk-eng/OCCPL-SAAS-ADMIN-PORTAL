@@ -1,7 +1,7 @@
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <div class="shell">
   @if (hasNav()) {
-    <aside class="shell-side" [class.open]="navOpen()">
+    <aside class="shell-side" [class.open]="navOpen()" [class.collapsed]="collapsed()">
       <a class="brand" routerLink="/">
         <span class="brand-mark" aria-hidden="true">O</span>
         <span class="brand-text">
@@ -19,10 +19,11 @@
                   [routerLink]="item.link"
                   routerLinkActive="active"
                   [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                  [attr.title]="collapsed() ? item.label : null"
                   (click)="navOpen.set(false)"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icon" /></svg>
-                  {{ item.label }}
+                  <span class="nav-label">{{ item.label }}</span>
                 </a>
               </li>
             }
@@ -36,15 +37,18 @@
                 <a
                   [routerLink]="company.link"
                   routerLinkActive="active"
+                  [attr.title]="collapsed() ? company.label : null"
                   (click)="navOpen.set(false)"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M4 21V5l8-3v19M12 9h8v12M4 21h16" />
                   </svg>
-                  {{ company.label }}
-                  @if (company.status !== 'ACTIVE') {
-                    <span class="nav-note">({{ company.status.toLowerCase() }})</span>
-                  }
+                  <span class="nav-label">
+                    {{ company.label }}
+                    @if (company.status !== 'ACTIVE') {
+                      <span class="nav-note">({{ company.status.toLowerCase() }})</span>
+                    }
+                  </span>
                 </a>
               </li>
             }
@@ -68,6 +72,22 @@
   <div class="shell-col">
     <header class="shell-header">
       @if (hasNav()) {
+        <button
+          type="button"
+          class="collapse-toggle"
+          [attr.aria-pressed]="collapsed()"
+          [attr.aria-label]="collapsed() ? 'Expand the menu' : 'Collapse the menu'"
+          [attr.title]="collapsed() ? 'Expand the menu' : 'Collapse the menu'"
+          (click)="toggleCollapsed()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            @if (collapsed()) {
+              <path d="M13 6l6 6-6 6M5 6l6 6-6 6" />
+            } @else {
+              <path d="M11 6l-6 6 6 6M19 6l-6 6 6 6" />
+            }
+          </svg>
+        </button>
         <button
           type="button"
           class="nav-toggle"

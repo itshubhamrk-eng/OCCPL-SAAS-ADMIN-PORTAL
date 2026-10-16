@@ -9,6 +9,8 @@ All notable changes to this project are documented here.
   (`ThemeService`, `data-theme` on the root element, dark values in a shared mixin in `styles/_tokens.scss`). Tested in `theme.service.spec.ts`.
 - Phones: the header fits the brand, theme button and avatar; Sign out moves into the menu drawer (it stays in the header when there is no menu); long codes in card-style tables wrap.
 - The Keycloak sign-in page still follows the browser setting only (it is a separate application).
+- Wide screens: a button at the left of the header collapses the side menu to an icon rail (names show as tooltips) and expands it again; the choice is remembered per browser.
+  Phones keep the full-width drawer. Per-component style budget raised to 8 kB (warning) / 12 kB (error).
 
 ### Dev opt-out for the admin-console check (2026-10-16)
 - The smoke test still fails when the Keycloak admin console answers from the internet. The development environment can opt out with the
