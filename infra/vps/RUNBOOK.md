@@ -164,11 +164,7 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    (key-only login, fail2ban), plus 80 and 443. If you create the instance by hand in the console instead of
    Terraform: Ubuntu 24.04, `t3.large`, 80 GiB gp3, Elastic IP, credit specification *Standard*, IMDSv2 only; log in
    as `ubuntu` with the key pair you created, add `~/.ssh/occpl_vps.pub` to `~/.ssh/authorized_keys`, then continue at step 2.
-7. **One-time code off on dev only (optional).** Add `MFA_PLATFORM_REQUIRED=false` to `/opt/occpl/.env`, then
-   `docker compose up -d core-platform`. Core then gives platform staff their permissions without the authenticator
-   code. To stop Keycloak asking for the code, delete the user's *otp* credential (Keycloak admin console, realm
-   occpl, Users, Credentials). Do not do this on production: MFA for platform roles is a security requirement (D-2).
-8. **Sign-in page theme on an existing realm.** The realm import only runs on the very first start, so a realm created
+7. **Sign-in page theme on an existing realm.** The realm import only runs on the very first start, so a realm created
    before the `occpl` theme existed keeps the stock Keycloak look. Set it once on the server (after the release that
    contains the theme is deployed):
    ```bash
@@ -178,3 +174,7 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
    $K update realms/occpl -s loginTheme=occpl
    ```
    New installs get it from the generated production realm.
+8. **One-time code off on dev only (optional).** Add `MFA_PLATFORM_REQUIRED=false` to `/opt/occpl/.env`, then
+   `docker compose up -d core-platform`. Core then gives platform staff their permissions without the authenticator
+   code. To stop Keycloak asking for the code, delete the user's *otp* credential (Keycloak admin console, realm
+   occpl, Users, Credentials). Do not do this on production: MFA for platform roles is a security requirement (D-2).

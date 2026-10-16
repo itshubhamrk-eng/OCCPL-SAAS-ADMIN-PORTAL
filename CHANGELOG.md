@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Optional MFA switch for the dev server (2026-10-16)
+- `MFA_PLATFORM_REQUIRED` is now passed from `/opt/occpl/.env` to Core (default `true`). Setting it to `false` on the dev server lets platform
+  staff work without an authenticator code; production keeps it on (D-2). See `infra/vps/RUNBOOK.md` §9 step 8.
+
 ### Remaining forms and dialogs reviewed in the new design (2026-10-16)
 - Checked product, plan (new/edit/detail), company overview, members/invitations, subscription, billing, usage, provisioning and
   invitation pages in light, dark and phone width against a mocked API; they inherit the new look from the shared styles.
