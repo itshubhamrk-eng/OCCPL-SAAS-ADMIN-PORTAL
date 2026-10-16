@@ -16,10 +16,12 @@ import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,12 +45,19 @@ class CompanyController {
         CompanyService.ContactData contact = request.primaryContact() == null ? null
                 : new CompanyService.ContactData(request.primaryContact().name(), request.primaryContact().email(),
                         request.primaryContact().phone());
+        CompanyService.ContactData support = request.supportContact() == null ? null
+                : new CompanyService.ContactData(request.supportContact().name(), request.supportContact().email(),
+                        request.supportContact().phone());
+        CompanyRequests.Profile p = request.profile();
+        CompanyService.ProfileData profile = p == null ? null
+                : new CompanyService.ProfileData(p.website(), p.addressLine1(), p.addressLine2(), p.city(), p.state(),
+                        p.postalCode(), p.gstNumber(), p.panNumber());
         CompanyView created = companies.create(new CompanyService.NewCompany(request.code(), request.legalName().strip(),
                 request.displayName().strip(), request.country(), blankToNull(request.taxId()),
                 request.timeZone() == null ? "Asia/Kolkata" : request.timeZone(),
                 request.locale() == null ? "en-IN" : request.locale(), contact,
                 request.initialAdmin().email().strip().toLowerCase(), request.initialAdmin().firstName(),
-                request.initialAdmin().lastName()));
+                request.initialAdmin().lastName(), profile, support));
         return ResponseEntity.created(URI.create("/api/v1/companies/" + created.id()))
                 .eTag(Etags.of(created.version())).body(created);
     }
@@ -77,9 +86,42 @@ class CompanyController {
     ResponseEntity<CompanyView> update(@PathVariable UUID companyId,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody CompanyRequests.UpdateCompany request) {
+        CompanyRequests.Profile p = request.profile();
+        CompanyService.ProfileChanges profile = p == null ? null
+                : new CompanyService.ProfileChanges(p.website(), p.addressLine1(), p.addressLine2(), p.city(), p.state(),
+                        p.postalCode(), p.gstNumber(), p.panNumber());
         CompanyView company = companies.update(companyId, new CompanyService.CompanyChanges(request.legalName(),
-                request.displayName(), request.country(), request.taxId()), ifMatch);
+                request.displayName(), request.country(), request.taxId(), profile), ifMatch);
         return ResponseEntity.ok().eTag(Etags.of(company.version())).body(company);
+    }
+
+    @PutMapping("/{companyId}/logo")
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    @Operation(summary = "Set the company logo",
+            description = "The request body is the image itself (PNG, JPEG or WebP, up to 512 KB). "
+                    + "503 when file storage is not configured.")
+    CompanyView setLogo(@PathVariable UUID companyId, @RequestBody byte[] image) {
+        return companies.setImage(companyId, CompanyService.Image.LOGO, image);
+    }
+
+    @PutMapping("/{companyId}/favicon")
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    @Operation(summary = "Set the company favicon",
+            description = "The request body is the image itself (PNG, JPEG, WebP or ICO, up to 128 KB).")
+    CompanyView setFavicon(@PathVariable UUID companyId, @RequestBody byte[] image) {
+        return companies.setImage(companyId, CompanyService.Image.FAVICON, image);
+    }
+
+    @DeleteMapping("/{companyId}/logo")
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    CompanyView removeLogo(@PathVariable UUID companyId) {
+        return companies.removeImage(companyId, CompanyService.Image.LOGO);
+    }
+
+    @DeleteMapping("/{companyId}/favicon")
+    @PreAuthorize("@tenant.check(#companyId, 'company.profile.manage', 'platform.companies.manage')")
+    CompanyView removeFavicon(@PathVariable UUID companyId) {
+        return companies.removeImage(companyId, CompanyService.Image.FAVICON);
     }
 
     @PostMapping("/{companyId}/activate")

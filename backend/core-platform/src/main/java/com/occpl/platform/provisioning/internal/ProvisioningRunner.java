@@ -4,6 +4,7 @@ import com.occpl.platform.catalog.api.ProductCatalog;
 import com.occpl.platform.catalog.api.ProductSummary;
 import com.occpl.platform.catalog.api.PublishedConfig;
 import com.occpl.platform.company.api.CompanyDirectory;
+import com.occpl.platform.company.api.CompanyProfile;
 import com.occpl.platform.company.api.CompanySummary;
 import com.occpl.platform.company.api.PrimaryContact;
 import com.occpl.platform.provisioning.internal.ProductServiceClient.Call;
@@ -139,6 +140,7 @@ public class ProvisioningRunner {
         body.put("companyCode", company.code());
         body.put("companyName", company.displayName());
         addAdmin(body, companies.primaryContact(company.id()).orElse(null));
+        addProfile(body, companies.profile(company.id()).orElse(null));
         body.put("productCode", product.code());
         body.put("configVersion", settings.versionNo());
         body.put("async", settings.mode() == ProductSettings.Mode.ASYNC);
@@ -160,6 +162,29 @@ public class ProvisioningRunner {
         putIfText(body, "adminEmail", contact.email());
         putIfText(body, "adminName", contact.name());
         putIfText(body, "adminPhone", contact.phone());
+    }
+
+    /** The company's optional profile; only fields that are set are sent. */
+    static void addProfile(Map<String, Object> body, CompanyProfile profile) {
+        if (profile == null) {
+            return;
+        }
+        putIfText(body, "country", profile.country());
+        putIfText(body, "website", profile.website());
+        putIfText(body, "addressLine1", profile.addressLine1());
+        putIfText(body, "addressLine2", profile.addressLine2());
+        putIfText(body, "city", profile.city());
+        putIfText(body, "state", profile.state());
+        putIfText(body, "postalCode", profile.postalCode());
+        putIfText(body, "gstNumber", profile.gstNumber());
+        putIfText(body, "panNumber", profile.panNumber());
+        putIfText(body, "logoUrl", profile.logoUrl());
+        putIfText(body, "faviconUrl", profile.faviconUrl());
+        if (profile.support() != null) {
+            putIfText(body, "supportName", profile.support().name());
+            putIfText(body, "supportEmail", profile.support().email());
+            putIfText(body, "supportPhone", profile.support().phone());
+        }
     }
 
     private static void putIfText(Map<String, Object> body, String key, String value) {

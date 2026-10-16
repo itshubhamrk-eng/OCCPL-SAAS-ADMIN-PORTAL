@@ -10,7 +10,9 @@ import com.occpl.platform.shared.error.ErrorCode;
 import com.occpl.platform.shared.id.UuidV7;
 import com.occpl.platform.shared.paging.Likes;
 import com.occpl.platform.shared.paging.PageRequests;
+import com.occpl.platform.shared.storage.FileStorage;
 import com.occpl.platform.shared.web.Etags;
+import java.time.Duration;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
@@ -18,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -40,9 +43,11 @@ public class CompanyService {
     private final AuditLogger audit;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final FileStorage files;
 
     CompanyService(CompanyRepository companies, CompanySettingsRepository settings, CompanyContactRepository contacts,
-            CompanyStatusChangeRepository history, AuditLogger audit, ApplicationEventPublisher events, Clock clock) {
+            CompanyStatusChangeRepository history, AuditLogger audit, ApplicationEventPublisher events, Clock clock,
+            FileStorage files) {
         this.companies = companies;
         this.settings = settings;
         this.contacts = contacts;
@@ -50,21 +55,38 @@ public class CompanyService {
         this.audit = audit;
         this.events = events;
         this.clock = clock;
+        this.files = files;
     }
 
     public record CompanyView(UUID id, String code, String legalName, String displayName, CompanyStatus status,
-            String country, String taxId, Instant createdAt, Instant updatedAt, long version) {
+            String country, String taxId, Profile profile, Instant createdAt, Instant updatedAt, long version) {
+    }
+
+    /** Optional profile; image links are signed and expire, so fetch them fresh rather than storing them. */
+    public record Profile(String website, String addressLine1, String addressLine2, String city, String state,
+            String postalCode, String gstNumber, String panNumber, String logoUrl, String faviconUrl) {
+    }
+
+    /** Profile values to store; a null or blank value clears the field. */
+    public record ProfileData(String website, String addressLine1, String addressLine2, String city, String state,
+            String postalCode, String gstNumber, String panNumber) {
+    }
+
+    /** Profile changes: null leaves a field unchanged, an empty string clears it. */
+    public record ProfileChanges(String website, String addressLine1, String addressLine2, String city, String state,
+            String postalCode, String gstNumber, String panNumber) {
     }
 
     public record NewCompany(String code, String legalName, String displayName, String country, String taxId,
             String timeZone, String locale, ContactData primaryContact, String initialAdminEmail,
-            String initialAdminFirstName, String initialAdminLastName) {
+            String initialAdminFirstName, String initialAdminLastName, ProfileData profile, ContactData supportContact) {
     }
 
     public record ContactData(String name, String email, String phone) {
     }
 
-    public record CompanyChanges(String legalName, String displayName, String country, String taxId) {
+    public record CompanyChanges(String legalName, String displayName, String country, String taxId,
+            ProfileChanges profile) {
     }
 
     public record SettingsView(String timeZone, String locale, List<String> allowedEmailDomains, long version) {
@@ -90,6 +112,15 @@ public class CompanyService {
         if (request.primaryContact() != null) {
             saveContact(company.id(), CompanyContact.Type.PRIMARY, request.primaryContact(), now);
         }
+        if (request.supportContact() != null) {
+            saveContact(company.id(), CompanyContact.Type.SUPPORT, request.supportContact(), now);
+        }
+        if (request.profile() != null) {
+            ProfileData p = request.profile();
+            company.updateProfile(blankToNull(p.website()), blankToNull(p.addressLine1()), blankToNull(p.addressLine2()),
+                    blankToNull(p.city()), blankToNull(p.state()), blankToNull(p.postalCode()),
+                    blankToNull(p.gstNumber()), blankToNull(p.panNumber()), actor, now);
+        }
         history.save(new CompanyStatusChange(UuidV7.generate(clock), company.id(), null, CompanyStatus.ACTIVE,
                 "Company created", actor, now));
         audit.record(AuditEvent.success("company.created", "company", company.id(), company.id(),
@@ -104,7 +135,7 @@ public class CompanyService {
             List<String> sort) {
         return companies.search(status, country, Likes.prefix(q),
                         PageRequests.of(page, size, sort, SORTS, Sort.by(Sort.Direction.DESC, "createdAt")))
-                .map(CompanyService::view);
+                .map(this::view);
     }
 
     @Transactional(readOnly = true)
@@ -132,6 +163,22 @@ public class CompanyService {
         String country = pick("country", company.country(), changes.country(), diff);
         String taxId = pick("taxId", company.taxId(), changes.taxId() == null ? null : blankToNull(changes.taxId()),
                 changes.taxId() != null, diff);
+        ProfileChanges profile = changes.profile();
+        if (profile != null) {
+            if (!platform && (profile.gstNumber() != null || profile.panNumber() != null)) {
+                throw new ApiException(ErrorCode.FORBIDDEN,
+                        "Only OCCPL staff can change the GST or PAN number. Contact support.");
+            }
+            String website = pickProfile("website", company.website(), profile.website(), diff);
+            String line1 = pickProfile("addressLine1", company.addressLine1(), profile.addressLine1(), diff);
+            String line2 = pickProfile("addressLine2", company.addressLine2(), profile.addressLine2(), diff);
+            String city = pickProfile("city", company.city(), profile.city(), diff);
+            String state = pickProfile("state", company.state(), profile.state(), diff);
+            String postal = pickProfile("postalCode", company.postalCode(), profile.postalCode(), diff);
+            String gst = pickProfile("gstNumber", company.gstNumber(), profile.gstNumber(), diff);
+            String pan = pickProfile("panNumber", company.panNumber(), profile.panNumber(), diff);
+            company.updateProfile(website, line1, line2, city, state, postal, gst, pan, user.userId(), clock.instant());
+        }
         if (!diff.isEmpty()) {
             company.update(legalName, displayName, country, taxId, user.userId(), clock.instant());
             companies.flush();
@@ -240,7 +287,7 @@ public class CompanyService {
         try {
             return CompanyContact.Type.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw ApiException.validation("Contact type must be PRIMARY, BILLING or TECHNICAL.");
+            throw ApiException.validation("Contact type must be PRIMARY, BILLING, TECHNICAL or SUPPORT.");
         }
     }
 
@@ -261,9 +308,92 @@ public class CompanyService {
         return value == null || value.isBlank() ? null : value.strip();
     }
 
-    private static CompanyView view(Company c) {
+    private CompanyView view(Company c) {
+        Profile profile = new Profile(c.website(), c.addressLine1(), c.addressLine2(), c.city(), c.state(),
+                c.postalCode(), c.gstNumber(), c.panNumber(), signed(c.logoKey()), signed(c.faviconKey()));
         return new CompanyView(c.id(), c.code(), c.legalName(), c.displayName(), c.status(), c.country(), c.taxId(),
-                c.createdAt(), c.updatedAt(), c.version());
+                profile, c.createdAt(), c.updatedAt(), c.version());
+    }
+
+    private String signed(String key) {
+        return key == null ? null : files.signedUrl(key, IMAGE_LINK_VALIDITY).orElse(null);
+    }
+
+    private static String pickProfile(String field, String current, String requested, Map<String, Object> diff) {
+        return pick(field, current, requested == null ? null : blankToNull(requested), requested != null, diff);
+    }
+
+    public static final Duration IMAGE_LINK_VALIDITY = Duration.ofHours(1);
+
+    public enum Image {
+        LOGO("logo", 512 * 1024), FAVICON("favicon", 128 * 1024);
+
+        final String prefix;
+        final int maxBytes;
+
+        Image(String prefix, int maxBytes) {
+            this.prefix = prefix;
+            this.maxBytes = maxBytes;
+        }
+    }
+
+    /**
+     * Stores a company logo or favicon (PNG, JPEG, WebP, or ICO for favicons), replacing the previous one.
+     * The file type is checked from the content, not the name or declared type.
+     */
+    @Transactional
+    public CompanyView setImage(UUID companyId, Image image, byte[] content) {
+        if (!files.enabled()) {
+            throw new ApiException(ErrorCode.STORAGE_DISABLED,
+                    "Image upload is not available: file storage is not configured.");
+        }
+        if (content == null || content.length == 0) {
+            throw ApiException.validation("The file is empty.");
+        }
+        if (content.length > image.maxBytes) {
+            throw ApiException.validation("The " + image.prefix + " must be at most " + (image.maxBytes / 1024) + " KB.");
+        }
+        ImageTypes.Detected type = ImageTypes.detect(content, image == Image.FAVICON)
+                .orElseThrow(() -> ApiException.validation(image == Image.FAVICON
+                        ? "The favicon must be a PNG, JPEG, WebP or ICO image."
+                        : "The logo must be a PNG, JPEG or WebP image."));
+        Company company = require(companyId);
+        UUID actor = CurrentUser.require().userId();
+        String key = "companies/" + companyId + "/" + image.prefix + "-" + UuidV7.generate(clock) + "." + type.extension();
+        files.put(key, content, type.contentType());
+        String previous = image == Image.LOGO ? company.logoKey() : company.faviconKey();
+        if (image == Image.LOGO) {
+            company.setLogoKey(key, actor, clock.instant());
+        } else {
+            company.setFaviconKey(key, actor, clock.instant());
+        }
+        companies.flush();
+        if (previous != null) {
+            files.delete(previous);
+        }
+        audit.record(AuditEvent.success("company." + image.prefix + "_changed", "company", companyId, companyId,
+                Map.of("bytes", content.length)));
+        return view(company);
+    }
+
+    @Transactional
+    public CompanyView removeImage(UUID companyId, Image image) {
+        Company company = require(companyId);
+        String previous = image == Image.LOGO ? company.logoKey() : company.faviconKey();
+        if (previous == null) {
+            return view(company);
+        }
+        UUID actor = CurrentUser.require().userId();
+        if (image == Image.LOGO) {
+            company.setLogoKey(null, actor, clock.instant());
+        } else {
+            company.setFaviconKey(null, actor, clock.instant());
+        }
+        companies.flush();
+        files.delete(previous);
+        audit.record(AuditEvent.success("company." + image.prefix + "_removed", "company", companyId, companyId,
+                Map.of()));
+        return view(company);
     }
 
     private static SettingsView settingsView(CompanySettings s) {
