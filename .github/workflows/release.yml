@@ -74,7 +74,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: core-platform (reuse the previous image when unchanged)
         id: reuse_core_platform
         if: steps.changes.outputs.core != 'true'
