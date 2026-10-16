@@ -22,6 +22,10 @@ All notable changes to this project are documented here.
 - The primary contact now requires a phone number (international format) when it is created or saved, in the API and in the company
   page ("Phone (required)"). Billing and technical contacts stay optional. Existing primary contacts without a phone must get one the next time they are edited. Existing products ignore the extra fields (the sample product does). Unit test: `ProvisioningBodyTest`.
 
+### Favicon cache fix (2026-10-16)
+- The web server cached every `.ico` and `.png` for a year as "immutable", so browsers kept showing the previous (Angular) icon after the OC logo was deployed.
+  The icons now revalidate hourly and their links carry `?v=2`, which makes browsers fetch the new files straight away. Hashed build files keep the long cache.
+
 ### Portal favicon (2026-10-16)
 - The browser tab, bookmarks and phone home screen now show the OC logo (`favicon.ico` with 16/32/48 px, 32 and 192 px PNGs, Apple touch icon), replacing the default icon.
 - The sign-in page (Keycloak, `occpl` theme) uses the same icon, so the whole platform shows one tab icon. Only the sign-in pages are themed; Keycloak's admin console keeps its own.
