@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Deploy: optional registry token for the courier images (2026-10-17)
+- The deploy logs the server into `ghcr.io` with the job's token, which cannot read the private `courier-service` and `courier-web` packages of other repositories (403, then a failed rollback). If the secret `GHCR_PULL_TOKEN` (a classic token with only `read:packages`) is set, the deploy uses it instead; without it nothing changes.
+
 ### Courier sign-in: allow the courier host as a CORS origin (2026-10-17)
 - The courier backend refused the sign-in request with "Invalid CORS request" because its allowed origins did not include the courier host. The compose file now sets `APP_CORS_ALLOWED_ORIGINS` to `https://$COURIER_HOST`.
 
