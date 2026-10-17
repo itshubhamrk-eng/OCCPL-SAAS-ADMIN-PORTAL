@@ -204,8 +204,10 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
     `courier_db` and user) and Redis, and is off unless `COMPOSE_PROFILES` contains `courier`.
     1. DNS: add an A record `courier.dev.occplsoftech.com` pointing at the server (same address as the other hosts).
     2. Images: the workflow *Image* in each of the two courier repositories publishes `ghcr.io/itshubhamrk-eng/courier-service`
-       (the API, repository `courier-service`) and `ghcr.io/itshubhamrk-eng/courier-web` (the web app, repository `courier-web`), tags: the commit SHA and `dev`. The server's `docker login ghcr.io` must be able to read them
-       (a token with `read:packages` on that GitHub account; the packages are private by default).
+       (the API, repository `courier-service`) and `ghcr.io/itshubhamrk-eng/courier-web` (the web app, repository `courier-web`), tags: the commit SHA and `dev`. Every deploy logs the server into `ghcr.io` with the workflow's token, which
+       cannot read private packages of other repositories. Add the repository secret `GHCR_PULL_TOKEN` (GitHub, Settings,
+       Secrets and variables, Actions): a *classic* personal access token of the account that owns the packages, with only
+       `read:packages`. The deploy then uses it; without it the courier images fail to pull with 403.
     3. Settings and database, once. The plan code is the courier plan you create in step 3 below (it must exist before
        the first company is provisioned):
        ```bash

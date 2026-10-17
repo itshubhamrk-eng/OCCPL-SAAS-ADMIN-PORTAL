@@ -242,10 +242,13 @@ jobs:
         env:
           HOST: ${{ vars.VPS_HOST }}
           RELEASE: ${{ needs.plan.outputs.release }}
-          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REGISTRY_USER: ${{ github.actor }}
+          # GHCR_PULL_TOKEN (optional secret): a classic personal access token with only read:packages, for private images
+          # in other repositories (the courier-service and courier-web packages). Without it the job's token is used,
+          # which can read only this repository's own packages.
+          REGISTRY_TOKEN: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ secrets.GHCR_PULL_TOKEN && github.repository_owner || github.actor }}
         run: |
-          # The job's token lets the server pull the private images for this deployment.
+          # The token lets the server pull the private images for this deployment.
           printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/id_deploy "occpl@$HOST" \
             "docker login ghcr.io -u '$REGISTRY_USER' --password-stdin >/dev/null"
           ssh -i ~/.ssh/id_deploy "occpl@$HOST" "chmod +x /opt/occpl/bin/*.sh /opt/occpl/backup/*.sh && /opt/occpl/bin/deploy.sh $RELEASE"
