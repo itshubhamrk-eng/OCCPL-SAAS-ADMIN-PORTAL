@@ -196,11 +196,36 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
     $K update clients/$CID/optional-client-scopes/$SCOPE -r occpl
     ```
     *Portal* (Super Admin, Products, New product): code `courier`, name `Courier Management`, app URL
-    `https://courier.dev.occplsoftech.com`, API base URL `https://courier-api.dev.occplsoftech.com`, API audience
+    `https://courier.dev.occplsoftech.com`, API base URL `https://courier.dev.occplsoftech.com` (the same host: Caddy sends `/provisioning/*` to the backend), API audience
     `courier-api`. Then add a configuration version
     `{"schemaVersion":1,"launch":{"path":"/"},"provisioning":{"mode":"SYNC","path":"/provisioning/v1/tenants/{companyId}"}}`,
-    publish it and activate the product. On the courier side set `OCCPL_PLATFORM_AUDIENCE=courier-api`,
-    `OCCPL_PLATFORM_ISSUER_URI` and `OCCPL_PLATFORM_JWK_SET_URI` to the realm's, and `OCCPL_PLATFORM_ENABLED=true`.
+    publish it and activate the product.
+11. **Host the courier app (dev).** It runs beside the platform on this server, using this server's MySQL (own database
+    `courier_db` and user) and Redis, and is off unless `COMPOSE_PROFILES` contains `courier`.
+    1. DNS: add an A record `courier.dev.occplsoftech.com` pointing at the server (same address as the other hosts).
+    2. Images: the workflow *Image* in each of the two courier repositories publishes `ghcr.io/itshubhamrk-eng/courier-service`
+       (the API, repository `courier-service`) and `ghcr.io/itshubhamrk-eng/courier-web` (the web app, repository `courier-web`), tags: the commit SHA and `dev`. The server's `docker login ghcr.io` must be able to read them
+       (a token with `read:packages` on that GitHub account; the packages are private by default).
+    3. Settings and database, once. The plan code is the courier plan you create in step 3 below (it must exist before
+       the first company is provisioned):
+       ```bash
+       cd /opt/occpl && bin/courier-setup.sh courier.dev.occplsoftech.com STARTER
+       docker compose pull && docker compose up -d
+       docker compose logs --tail 80 courier-backend      # Flyway runs the migrations on first start
+       ```
+       The script keeps existing values in `.env`, generates the courier's database password, JWT secret and encryption key,
+       and adds `courier` to `COMPOSE_PROFILES`. From then on every `bin/deploy.sh` also pulls and starts the courier
+       containers (tag `dev`), so push courier images before relying on a deploy.
+    4. Check: `https://courier.dev.occplsoftech.com` shows the courier sign-in page, and
+       `curl -i https://courier.dev.occplsoftech.com/provisioning/v1/tenants/x` answers 401 (the endpoint exists and wants a token).
+    5. Memory: with Core, Keycloak, MySQL, Redis, the portal and the courier backend on one `t3.large`, watch
+       `docker stats`; lower `COURIER_MEM_LIMIT` or move up an instance size if the server swaps.
+    6. The courier app starts with no users and no plans. Create the first Super Admin without SQL or sharing a password: add
+       `COURIER_BOOTSTRAP_SUPER_ADMIN_EMAIL=you@company.com` and `COURIER_BOOTSTRAP_SUPER_ADMIN_PASSWORD=<a strong password>` to `/opt/occpl/.env`
+       (the `courier-service` image must include the `SuperAdminBootstrap` change), run `docker compose up -d courier-backend`, check
+       `docker compose logs courier-backend | grep -i bootstrap`, then **delete both lines** from `.env` and run `docker compose up -d courier-backend` again.
+       Sign in at the courier host with that account and create the subscription plan whose code you gave to `bin/courier-setup.sh`
+       (details: `MEMORY/modules/platform-integration.md` in the `courier-service` repository.
 12. **Company logos and favicons in S3 (dev).** Optional; without it the company pages work and only image upload answers
     "File storage is not configured".
     1. In the AWS console create a **private** bucket in the same region as the server (for example `occpl-dev-files`,
@@ -215,3 +240,18 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
        `FILES_AWS_ACCESS_KEY_ID=...` and `FILES_AWS_SECRET_ACCESS_KEY=...` (leave both out when the instance role has the policy).
        Then `docker compose up -d core-platform`.
     4. Check: open a company, Profile, upload a logo; it should appear. A signed link stops working after an hour, so reload the page to get a new one.
+13. **Sign in with OCCPL for the courier app (dev).** People open Courier from the portal and arrive signed in. Needs steps 10 and 11 first.
+    1. *Keycloak*, two clients (admin console, realm `occpl`, or `kcadm`):
+       - `courier-web`: **public** client (no secret), *Standard flow* on, *PKCE method* `S256`, valid redirect URI
+         `https://courier.dev.occplsoftech.com/sso`, web origin `https://courier.dev.occplsoftech.com`; give it the client scope `courier-api`
+         (step 10) as a **default** scope so its tokens carry that audience, and make sure the `email` and `profile` scopes are default.
+       - `courier-service`: **confidential** client with *Service accounts* on and no other flows. Core uses its client id to know which
+         product is calling: put the same value in the courier product's *Service client id* in the portal (Products, courier, edit).
+         Add the audience mapper `occpl-core` to it, as for other product service clients (`occpl-realm.json` shows the sample product's).
+    2. *Courier product configuration* in the portal: set the launch path to `/sso?company={companyId}` (new configuration version, publish).
+    3. *Server settings* in `/opt/occpl/.env` (the compose file passes them to `courier-backend`):
+       `OCCPL_PLATFORM_CORE_BASE_URL=https://api.dev.occplsoftech.com`,
+       `OCCPL_PLATFORM_CORE_TOKEN_URI=https://auth.dev.occplsoftech.com/realms/occpl/protocol/openid-connect/token`,
+       `OCCPL_PLATFORM_SERVICE_CLIENT_SECRET=<the courier-service secret>`; then `docker compose up -d courier-backend`.
+    4. Check: in the portal open a company that has the courier product and press Open. You should land on the courier dashboard without a
+       password. The first time creates a courier user for you (a company admin on the platform becomes a courier company admin; others start as viewers).

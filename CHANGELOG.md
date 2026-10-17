@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Courier hosting uses the split repositories; Sign in with OCCPL setup (2026-10-16)
+- The courier app now lives in two repositories, `courier-service` (API) and `courier-web` (web app); the optional hosting profile pulls `ghcr.io/itshubhamrk-eng/courier-service` and `courier-web`.
+- The courier backend gets the settings for "Sign in with OCCPL", and the runbook (section 9, step 13) lists the two Keycloak clients and the product launch path it needs.
+
 ### Round favicon (2026-10-16)
 - The OC logo favicon is now a circle (transparent corners) on the portal and the sign-in page, instead of a white square. The icon links use `?v=3` so browsers fetch it again.
 

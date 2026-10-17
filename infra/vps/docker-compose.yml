@@ -21,6 +21,7 @@ services:
       API_HOST: api.${DOMAIN}
       AUTH_HOST: auth.${DOMAIN}
       ADMIN_IPS: ${ADMIN_IPS:-127.0.0.1/32}
+      COURIER_HOST: ${COURIER_HOST:-courier.localhost}   # only used when the courier profile is on
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data   # certificates: keep across restarts (Let's Encrypt rate limits)
@@ -184,6 +185,62 @@ services:
       CSP_CONNECT_SRC: https://api.${DOMAIN} https://auth.${DOMAIN}
     ports:
       - "127.0.0.1:8088:8080"
+    mem_limit: 128m
+    logging: *logging
+
+  # --- Courier Management product (optional: runs only when COMPOSE_PROFILES=courier is in .env) ---
+  # Uses this server's MySQL (own database and user) and Redis. Set up once with bin/courier-setup.sh.
+  courier-backend:
+    profiles: [courier]
+    image: ${COURIER_BACKEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-service}:${COURIER_RELEASE:-dev}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: courier_db
+      DB_USERNAME: courier
+      DB_PASSWORD: ${COURIER_DB_PASSWORD:-}
+      DB_POOL_SIZE: "10"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${COURIER_JWT_SECRET:-}
+      SECRETS_ENCRYPTION_KEY: ${COURIER_SECRETS_ENCRYPTION_KEY:-}
+      # Platform integration: the OCCPL platform provisions companies through /provisioning/v1/**.
+      OCCPL_PLATFORM_ENABLED: "true"
+      OCCPL_PLATFORM_ISSUER_URI: https://auth.${DOMAIN}/realms/occpl
+      OCCPL_PLATFORM_JWK_SET_URI: http://keycloak:8080/realms/occpl/protocol/openid-connect/certs
+      OCCPL_PLATFORM_AUDIENCE: courier-api
+      OCCPL_PLATFORM_DEFAULT_PLAN_CODE: ${COURIER_DEFAULT_PLAN_CODE:-}
+      # "Sign in with OCCPL": the web client people use, and this app's service client for asking Core who may sign in.
+      # First start only: creates the courier's first Super Admin; remove both from .env once it exists.
+      BOOTSTRAP_SUPER_ADMIN_EMAIL: ${COURIER_BOOTSTRAP_SUPER_ADMIN_EMAIL:-}
+      BOOTSTRAP_SUPER_ADMIN_PASSWORD: ${COURIER_BOOTSTRAP_SUPER_ADMIN_PASSWORD:-}
+      OCCPL_PLATFORM_WEB_CLIENT_ID: courier-web
+      OCCPL_PLATFORM_CORE_BASE_URL: ${OCCPL_PLATFORM_CORE_BASE_URL:-}
+      OCCPL_PLATFORM_CORE_TOKEN_URI: ${OCCPL_PLATFORM_CORE_TOKEN_URI:-}
+      OCCPL_PLATFORM_SERVICE_CLIENT_ID: courier-service
+      OCCPL_PLATFORM_SERVICE_CLIENT_SECRET: ${OCCPL_PLATFORM_SERVICE_CLIENT_SECRET:-}
+      JAVA_OPTS: -XX:MaxRAMPercentage=70 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError
+    networks:
+      default:
+        aliases: [backend]   # the courier web image's nginx forwards /api/ to the host name "backend"
+    mem_limit: ${COURIER_MEM_LIMIT:-1g}
+    stop_grace_period: 30s
+    logging: *logging
+
+  courier-frontend:
+    profiles: [courier]
+    image: ${COURIER_FRONTEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-web}:${COURIER_RELEASE:-dev}
+    restart: unless-stopped
+    depends_on:
+      - courier-backend
     mem_limit: 128m
     logging: *logging
 
