@@ -25,7 +25,10 @@ else
 fi
 chmod 600 .env
 
-set -a; . ./.env; set +a
+set -a
+# shellcheck source=/dev/null
+. ./.env
+set +a
 docker compose up -d --wait mysql
 docker compose exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
 CREATE DATABASE IF NOT EXISTS courier_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
