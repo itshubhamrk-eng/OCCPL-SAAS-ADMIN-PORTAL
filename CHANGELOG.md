@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Courier sign-in: allow the courier host as a CORS origin (2026-10-17)
+- The courier backend refused the sign-in request with "Invalid CORS request" because its allowed origins did not include the courier host. The compose file now sets `APP_CORS_ALLOWED_ORIGINS` to `https://$COURIER_HOST`.
+
 ### Courier hosting uses the split repositories; Sign in with OCCPL setup (2026-10-16)
 - The courier app now lives in two repositories, `courier-service` (API) and `courier-web` (web app); the optional hosting profile pulls `ghcr.io/itshubhamrk-eng/courier-service` and `courier-web`.
 - The courier backend gets the settings for "Sign in with OCCPL", and the runbook (section 9, step 13) lists the two Keycloak clients and the product launch path it needs.
