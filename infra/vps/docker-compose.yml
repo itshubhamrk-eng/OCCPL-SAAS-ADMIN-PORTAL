@@ -201,6 +201,8 @@ services:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      # The browser sends this origin with the sign-in request; the courier answers "Invalid CORS request" for any other.
+      APP_CORS_ALLOWED_ORIGINS: https://${COURIER_HOST:-courier.localhost}
       DB_HOST: mysql
       DB_PORT: "3306"
       DB_NAME: courier_db
