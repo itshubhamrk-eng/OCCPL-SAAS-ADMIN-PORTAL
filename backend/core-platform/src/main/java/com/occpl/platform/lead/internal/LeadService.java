@@ -29,6 +29,8 @@ public class LeadService {
     private static final Map<String, String> SORTS = Map.of("companyName", "companyName", "contactName",
             "contactName", "status", "status", "createdAt", "createdAt");
 
+    static final String PUBLIC_SOURCE = "Website";
+
     private final LeadRepository leads;
     private final AuditLogger audit;
     private final Notifications notifications;
@@ -53,15 +55,28 @@ public class LeadService {
 
     @Transactional
     public LeadView register(LeadData data) {
-        UUID actor = CurrentUser.require().userId();
+        Lead lead = create(data, CurrentUser.require().userId());
+        audit.record(AuditEvent.success("lead.registered", "lead", lead.id(), null,
+                Map.of("companyName", lead.companyName(), "email", lead.email())));
+        return view(lead);
+    }
+
+    /** Self-registration from the public website form: no signed-in user, source fixed to "Website". */
+    @Transactional
+    public void registerPublic(LeadData data) {
+        Lead lead = create(new LeadData(data.companyName(), data.contactName(), data.email(), data.phone(),
+                data.productInterest(), PUBLIC_SOURCE, data.notes()), null);
+        audit.recordSystem(AuditEvent.success("lead.registered", "lead", lead.id(), null,
+                Map.of("companyName", lead.companyName(), "email", lead.email(), "channel", "public")));
+    }
+
+    private Lead create(LeadData data, UUID actor) {
         Lead lead = leads.save(new Lead(UuidV7.generate(clock), data.companyName().strip(),
                 data.contactName().strip(), data.email().strip().toLowerCase(), blankToNull(data.phone()),
                 blankToNull(data.productInterest()), blankToNull(data.source()), blankToNull(data.notes()), actor,
                 clock.instant()));
-        audit.record(AuditEvent.success("lead.registered", "lead", lead.id(), null,
-                Map.of("companyName", lead.companyName(), "email", lead.email())));
         notifications.enqueue(LeadEmails.registered(lead));
-        return view(lead);
+        return lead;
     }
 
     @Transactional(readOnly = true)

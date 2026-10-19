@@ -93,12 +93,33 @@ RFC 9457 problem JSON with a stable `code`:
 stale `If-Match`, `422` invalid status move, `429` rate limited. Every response carries
 `X-Correlation-Id`; include it when reporting problems.
 
-## Connecting the website
+## Public website form: POST /public/leads
 
-1. **Server-side (works today):** your website backend gets a token for a dedicated staff user with
-   `platform.leads.manage` and calls `POST /leads` when the contact form is submitted. Keep the
-   credentials on the server only. Caveat: staff users currently require MFA before platform
-   permissions apply, so a non-interactive account needs a decision first.
-2. **Public intake endpoint (recommended, not built):** a `POST /public/leads` that needs no login but
-   is rate-limited, bot-protected and only creates `NEW` leads with `source` fixed to the website. This
-   is the safe way to post straight from the browser.
+For the website's contact form. **No sign-in and no token.** Creates a `NEW` lead with `source`
+`Website` and emails the sender a confirmation.
+
+```bash
+curl -X POST "$BASE/public/leads" -H "Content-Type: application/json" \
+  -d '{"companyName":"Acme Pvt Ltd","contactName":"Priya Shah","email":"priya@acme.example",
+       "phone":"+91 98765 43210","productInterest":"Courier","message":"Please call me"}'
+```
+
+| Field | Notes |
+|---|---|
+| `companyName`, `contactName`, `email` | required (same limits as above) |
+| `phone`, `productInterest` | optional |
+| `message` | optional, ≤ 2000; stored as the lead's notes |
+| `website` | **honeypot**: add a hidden input with this name and leave it empty. Submissions that fill it are silently discarded (still answered `202`) |
+
+Responses: `202 {"received": true}` on success (no lead details are returned), `400` validation,
+`429` after 5 submissions per minute from one IP (`Retry-After` header).
+
+**Setup on the server:** the website's origin must be listed in `occpl.security.cors.allowed-origins`
+(otherwise browsers block the call), and the API must run behind the reverse proxy so the client IP
+is real. Call it from the browser or from your website backend; no secret is involved.
+
+## Calling the staff endpoints from the website backend
+
+`POST /leads` and the rest need a staff token (see Authentication). Use them only from a server,
+never a browser. Staff users currently require MFA before platform permissions apply, so a
+non-interactive account needs a decision first. For a plain contact form, prefer `/public/leads`.

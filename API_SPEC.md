@@ -111,6 +111,7 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
+| POST | `/public/leads` | none (rate limited: 5/min per IP) | Website contact form: `companyName`, `contactName`, `email`, `phone?`, `productInterest?`, `message?`, honeypot `website` (must be empty). Creates a NEW lead with source `Website`, emails a confirmation, answers 202 |
 | POST | `/leads` | P:`platform.leads.manage` | Register (NEW): `companyName`, `contactName`, `email`, `phone?`, `productInterest?`, `source?`, `notes?` |
 | GET | `/leads` | P:`platform.leads.read` | `q` (company/contact/email prefix), `status`, paging, `sort=companyName\|contactName\|status\|createdAt` |
 | GET | `/leads/{leadId}` | P:`platform.leads.read` | Details, `ETag` |

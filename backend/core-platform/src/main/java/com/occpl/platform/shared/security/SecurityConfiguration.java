@@ -91,6 +91,8 @@ class SecurityConfiguration {
                         .requestMatchers("/error").permitAll()
                         // Payment gateway webhooks authenticate with an HMAC signature, not a token.
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/payments/**").permitAll()
+                        // Public website contact form; rate limited and creates NEW leads only.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/public/leads").permitAll()
                         // Product services (client-credentials tokens) may use the service API only, and users never.
                         .requestMatchers("/api/v1/service/**").hasAuthority(ServicePrincipal.AUTHORITY)
                         .anyRequest().access(SecurityConfiguration::userOnly))

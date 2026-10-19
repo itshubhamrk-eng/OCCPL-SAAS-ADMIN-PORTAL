@@ -125,6 +125,32 @@ class LeadIT {
         perform(post(lostUrl), "root", "{\"status\":\"NEW\"}").andExpect(jsonPath("$.status").value("NEW"));
     }
 
+    @Test
+    void acceptsPublicWebsiteEnquiriesWithoutSignIn() throws Exception {
+        String email = "web-" + run + "@enquiry.test";
+        String valid = "{\"companyName\":\"Web Co " + run + "\",\"contactName\":\"Visitor\",\"email\":\""
+                + email + "\",\"message\":\"Please call me\"}";
+        mvc.perform(post("/api/v1/public/leads").contentType(MediaType.APPLICATION_JSON).content(valid))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.received").value(true));
+        assertThat(jdbc.queryForObject("select count(*) from sales_lead where email = ? and status = 'NEW' "
+                + "and source = 'Website' and notes = 'Please call me'", Integer.class, email)).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "select count(*) from notification where template = 'lead-registered' and recipient_email = ?",
+                Integer.class, email)).isEqualTo(1);
+
+        mvc.perform(post("/api/v1/public/leads").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"companyName\":\"\",\"contactName\":\"V\",\"email\":\"nope\"}"))
+                .andExpect(status().isBadRequest());
+
+        String bot = "bot-" + run + "@enquiry.test";
+        mvc.perform(post("/api/v1/public/leads").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"companyName\":\"Bot\",\"contactName\":\"Bot\",\"email\":\"" + bot
+                        + "\",\"website\":\"http://spam.example\"}"))
+                .andExpect(status().isAccepted());
+        assertThat(jdbc.queryForObject("select count(*) from sales_lead where email = ?", Integer.class, bot))
+                .isZero();
+    }
+
     private String registerBody(String company) {
         return "{\"companyName\":\"" + company + "-" + run + "\",\"contactName\":\"Buyer\","
                 + "\"email\":\"Buyer@" + company.toLowerCase() + "-" + run + ".test\",\"source\":\"Website\"}";

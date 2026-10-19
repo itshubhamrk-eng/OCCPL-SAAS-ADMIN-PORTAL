@@ -24,6 +24,17 @@ final class LeadRequests {
             @Size(max = 2000) String notes) {
     }
 
+    /** {@code website} is a honeypot: real visitors never see or fill it. */
+    record PublicLead(
+            @NotBlank @Size(max = 200) String companyName,
+            @NotBlank @Size(max = 200) String contactName,
+            @NotBlank @Email @Size(max = 320) String email,
+            @Pattern(regexp = "|" + PHONE, message = "digits, spaces and + ( ) - . only; 5-32 characters") String phone,
+            @Size(max = 200) String productInterest,
+            @Size(max = 2000) String message,
+            @Size(max = 200) String website) {
+    }
+
     record UpdateLead(
             @Size(min = 1, max = 200) String companyName,
             @Size(min = 1, max = 200) String contactName,

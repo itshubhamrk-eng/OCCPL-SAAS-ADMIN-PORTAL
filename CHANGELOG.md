@@ -8,6 +8,7 @@ All notable changes to this project are documented here.
 - Platform staff can register and manage leads (prospective customers) under **Leads** in the portal: company name, contact name, email, phone, product interest, source and notes. The status flow is new → contacted → qualified → converted, with lost reachable from any open status and reopenable to new.
 - New permissions `platform.leads.read` (also held by Platform Support) and `platform.leads.manage`. Endpoints: `POST/GET /leads`, `GET/PATCH /leads/{leadId}`, `POST /leads/{leadId}/status`. Registering, editing and status changes are audited.
 - A newly registered lead receives a formatted confirmation email (HTML and plain text) through the notification outbox, so it is sent only if the registration commits.
+- Public intake for the website contact form: `POST /api/v1/public/leads` (no sign-in) creates a NEW lead with source `Website`. It is limited to 5 submissions per minute per IP and has a honeypot field against bots. See [docs/LEADS_API.md](docs/LEADS_API.md).
 
 ### Release flow for the courier repositories: server side (2026-10-19)
 - `bin/courier-deploy.sh backend|frontend <git SHA>` deploys one courier image, waits until it is healthy, restarts the web container after a backend change, and rolls back to the previous image on failure. It also works as an SSH forced command, so the courier repositories' release workflows can use a key that can do nothing else.

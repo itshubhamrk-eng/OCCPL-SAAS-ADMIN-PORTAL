@@ -74,19 +74,21 @@ class EndpointSecurityIT {
     }
 
     /** Endpoints without {@code @PreAuthorize} and why that is safe. */
-    private static final Map<String, String> NO_PRE_AUTHORIZE = Map.of(
-            "GET /api/v1/me", "own data of any signed-in user",
-            "GET /api/v1/me/profile", "own data of any signed-in user",
-            "PUT /api/v1/me/profile", "own data of any signed-in user",
-            "POST /api/v1/invitations/accept", "possession of the one-time invitation token",
-            "GET /api/v1/permissions", "public permission catalogue for signed-in users",
-            "GET /api/v1/service/access", "security chain: SERVICE authority; product from the client id",
-            "POST /api/v1/service/usage/consume", "security chain: SERVICE authority; product from the client id",
-            "POST /api/v1/service/usage/release", "security chain: SERVICE authority; product from the client id",
-            "POST /api/v1/service/provisioning/jobs/{jobId}/callback", "security chain: SERVICE authority; job must belong to the caller's product",
-            "POST /api/v1/webhooks/payments/razorpay", "HMAC signature of the raw body");
+    private static final Map<String, String> NO_PRE_AUTHORIZE = Map.ofEntries(
+            Map.entry("GET /api/v1/me", "own data of any signed-in user"),
+            Map.entry("GET /api/v1/me/profile", "own data of any signed-in user"),
+            Map.entry("PUT /api/v1/me/profile", "own data of any signed-in user"),
+            Map.entry("POST /api/v1/invitations/accept", "possession of the one-time invitation token"),
+            Map.entry("GET /api/v1/permissions", "public permission catalogue for signed-in users"),
+            Map.entry("GET /api/v1/service/access", "security chain: SERVICE authority; product from the client id"),
+            Map.entry("POST /api/v1/service/usage/consume", "security chain: SERVICE authority; product from the client id"),
+            Map.entry("POST /api/v1/service/usage/release", "security chain: SERVICE authority; product from the client id"),
+            Map.entry("POST /api/v1/service/provisioning/jobs/{jobId}/callback", "security chain: SERVICE authority; job must belong to the caller's product"),
+            Map.entry("POST /api/v1/webhooks/payments/razorpay", "HMAC signature of the raw body"),
+            Map.entry("POST /api/v1/public/leads", "public website form: per-IP rate limit, honeypot, creates NEW leads only"));
 
-    private static final Set<String> ANONYMOUS_ALLOWED = Set.of("POST /api/v1/webhooks/payments/razorpay");
+    private static final Set<String> ANONYMOUS_ALLOWED = Set.of("POST /api/v1/webhooks/payments/razorpay",
+            "POST /api/v1/public/leads");
 
     /** Smallest valid bodies, so that requests reach authorization and lookups rather than validation. */
     private static final Map<String, String> BODIES = Map.ofEntries(
