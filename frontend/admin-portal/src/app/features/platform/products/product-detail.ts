@@ -19,6 +19,7 @@ import {
 } from '../../../core/api/models';
 import { SessionService } from '../../../core/session/session.service';
 import { FieldError } from '../../../shared/forms/field-error';
+import { beautifyJson } from '../../../shared/forms/json-format';
 import { applyServerErrors } from '../../../shared/forms/server-errors';
 import { ActionDialog } from '../../../shared/ui/action-dialog';
 import { HumanizePipe } from '../../../shared/ui/format.pipes';
@@ -193,6 +194,18 @@ export class ProductDetail implements OnInit {
       );
     }
     this.creatingVersion.set(true);
+  }
+
+  /** Re-indents the configuration; an invalid text stays as typed and shows its error. */
+  protected beautifyConfig(): void {
+    const control = this.versionForm.controls.config;
+    const pretty = beautifyJson(control.value);
+    if (pretty === null) {
+      control.markAsTouched();
+      return;
+    }
+    control.setValue(pretty);
+    control.markAsDirty();
   }
 
   protected async createVersion(): Promise<void> {

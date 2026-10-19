@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Portal: Beautify button for product configuration versions (2026-10-19)
+- The "New version" form on a product has a **Beautify JSON** button that re-indents the configuration text. Invalid JSON is left as typed and shows its error.
+
 ### Deploy: optional registry token for the courier images (2026-10-17)
 - The deploy logs the server into `ghcr.io` with the job's token, which cannot read the private `courier-service` and `courier-web` packages of other repositories (403, then a failed rollback). If the secret `GHCR_PULL_TOKEN` (a classic token with only `read:packages`) is set, the deploy uses it instead; without it nothing changes.
 
