@@ -23,6 +23,7 @@ const ICONS = {
   users:
     'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
   products: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
+  leads: 'M22 3H2l8 9.5V19l4 2v-8.5z',
   plans: 'M4 6h16M4 12h16M4 18h10',
   subscriptions: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
   invoices: 'M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6',
@@ -46,6 +47,7 @@ const PLATFORM_NAV: (NavItem & { permission?: string })[] = [
     link: '/platform/products',
     permission: 'platform.products.read',
   },
+  { icon: ICONS.leads, label: 'Leads', link: '/platform/leads', permission: 'platform.leads.read' },
   { icon: ICONS.plans, label: 'Plans', link: '/platform/plans', permission: 'platform.plans.read' },
   {
     icon: ICONS.subscriptions,

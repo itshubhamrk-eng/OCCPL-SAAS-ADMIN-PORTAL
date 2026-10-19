@@ -9,6 +9,8 @@ INSERT INTO permission (code, scope, description) VALUES
     ('platform.roles.manage',        'PLATFORM', 'Assign platform roles to users'),
     ('platform.products.read',       'PLATFORM', 'View the product catalogue'),
     ('platform.products.manage',     'PLATFORM', 'Register and configure products'),
+    ('platform.leads.read',         'PLATFORM', 'View leads'),
+    ('platform.leads.manage',       'PLATFORM', 'Register, update and change the status of leads'),
     ('platform.plans.read',          'PLATFORM', 'View subscription plans'),
     ('platform.plans.manage',        'PLATFORM', 'Create and publish subscription plans'),
     ('platform.subscriptions.read',  'PLATFORM', 'View company subscriptions'),

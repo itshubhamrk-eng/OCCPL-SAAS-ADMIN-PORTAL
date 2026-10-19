@@ -60,7 +60,7 @@ class CorePlatformApplicationIT {
 
     @Test
     void seedsPermissionCatalogueAndSystemRoles() {
-        assertThat(jdbc.queryForObject("select count(*) from permission", Integer.class)).isEqualTo(28);
+        assertThat(jdbc.queryForObject("select count(*) from permission", Integer.class)).isEqualTo(30);
         assertThat(jdbc.queryForList("select code from role where system_role order by code", String.class))
                 .containsExactly("COMPANY_ADMIN", "COMPANY_MANAGER", "COMPANY_USER", "PLATFORM_SUPPORT", "SUPER_ADMIN");
         assertThat(jdbc.queryForObject("select count(*) from role_permission rp join role r on r.id = rp.role_id "

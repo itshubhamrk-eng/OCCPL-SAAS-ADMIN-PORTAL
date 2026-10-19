@@ -111,6 +111,12 @@ Legend — Auth: **P:** platform permission, **C:** company permission (via memb
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
+| POST | `/public/leads` | none (rate limited: 5/min per IP) | Website contact form: `companyName`, `contactName`, `email`, `phone?`, `productInterest?`, `message?`, honeypot `website` (must be empty). Creates a NEW lead with source `Website`, emails a confirmation, answers 202 |
+| POST | `/leads` | P:`platform.leads.manage` | Register (NEW): `companyName`, `contactName`, `email`, `phone?`, `productInterest?`, `source?`, `notes?` |
+| GET | `/leads` | P:`platform.leads.read` | `q` (company/contact/email prefix), `status`, paging, `sort=companyName\|contactName\|status\|createdAt` |
+| GET | `/leads/{leadId}` | P:`platform.leads.read` | Details, `ETag` |
+| PATCH | `/leads/{leadId}` | P:`platform.leads.manage` | Omitted fields unchanged, `""` clears optional ones; `If-Match` |
+| POST | `/leads/{leadId}/status` | P:`platform.leads.manage` | `status`, `reason?`: NEW→CONTACTED\|QUALIFIED\|LOST, CONTACTED→QUALIFIED\|LOST, QUALIFIED→CONVERTED\|LOST, LOST→NEW; else 422 |
 | POST | `/products` | P:`platform.products.manage` | Register (DRAFT): `code`, `name`, `description?`, `appUrl`, `apiBaseUrl?`, `apiAudience?` |
 | GET | `/products` | P:`platform.products.read` | `q` (code/name prefix), `status`, paging, `sort=name\|code\|createdAt\|status` |
 | GET | `/products/config-schema` | P:`platform.products.read` | JSON Schema for configuration versions |

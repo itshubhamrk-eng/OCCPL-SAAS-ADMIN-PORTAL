@@ -62,7 +62,7 @@ The last ACTIVE COMPANY_ADMIN of a company cannot be removed or demoted.
 ### Permission examples
 
 Platform: `platform.companies.read|manage`, `platform.users.read|manage`,
-`platform.roles.manage`, `platform.products.read|manage`, `platform.plans.read|manage`,
+`platform.roles.manage`, `platform.products.read|manage`, `platform.leads.read|manage`, `platform.plans.read|manage`,
 `platform.subscriptions.read|manage`, `platform.provisioning.read|manage`,
 `platform.audit.read`, `platform.reports.read`, `platform.settings.manage`.
 
