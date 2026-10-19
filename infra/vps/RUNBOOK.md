@@ -257,3 +257,22 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
        `OCCPL_PLATFORM_SERVICE_CLIENT_SECRET=<the courier-service secret>`; then `docker compose up -d courier-backend`.
     4. Check: in the portal open a company that has the courier product and press Open. You should land on the courier dashboard without a
        password. The first time creates a courier user for you (a company admin on the platform becomes a courier company admin; others start as viewers).
+
+
+14. **Release flow for the courier repositories (dev).** Every merge to `main` of `courier-service` and `courier-web` tests, builds the
+    image, deploys it here, runs a smoke test and rolls back if the new container does not become healthy (workflow `Release`;
+    run it by hand with a full commit SHA in *release* to roll back). The workflows log in over SSH with a key that can run
+    only `bin/courier-deploy.sh` (it is part of the compose bundle, so it is on the server after the first deploy that has it).
+    One-time setup:
+    1. On your computer create a key pair used only for this: `ssh-keygen -t ed25519 -N '' -C courier-deploy -f courier-deploy`.
+    2. On the server append the public key to `~/.ssh/authorized_keys` of user `occpl`, as one line with the restriction in front:
+       `command="/opt/occpl/bin/courier-deploy.sh",restrict ssh-ed25519 AAAA... courier-deploy`
+       (`restrict` turns off shells, forwarding and everything else; the script accepts only `backend|frontend <git SHA or dev>`).
+    3. In **each** of the two courier repositories (Settings, Environments, new environment **dev**): secret `VPS_SSH_KEY` = the
+       private key file, secret `VPS_KNOWN_HOSTS` = the output of `ssh-keyscan -t ed25519 <server address>`, variable `VPS_HOST` =
+       the server address, variable `COURIER_URL` = `https://courier.dev.occplsoftech.com`. Delete the private key file afterwards.
+    4. The server must be logged in to `ghcr.io` with the `GHCR_PULL_TOKEN` token (every OCCPL deploy does this); the courier
+       deploy only runs `docker compose pull` for its own image.
+    The image tags are kept in `.env` as `COURIER_BACKEND_RELEASE` and `COURIER_FRONTEND_RELEASE` (default `dev`), so the two
+    images are released and rolled back independently. After the backend is replaced the web container is restarted, because its
+    nginx looks the backend up only once at start.
