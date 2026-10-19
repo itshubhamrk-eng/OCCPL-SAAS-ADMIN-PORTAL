@@ -4,6 +4,7 @@ import com.occpl.platform.audit.api.AuditEvent;
 import com.occpl.platform.audit.api.AuditLogger;
 import com.occpl.platform.identity.api.CurrentUser;
 import com.occpl.platform.lead.api.LeadStatus;
+import com.occpl.platform.notification.api.Notifications;
 import com.occpl.platform.shared.error.ApiException;
 import com.occpl.platform.shared.id.UuidV7;
 import com.occpl.platform.shared.paging.Likes;
@@ -30,11 +31,13 @@ public class LeadService {
 
     private final LeadRepository leads;
     private final AuditLogger audit;
+    private final Notifications notifications;
     private final Clock clock;
 
-    LeadService(LeadRepository leads, AuditLogger audit, Clock clock) {
+    LeadService(LeadRepository leads, AuditLogger audit, Notifications notifications, Clock clock) {
         this.leads = leads;
         this.audit = audit;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -57,6 +60,7 @@ public class LeadService {
                 clock.instant()));
         audit.record(AuditEvent.success("lead.registered", "lead", lead.id(), null,
                 Map.of("companyName", lead.companyName(), "email", lead.email())));
+        notifications.enqueue(LeadEmails.registered(lead));
         return view(lead);
     }
 

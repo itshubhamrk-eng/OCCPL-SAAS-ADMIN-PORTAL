@@ -74,6 +74,10 @@ class LeadIT {
         assertThat(lead.get("status").asString()).isEqualTo("NEW");
         assertThat(lead.get("email").asString()).isEqualTo("buyer@acme-" + run + ".test");
 
+        assertThat(jdbc.queryForObject(
+                "select count(*) from notification where template = 'lead-registered' and recipient_email = ?",
+                Integer.class, "buyer@acme-" + run + ".test")).isEqualTo(1);
+
         String id = lead.get("id").asString();
         perform(get("/api/v1/leads/" + id), "support", null).andExpect(status().isOk());
         perform(get("/api/v1/leads/" + id), "plain", null).andExpect(status().isForbidden());
