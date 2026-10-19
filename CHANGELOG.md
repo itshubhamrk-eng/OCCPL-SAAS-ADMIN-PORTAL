@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Runbook: courier launch path (2026-10-19)
+- The courier product's launch path is `/sso/{companyId}`: the configuration schema allows only path characters, so the earlier `/sso?company={companyId}` was rejected. The courier web app accepts the company in the path.
+
 ### Courier CORS: correct environment variable name (2026-10-19)
 - The previous change set `APP_CORS_ALLOWED_ORIGINS`, which Spring Boot does not map to `app.cors.allowed-origins` (dashes are removed, not turned into underscores), so the courier still refused sign-in with "Invalid CORS request". The compose file now sets `APP_CORS_ALLOWEDORIGINS`.
 
