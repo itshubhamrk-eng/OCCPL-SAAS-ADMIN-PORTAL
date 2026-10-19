@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Portal: Beautify button for product configuration versions (2026-10-19)
+- The "New version" form on a product has a **Beautify JSON** button that re-indents the configuration text. Invalid JSON is left as typed and shows its error.
+
 ### Runbook: courier launch path (2026-10-19)
 - The courier product's launch path is `/sso/{companyId}`: the configuration schema allows only path characters, so the earlier `/sso?company={companyId}` was rejected. The courier web app accepts the company in the path.
 
