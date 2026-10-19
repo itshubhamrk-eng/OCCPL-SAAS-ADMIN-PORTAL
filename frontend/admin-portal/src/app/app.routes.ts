@@ -101,6 +101,27 @@ export const routes: Routes = [
               import('./features/platform/products/product-detail').then((m) => m.ProductDetail),
           },
           {
+            path: 'leads',
+            canActivate: [platformGuard(P + 'leads.read')],
+            title: 'Leads',
+            loadComponent: () =>
+              import('./features/platform/leads/leads-list').then((m) => m.LeadsList),
+          },
+          {
+            path: 'leads/new',
+            canActivate: [platformGuard(P + 'leads.manage')],
+            title: 'Register lead',
+            loadComponent: () =>
+              import('./features/platform/leads/lead-register').then((m) => m.LeadRegister),
+          },
+          {
+            path: 'leads/:leadId',
+            canActivate: [platformGuard(P + 'leads.read')],
+            title: 'Lead',
+            loadComponent: () =>
+              import('./features/platform/leads/lead-detail').then((m) => m.LeadDetail),
+          },
+          {
             path: 'plans',
             canActivate: [platformGuard(P + 'plans.read')],
             title: 'Plans',

@@ -504,3 +504,32 @@ export interface BillingStatus {
   readonly webhooksEnabled: boolean;
   readonly gateway: string;
 }
+
+// ---------------------------------------------------------------- leads
+
+export type LeadStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'CONVERTED' | 'LOST';
+
+export interface Lead {
+  readonly id: string;
+  readonly companyName: string;
+  readonly contactName: string;
+  readonly email: string;
+  readonly phone: string | null;
+  readonly productInterest: string | null;
+  readonly source: string | null;
+  readonly status: LeadStatus;
+  readonly notes: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly version: number;
+}
+
+export interface LeadData {
+  companyName?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  productInterest?: string;
+  source?: string;
+  notes?: string;
+}

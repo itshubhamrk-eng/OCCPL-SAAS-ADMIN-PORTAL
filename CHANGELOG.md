@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Lead registration on the platform side (2026-10-19)
+- Platform staff can register and manage leads (prospective customers) under **Leads** in the portal: company name, contact name, email, phone, product interest, source and notes. The status flow is new → contacted → qualified → converted, with lost reachable from any open status and reopenable to new.
+- New permissions `platform.leads.read` (also held by Platform Support) and `platform.leads.manage`. Endpoints: `POST/GET /leads`, `GET/PATCH /leads/{leadId}`, `POST /leads/{leadId}/status`. Registering, editing and status changes are audited.
+
 ### Release flow for the courier repositories: server side (2026-10-19)
 - `bin/courier-deploy.sh backend|frontend <git SHA>` deploys one courier image, waits until it is healthy, restarts the web container after a backend change, and rolls back to the previous image on failure. It also works as an SSH forced command, so the courier repositories' release workflows can use a key that can do nothing else.
 - The compose file takes the image tag per image (`COURIER_BACKEND_RELEASE`, `COURIER_FRONTEND_RELEASE`, falling back to `COURIER_RELEASE`, then `dev`). RUNBOOK section 9, step 14 describes the one-time setup.
