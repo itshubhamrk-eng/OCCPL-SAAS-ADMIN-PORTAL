@@ -250,7 +250,7 @@ the production deploy. Outgoing email is real (the same SMTP mailbox): use test 
        - `courier-service`: **confidential** client with *Service accounts* on and no other flows. Core uses its client id to know which
          product is calling: put the same value in the courier product's *Service client id* in the portal (Products, courier, edit).
          Add the audience mapper `occpl-core` to it, as for other product service clients (`occpl-realm.json` shows the sample product's).
-    2. *Courier product configuration* in the portal: set the launch path to `/sso?company={companyId}` (new configuration version, publish).
+    2. *Courier product configuration* in the portal: set the launch path to `/sso/{companyId}` (the schema allows no query string; new configuration version, publish).
     3. *Server settings* in `/opt/occpl/.env` (the compose file passes them to `courier-backend`):
        `OCCPL_PLATFORM_CORE_BASE_URL=https://api.dev.occplsoftech.com`,
        `OCCPL_PLATFORM_CORE_TOKEN_URI=https://auth.dev.occplsoftech.com/realms/occpl/protocol/openid-connect/token`,
