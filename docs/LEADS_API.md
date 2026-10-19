@@ -114,8 +114,9 @@ curl -X POST "$BASE/public/leads" -H "Content-Type: application/json" \
 Responses: `202 {"received": true}` on success (no lead details are returned), `400` validation,
 `429` after 5 submissions per minute from one IP (`Retry-After` header).
 
-**Setup on the server:** the website's origin must be listed in `occpl.security.cors.allowed-origins`
-(otherwise browsers block the call), and the API must run behind the reverse proxy so the client IP
+**Setup on the server:** the website's origin must be allowed by CORS (otherwise browsers block the call):
+set `CORS_EXTRA_ORIGINS=https://www.occplsoftech.com` in the VPS `.env` and redeploy (origins are exact,
+so list `https://occplsoftech.com` too if the bare domain is used), and the API must run behind the reverse proxy so the client IP
 is real. Call it from the browser or from your website backend; no secret is involved.
 
 ## Calling the staff endpoints from the website backend

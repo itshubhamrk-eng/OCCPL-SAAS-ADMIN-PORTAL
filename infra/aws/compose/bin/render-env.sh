@@ -32,7 +32,7 @@ DB_MIGRATOR_USERNAME=occpl_migrator
 DB_MIGRATOR_PASSWORD=$(val "$app" db_migrator_password)
 OIDC_ISSUER_URI=$auth/realms/occpl
 SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI=$keycloak_internal/realms/occpl/protocol/openid-connect/certs
-CORS_ALLOWED_ORIGINS=$admin
+CORS_ALLOWED_ORIGINS=$admin$(extra=$(cfg cors_extra_origins); [ -n "$extra" ] && printf ',%s' "$extra")
 API_DOCS_ENABLED=false
 KEYCLOAK_BASE_URL=$keycloak_internal
 KEYCLOAK_ADMIN_CLIENT_SECRET=$(val "$app" keycloak_admin_client_secret)
