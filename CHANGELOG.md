@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Release flow for the courier repositories: server side (2026-10-19)
+- `bin/courier-deploy.sh backend|frontend <git SHA>` deploys one courier image, waits until it is healthy, restarts the web container after a backend change, and rolls back to the previous image on failure. It also works as an SSH forced command, so the courier repositories' release workflows can use a key that can do nothing else.
+- The compose file takes the image tag per image (`COURIER_BACKEND_RELEASE`, `COURIER_FRONTEND_RELEASE`, falling back to `COURIER_RELEASE`, then `dev`). RUNBOOK section 9, step 14 describes the one-time setup.
+
 ### Portal: Beautify button for product configuration versions (2026-10-19)
 - The "New version" form on a product has a **Beautify JSON** button that re-indents the configuration text. Invalid JSON is left as typed and shows its error.
 
