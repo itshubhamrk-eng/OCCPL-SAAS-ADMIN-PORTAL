@@ -61,7 +61,7 @@ Testcontainers; includes the Core ↔ sample product end-to-end test in `backend
 | `OIDC_ISSUER_URI` | yes | Expected `iss` (and discovery URL unless a JWK set URI is given) |
 | `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI` | no | Internal JWKS URL when the issuer URL is not reachable from the container |
 | `OIDC_AUDIENCE` | no (`occpl-core`) | Required `aud` |
-| `CORS_ALLOWED_ORIGINS` | no (none) | Comma-separated portal origins |
+| `CORS_ALLOWED_ORIGINS` | no (none) | Comma-separated origins (portal, plus the public website for `/api/v1/public/leads`). On the VPS the portal origin is built in; add others with `CORS_EXTRA_ORIGINS` in `.env` |
 | `API_DOCS_ENABLED` | no (`false`) | OpenAPI/Swagger UI; keep `false` in production |
 
 | `KEYCLOAK_BASE_URL` / `KEYCLOAK_REALM` | yes (prod) | Keycloak Admin REST API (internal URL) |

@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### CORS: extra allowed origins for the public website (2026-10-19)
+- `CORS_EXTRA_ORIGINS` (VPS `.env`) or `cors_extra_origins` (AWS SSM config) appends comma-separated origins to Core's `CORS_ALLOWED_ORIGINS`, so the website can call `POST /api/v1/public/leads`. Unset, nothing changes.
+
 ### Lead registration on the platform side (2026-10-19)
 - Platform staff can register and manage leads (prospective customers) under **Leads** in the portal: company name, contact name, email, phone, product interest, source and notes. The status flow is new → contacted → qualified → converted, with lost reachable from any open status and reopenable to new.
 - New permissions `platform.leads.read` (also held by Platform Support) and `platform.leads.manage`. Endpoints: `POST/GET /leads`, `GET/PATCH /leads/{leadId}`, `POST /leads/{leadId}/status`. Registering, editing and status changes are audited.

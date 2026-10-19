@@ -140,7 +140,8 @@ services:
       # Tokens carry the public issuer; keys and admin calls go over the compose network.
       OIDC_ISSUER_URI: https://auth.${DOMAIN}/realms/occpl
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/occpl/protocol/openid-connect/certs
-      CORS_ALLOWED_ORIGINS: https://admin.${DOMAIN}
+      # The portal, plus any extra comma-separated origins from .env (e.g. the public website's lead form).
+      CORS_ALLOWED_ORIGINS: https://admin.${DOMAIN}${CORS_EXTRA_ORIGINS:+,${CORS_EXTRA_ORIGINS}}
       API_DOCS_ENABLED: "false"
       MFA_PLATFORM_REQUIRED: ${MFA_PLATFORM_REQUIRED:-true}   # keep true; false is for the dev server only
       KEYCLOAK_BASE_URL: http://keycloak:8080
