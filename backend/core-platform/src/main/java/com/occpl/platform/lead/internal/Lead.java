@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "lead")
+@Table(name = "sales_lead")
 public class Lead {
 
     private static final Map<LeadStatus, Set<LeadStatus>> TRANSITIONS = Map.of(
