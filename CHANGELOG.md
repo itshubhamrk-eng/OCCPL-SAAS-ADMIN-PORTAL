@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Courier CORS: correct environment variable name (2026-10-19)
+- The previous change set `APP_CORS_ALLOWED_ORIGINS`, which Spring Boot does not map to `app.cors.allowed-origins` (dashes are removed, not turned into underscores), so the courier still refused sign-in with "Invalid CORS request". The compose file now sets `APP_CORS_ALLOWEDORIGINS`.
+
 ### Deploy: optional registry token for the courier images (2026-10-17)
 - The deploy logs the server into `ghcr.io` with the job's token, which cannot read the private `courier-service` and `courier-web` packages of other repositories (403, then a failed rollback). If the secret `GHCR_PULL_TOKEN` (a classic token with only `read:packages`) is set, the deploy uses it instead; without it nothing changes.
 
