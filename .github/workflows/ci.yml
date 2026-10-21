@@ -64,7 +64,7 @@ jobs:
       # (Docker is available on GitHub-hosted runners).
       - run: mvn -B -ntp verify -Doccpl.test.mysql-image=${{ matrix.mysql }}
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-test-reports-${{ strategy.job-index }}
           path: backend/**/target/*-reports/
