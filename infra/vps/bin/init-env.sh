@@ -17,7 +17,7 @@ mail_domain=$(awk -F. '{print $(NF-1) "." $NF}' <<< "$DOMAIN") # mailboxes live 
 ask ACME_EMAIL "Email for certificate notices" "tech@$mail_domain"
 ask ADMIN_IPS "IP addresses allowed to open the Keycloak console (space-separated, with /32)" ""
 [ -n "$ADMIN_IPS" ] || { echo "ADMIN_IPS is required" >&2; exit 1; }
-ask IMAGE_PREFIX "Image prefix" ghcr.io/itshubhamrk-eng/occpl
+ask IMAGE_PREFIX "Image prefix" ghcr.io/occplsoftech/occpl
 ask SMTP_HOST "SMTP host" smtp.hostinger.com
 ask SMTP_PORT "SMTP port (465 = SSL, 587 = STARTTLS)" 465
 ask SMTP_USERNAME "SMTP user" "tech@$mail_domain"

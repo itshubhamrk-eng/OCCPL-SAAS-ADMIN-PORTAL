@@ -23,7 +23,7 @@ variable "images" {
 variable "github_repository" {
   description = "owner/name of the GitHub repository allowed to publish and deploy"
   type        = string
-  default     = "itshubhamrk-eng/OCCPL-SAAS-ADMIN-PORTAL"
+  default     = "occplsoftech/OCCPL-SAAS-ADMIN-PORTAL"
 }
 
 variable "manage_dmarc_record" {
