@@ -6,7 +6,8 @@ All notable changes to this project are documented here.
 
 ### Repository moved to the occplsoftech account (2026-10-21)
 - The default image prefix (`infra/vps/.env.example`, `bin/init-env.sh`) is `ghcr.io/occplsoftech/occpl`, and the AWS `github_repository` default and its runbook note use `occplsoftech/OCCPL-SAAS-ADMIN-PORTAL`. The release workflow already derives the image names from the repository owner. On a running server, set `IMAGE_PREFIX` in `/opt/occpl/.env` before the first release from the new location.
-- Optional repository variable `GHCR_PULL_USER`: the user the `GHCR_PULL_TOKEN` token belongs to, for when it is not the repository owner. The courier images remain under `ghcr.io/itshubhamrk-eng/`.
+- `courier-service` and `courier-web` moved to `occplsoftech` as well: the compose defaults pull `ghcr.io/occplsoftech/courier-service` and `courier-web`. The first release from each new repository publishes them; until then the server keeps its running courier containers. Create `GHCR_PULL_TOKEN` again as a classic `read:packages` token of the `occplsoftech` account.
+- Optional repository variable `GHCR_PULL_USER`: the user the `GHCR_PULL_TOKEN` token belongs to, for when it is not the repository owner (unset, the owner is used).
 
 ### Mailbox renamed to support@occplsoftech.com (2026-10-21)
 - The documentation and `infra/vps/.env.example` now use `support@occplsoftech.com` (SMTP user, sender, Let's Encrypt contact and provisioning alert recipient) instead of `tech@occplsoftech.com`. A running server keeps its own `/opt/occpl/.env`: change the values there too (RUNBOOK section on the mailbox).
