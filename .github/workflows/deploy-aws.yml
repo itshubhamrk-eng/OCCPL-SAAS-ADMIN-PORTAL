@@ -39,7 +39,7 @@ jobs:
     outputs:
       release: ${{ steps.release.outputs.release }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release }}
       - id: release
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: production # the IAM trust policy of the deploy role names this environment
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release }}
       - uses: aws-actions/configure-aws-credentials@v4

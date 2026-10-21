@@ -41,3 +41,7 @@
 		reverse_proxy courier-frontend:80
 	}
 }
+
+# Extra site blocks that this repo's deploy does not manage, for example the public website
+# (/opt/occpl/extra/website.caddy, static files in /opt/occpl/site). A glob that matches no file is fine.
+import /etc/caddy/extra/*.caddy

@@ -53,7 +53,7 @@ jobs:
     outputs:
       release: ${{ steps.meta.outputs.release }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2 # the commit and its parent, to see what changed
@@ -69,7 +69,7 @@ jobs:
         run: infra/scripts/changed-paths.sh "${{ steps.meta.outputs.previous }}" HEAD | tee -a "$GITHUB_OUTPUT"
       - name: Production realm is in sync with the development realm
         run: python3 infra/aws/compose/keycloak/make-production-realm.py --check
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: ${{ matrix.target }} # "production" waits for its reviewers
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.release }}
       - name: SSH access

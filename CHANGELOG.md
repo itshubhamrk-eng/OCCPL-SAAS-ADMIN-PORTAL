@@ -7,6 +7,10 @@ All notable changes to this project are documented here.
 ### Mailbox renamed to support@occplsoftech.com (2026-10-21)
 - The documentation and `infra/vps/.env.example` now use `support@occplsoftech.com` (SMTP user, sender, Let's Encrypt contact and provisioning alert recipient) instead of `tech@occplsoftech.com`. A running server keeps its own `/opt/occpl/.env`: change the values there too (RUNBOOK section on the mailbox).
 
+### Caddy: load extra site blocks, for the public website (2026-10-19)
+- The `Caddyfile` ends with `import /etc/caddy/extra/*.caddy` and `docker-compose.yml` mounts `./extra` (at `/etc/caddy/extra`) and `./site` (at `/srv/site`) into Caddy. The public website (`www.occplsoftech.com`, its own repository `softech-website`) keeps its Caddy config in `/opt/occpl/extra/website.caddy` and its static files in `/opt/occpl/site`. Before this, each release deploy overwrote the hand-added website block and mounts and took the website offline.
+- The release deploy does not use `--delete`, so `extra/` and `site/` survive it. A glob that matches no file only logs a warning, so a server without `website.caddy` is unaffected.
+
 ### CORS: extra allowed origins for the public website (2026-10-19)
 - `CORS_EXTRA_ORIGINS` (VPS `.env`) or `cors_extra_origins` (AWS SSM config) appends comma-separated origins to Core's `CORS_ALLOWED_ORIGINS`, so the website can call `POST /api/v1/public/leads`. Unset, nothing changes.
 
