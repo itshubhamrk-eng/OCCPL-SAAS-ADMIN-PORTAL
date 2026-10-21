@@ -34,7 +34,7 @@ account (the registrar's name servers pointing at it); a GitHub admin on the rep
      `ECR_REGISTRY` (`ecr_registry`), `ARTIFACTS_BUCKET` (`artifacts_bucket`).
    - Environment `production`, limited to the `main` branch, with required reviewers and the
      variables from the output `github_environment_variables`.
-   - The IAM trust policies match `repo:itshubhamrk-eng/OCCPL-SAAS-ADMIN-PORTAL:…` exactly
+   - The IAM trust policies match `repo:occplsoftech/OCCPL-SAAS-ADMIN-PORTAL:…` exactly
      (case-sensitive). If the repository is renamed or transferred, update `github_repository`.
 6. **Database accounts.** `infra/aws/scripts/bootstrap-database.sh` creates the `occpl_core` and
    `keycloak` schemas and the TLS-only accounts `occpl_migrator`, `occpl_app`, `occpl_backup` and

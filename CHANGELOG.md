@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Repository moved to the occplsoftech account (2026-10-21)
+- The default image prefix (`infra/vps/.env.example`, `bin/init-env.sh`) is `ghcr.io/occplsoftech/occpl`, and the AWS `github_repository` default and its runbook note use `occplsoftech/OCCPL-SAAS-ADMIN-PORTAL`. The release workflow already derives the image names from the repository owner. On a running server, set `IMAGE_PREFIX` in `/opt/occpl/.env` before the first release from the new location.
+- `courier-service` and `courier-web` moved to `occplsoftech` as well: the compose defaults pull `ghcr.io/occplsoftech/courier-service` and `courier-web`. The first release from each new repository publishes them; until then the server keeps its running courier containers. Create `GHCR_PULL_TOKEN` again as a classic `read:packages` token of the `occplsoftech` account.
+- Optional repository variable `GHCR_PULL_USER`: the user the `GHCR_PULL_TOKEN` token belongs to, for when it is not the repository owner (unset, the owner is used).
+
+### Mailbox renamed to support@occplsoftech.com (2026-10-21)
+- The documentation and `infra/vps/.env.example` now use `support@occplsoftech.com` (SMTP user, sender, Let's Encrypt contact and provisioning alert recipient) instead of `tech@occplsoftech.com`. A running server keeps its own `/opt/occpl/.env`: change the values there too (RUNBOOK section on the mailbox).
+
 ### Caddy: load extra site blocks, for the public website (2026-10-19)
 - The `Caddyfile` ends with `import /etc/caddy/extra/*.caddy` and `docker-compose.yml` mounts `./extra` (at `/etc/caddy/extra`) and `./site` (at `/srv/site`) into Caddy. The public website (`www.occplsoftech.com`, its own repository `softech-website`) keeps its Caddy config in `/opt/occpl/extra/website.caddy` and its static files in `/opt/occpl/site`. Before this, each release deploy overwrote the hand-added website block and mounts and took the website offline.
 - The release deploy does not use `--delete`, so `extra/` and `site/` survive it. A glob that matches no file only logs a warning, so a server without `website.caddy` is unaffected.

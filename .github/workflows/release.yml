@@ -246,7 +246,8 @@ jobs:
           # in other repositories (the courier-service and courier-web packages). Without it the job's token is used,
           # which can read only this repository's own packages.
           REGISTRY_TOKEN: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
-          REGISTRY_USER: ${{ secrets.GHCR_PULL_TOKEN && github.repository_owner || github.actor }}
+          # GHCR_PULL_USER (optional variable): the GitHub user the token belongs to; defaults to the repository owner.
+          REGISTRY_USER: ${{ secrets.GHCR_PULL_TOKEN && (vars.GHCR_PULL_USER || github.repository_owner) || github.actor }}
         run: |
           # The token lets the server pull the private images for this deployment.
           printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/id_deploy "occpl@$HOST" \

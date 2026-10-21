@@ -195,7 +195,7 @@ services:
   # Uses this server's MySQL (own database and user) and Redis. Set up once with bin/courier-setup.sh.
   courier-backend:
     profiles: [courier]
-    image: ${COURIER_BACKEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-service}:${COURIER_BACKEND_RELEASE:-${COURIER_RELEASE:-dev}}
+    image: ${COURIER_BACKEND_IMAGE:-ghcr.io/occplsoftech/courier-service}:${COURIER_BACKEND_RELEASE:-${COURIER_RELEASE:-dev}}
     restart: unless-stopped
     depends_on:
       mysql:
@@ -242,7 +242,7 @@ services:
 
   courier-frontend:
     profiles: [courier]
-    image: ${COURIER_FRONTEND_IMAGE:-ghcr.io/itshubhamrk-eng/courier-web}:${COURIER_FRONTEND_RELEASE:-${COURIER_RELEASE:-dev}}
+    image: ${COURIER_FRONTEND_IMAGE:-ghcr.io/occplsoftech/courier-web}:${COURIER_FRONTEND_RELEASE:-${COURIER_RELEASE:-dev}}
     restart: unless-stopped
     depends_on:
       - courier-backend

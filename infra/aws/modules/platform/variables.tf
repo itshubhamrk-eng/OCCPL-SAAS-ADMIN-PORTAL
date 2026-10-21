@@ -134,7 +134,7 @@ variable "github_oidc_provider_arn" {
 
 variable "github_repository" {
   type    = string
-  default = "itshubhamrk-eng/OCCPL-SAAS-ADMIN-PORTAL"
+  default = "occplsoftech/OCCPL-SAAS-ADMIN-PORTAL"
 }
 
 variable "bootstrap_super_admin_email" {

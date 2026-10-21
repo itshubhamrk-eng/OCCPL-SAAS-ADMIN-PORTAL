@@ -13,7 +13,7 @@ certificates), the admin portal, Core Platform, Keycloak (production image, real
 and Redis in containers. Images are built once per commit by GitHub Actions and published to the
 GitHub container registry (`release.yml`); a manual approval on the `production` environment gates the
 deploy over SSH (`bin/deploy.sh`, automatic rollback). Email goes through the existing
-`tech@occplsoftech.com` SMTP mailbox until SES is approved (SMTP over SSL or STARTTLS is configurable).
+`support@occplsoftech.com` SMTP mailbox until SES is approved (SMTP over SSL or STARTTLS is configurable).
 Backups: the Phase 9 scripts (nightly dump, 5-minute binary-log increments) with an off-host copy in a
 write-only S3 bucket (`infra/aws/shared/backups.tf`). DNS stays in Route 53.
 
