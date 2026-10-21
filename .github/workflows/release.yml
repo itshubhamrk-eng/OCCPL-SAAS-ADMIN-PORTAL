@@ -53,7 +53,7 @@ jobs:
     outputs:
       release: ${{ steps.meta.outputs.release }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2 # the commit and its parent, to see what changed
@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: ${{ matrix.target }} # "production" waits for its reviewers
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.release }}
       - name: SSH access
