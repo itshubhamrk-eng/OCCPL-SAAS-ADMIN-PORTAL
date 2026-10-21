@@ -139,6 +139,10 @@ courier containers and talks to the same backend; repository `occplsoftech/e-com
    sign in; blank shows a "Company code" field), `PORTAL_COMPANY_NAME`, `PORTAL_SUPPORT_EMAIL`. Then
    `docker compose up -d` starts `courier-portal` and restarts the backend with the portal's origin in its CORS list and
    `CUSTOMER_PORTAL_BASE_URL` (the links in activation and password-reset emails).
+   **After changing `PORTAL_HOST` (or `COURIER_HOST`) in `.env`, recreate Caddy:** `docker compose up -d caddy`. Caddy reads these
+   values only when its container is created, so until then it serves the old host and the portal's HTTPS fails with
+   `tlsv1 alert internal error` (the release smoke test shows exactly that). Check with
+   `docker compose exec caddy printenv PORTAL_HOST` and `docker compose logs caddy | grep -i obtain`.
 3. **Couriers (optional):** a company administrator connects the company's own courier accounts in the courier app, under
    *Administration > Courier Integrations* (Shiprocket: API user e-mail, password, pickup location; Delhivery: API token, pickup
    location), then presses *Test connection*. Secrets are stored encrypted and never shown again. Blue Dart and Ekart are listed as
