@@ -179,7 +179,7 @@ Internet ─ :80/:443 ─ Caddy (Let's Encrypt, HTTP → HTTPS)
    internal: MySQL 8.4 (occpl_core, keycloak) · Redis; backups → /var/backups/occpl → S3 (write-only user)
 ```
 
-DNS stays in Route 53 (three A records to the server). Email uses the `tech@occplsoftech.com` SMTP
+DNS stays in Route 53 (three A records to the server). Email uses the `support@occplsoftech.com` SMTP
 mailbox until SES is approved. One machine means an outage on reboot or host failure; recovery is a
 restore (RUNBOOK §6).
 

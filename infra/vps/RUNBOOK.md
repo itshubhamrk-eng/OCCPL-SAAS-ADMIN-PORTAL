@@ -10,7 +10,7 @@ Commands marked **[Mac]** run on your computer, **[server]** over SSH as user `o
 | A VPS | Ubuntu 24.04, **4 vCPU, 8 GB RAM or more, 80 GB+ disk**, IPv4 address, in an Indian data centre if offered (latency, data residency). Add your SSH public key when ordering. |
 | The domain's DNS in Route 53 | Done (zone `occplsoftech.com`). |
 | A GitHub admin login | For the environment, variable and secrets in §3. |
-| An SMTP mailbox | `tech@occplsoftech.com` (Hostinger mail). |
+| An SMTP mailbox | `support@occplsoftech.com` (Hostinger mail). |
 
 Generate a key pair for the server: **[Mac]** `ssh-keygen -t ed25519 -f ~/.ssh/occpl_vps -C occpl-deploy`
 (use it for the VPS and as the deploy key in §3; `~/.ssh/occpl_vps.pub` is the public half).

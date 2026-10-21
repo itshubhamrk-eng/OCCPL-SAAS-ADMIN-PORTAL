@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Mailbox renamed to support@occplsoftech.com (2026-10-21)
+- The documentation and `infra/vps/.env.example` now use `support@occplsoftech.com` (SMTP user, sender, Let's Encrypt contact and provisioning alert recipient) instead of `tech@occplsoftech.com`. A running server keeps its own `/opt/occpl/.env`: change the values there too (RUNBOOK section on the mailbox).
+
 ### CORS: extra allowed origins for the public website (2026-10-19)
 - `CORS_EXTRA_ORIGINS` (VPS `.env`) or `cors_extra_origins` (AWS SSM config) appends comma-separated origins to Core's `CORS_ALLOWED_ORIGINS`, so the website can call `POST /api/v1/public/leads`. Unset, nothing changes.
 
