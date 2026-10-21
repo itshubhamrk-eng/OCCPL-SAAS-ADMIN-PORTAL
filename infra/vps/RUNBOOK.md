@@ -134,15 +134,18 @@ A separate web app for a courier company's business customers (book, compare rat
 courier containers and talks to the same backend; repository `occplsoftech/e-commerce-bussines`.
 
 1. **DNS:** an A/AAAA record for `PORTAL_HOST` (default `portal.<courier host without its first label>`, set by
-   `bin/courier-setup.sh`) pointing at this server, like the other hosts. Caddy gets the certificate by itself.
+   `bin/courier-setup.sh`; this installation uses `e-commerce.occplsoftech.com` -> 65.0.187.198, so set `PORTAL_HOST=e-commerce.occplsoftech.com` in `.env`) pointing at this server, like the other hosts. Caddy gets the certificate by itself.
 2. **`.env`:** `PORTAL_HOST` (written by the setup script), optionally `PORTAL_COMPANY_CODE` (the company whose customers
    sign in; blank shows a "Company code" field), `PORTAL_COMPANY_NAME`, `PORTAL_SUPPORT_EMAIL`. Then
    `docker compose up -d` starts `courier-portal` and restarts the backend with the portal's origin in its CORS list and
    `CUSTOMER_PORTAL_BASE_URL` (the links in activation and password-reset emails).
-3. **Couriers (optional):** `SHIPROCKET_ENABLED=true` with `SHIPROCKET_API_EMAIL`, `SHIPROCKET_API_PASSWORD`,
-   `SHIPROCKET_PICKUP_LOCATION`; `DELHIVERY_ENABLED=true` with `DELHIVERY_API_TOKEN`, `DELHIVERY_PICKUP_LOCATION`. Without
-   them those couriers show as "not connected" and OCCPL's own network is still offered. Use a Shiprocket **API user**,
-   not the owner login. The markup is the administrator-managed rule in the courier app (`/api/v1/pricing-markup-rules`,
+3. **Couriers (optional):** a company administrator connects the company's own courier accounts in the courier app, under
+   *Administration > Courier Integrations* (Shiprocket: API user e-mail, password, pickup location; Delhivery: API token, pickup
+   location), then presses *Test connection*. Secrets are stored encrypted and never shown again. Blue Dart and Ekart are listed as
+   "Coming soon" (no integration code yet). Use a Shiprocket **API user**, not the owner login. *Fallback:* settings in `.env`
+   (`SHIPROCKET_ENABLED`, `SHIPROCKET_API_EMAIL`, `SHIPROCKET_API_PASSWORD`, `SHIPROCKET_PICKUP_LOCATION`, `DELHIVERY_ENABLED`,
+   `DELHIVERY_API_TOKEN`, `DELHIVERY_PICKUP_LOCATION`) apply to every company that has not saved its own account.
+   The markup is the administrator-managed rule in the courier app (`/api/v1/pricing-markup-rules`,
    default 10 % on external couriers); GST on that markup and on OCCPL's network is `app.customer-portal.markup-gst-percent`
    / `occpl-network-gst-percent` (18 by default - confirm with the accountant).
 4. **Deploys:** the portal repository's Release workflow runs `courier-deploy.sh portal <sha>` over the same restricted SSH
