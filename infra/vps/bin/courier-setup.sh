@@ -3,7 +3,9 @@
 #   - adds its settings and generated secrets to .env (existing values are kept)
 #   - creates its MySQL database and user
 # Afterwards: docker compose pull && docker compose up -d   (images come from the courier-service and courier-web repositories' Image workflow)
-#   bin/courier-setup.sh <courier-host> <default-plan-code>      e.g. courier.dev.occplsoftech.com STARTER
+#   bin/courier-setup.sh <courier-host> <default-plan-code> [<portal-host>]   e.g. courier.dev.occplsoftech.com STARTER
+#   The customer shipping portal's host defaults to portal.<courier host without its first label> (portal.dev.occplsoftech.com);
+#   its DNS record must point at this server as well.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 host=${1:?usage: courier-setup.sh <courier-host> <default-plan-code>}
@@ -14,6 +16,7 @@ put() { # key value: keep an existing value
   grep -q "^$1=" .env || printf '%s=%s\n' "$1" "$2" >> .env
 }
 put COURIER_HOST "$host"
+put PORTAL_HOST "${3:-portal.${host#*.}}"
 put COURIER_DEFAULT_PLAN_CODE "$plan"
 put COURIER_DB_PASSWORD "$(openssl rand -hex 24)"
 put COURIER_JWT_SECRET "$(openssl rand -base64 48 | tr -d '\n')"

@@ -22,6 +22,7 @@ services:
       AUTH_HOST: auth.${DOMAIN}
       ADMIN_IPS: ${ADMIN_IPS:-127.0.0.1/32}
       COURIER_HOST: ${COURIER_HOST:-courier.localhost}   # only used when the courier profile is on
+      PORTAL_HOST: ${PORTAL_HOST:-portal.localhost}      # the customer shipping portal, same profile
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./extra:/etc/caddy/extra:ro   # extra site blocks (e.g. the public website); not overwritten by the deploy
@@ -205,7 +206,17 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: dev
       # The browser sends this origin with the sign-in request; the courier answers "Invalid CORS request" for any other.
-      APP_CORS_ALLOWEDORIGINS: https://${COURIER_HOST:-courier.localhost}
+      APP_CORS_ALLOWEDORIGINS: https://${COURIER_HOST:-courier.localhost},https://${PORTAL_HOST:-portal.localhost}
+      # Where activation and password-reset links for customer-portal accounts point.
+      CUSTOMER_PORTAL_BASE_URL: https://${PORTAL_HOST:-portal.localhost}
+      # Customer portal couriers. Blank = shown as "not connected"; the provider's API credentials never go in the image.
+      SHIPROCKET_ENABLED: ${SHIPROCKET_ENABLED:-false}
+      SHIPROCKET_API_EMAIL: ${SHIPROCKET_API_EMAIL:-}
+      SHIPROCKET_API_PASSWORD: ${SHIPROCKET_API_PASSWORD:-}
+      SHIPROCKET_PICKUP_LOCATION: ${SHIPROCKET_PICKUP_LOCATION:-}
+      DELHIVERY_ENABLED: ${DELHIVERY_ENABLED:-false}
+      DELHIVERY_API_TOKEN: ${DELHIVERY_API_TOKEN:-}
+      DELHIVERY_PICKUP_LOCATION: ${DELHIVERY_PICKUP_LOCATION:-}
       DB_HOST: mysql
       DB_PORT: "3306"
       DB_NAME: courier_db
@@ -246,6 +257,22 @@ services:
     restart: unless-stopped
     depends_on:
       - courier-backend
+    mem_limit: 128m
+    logging: *logging
+
+  # Customer shipping portal (business customers book and track shipments). Same courier backend; its nginx
+  # forwards /api/ to the host name "backend". Deployed by the e-commerce-bussines repository's Release workflow.
+  courier-portal:
+    profiles: [courier]
+    image: ${PORTAL_IMAGE:-ghcr.io/occplsoftech/e-commerce-business}:${COURIER_PORTAL_RELEASE:-${COURIER_RELEASE:-dev}}
+    restart: unless-stopped
+    depends_on:
+      - courier-backend
+    environment:
+      # Company whose customers sign in here (blank: the sign-in page asks for a company code).
+      PORTAL_COMPANY_CODE: ${PORTAL_COMPANY_CODE:-}
+      PORTAL_COMPANY_NAME: ${PORTAL_COMPANY_NAME:-OCCPL SOFTECH}
+      PORTAL_SUPPORT_EMAIL: ${PORTAL_SUPPORT_EMAIL:-}
     mem_limit: 128m
     logging: *logging
 
