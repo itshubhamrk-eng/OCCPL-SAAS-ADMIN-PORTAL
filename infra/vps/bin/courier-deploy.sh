@@ -2,7 +2,7 @@
 # Deploys ONE courier image on this server and waits until it is healthy; if it does not become healthy the
 # previous image is started again and the exit code is 1. Called by the release workflows of the courier-service and
 # courier-web repositories over SSH, and usable by hand:
-#   bin/courier-deploy.sh backend|frontend <release>     release = full git SHA of the image tag, or "dev"
+#   bin/courier-deploy.sh backend|frontend|portal <release>     release = full git SHA of the image tag, or "dev"
 # As an SSH forced command (authorized_keys: command="/opt/occpl/bin/courier-deploy.sh",restrict ssh-ed25519 ...) the
 # arguments come from the client's command line, so that key can do nothing else on this server.
 set -euo pipefail
@@ -13,7 +13,7 @@ if [ -n "${SSH_ORIGINAL_COMMAND:-}" ]; then
   read -r -a original <<<"$SSH_ORIGINAL_COMMAND"
   set -- "${original[@]}"
 fi
-usage() { echo "usage: courier-deploy.sh backend|frontend <40-character git SHA | dev>" >&2; exit 2; }
+usage() { echo "usage: courier-deploy.sh backend|frontend|portal <40-character git SHA | dev>" >&2; exit 2; }
 [ $# -eq 2 ] || usage
 part=$1
 release=$2
@@ -21,6 +21,7 @@ release=$2
 case "$part" in
   backend) service=courier-backend; var=COURIER_BACKEND_RELEASE ;;
   frontend) service=courier-frontend; var=COURIER_FRONTEND_RELEASE ;;
+  portal) service=courier-portal; var=COURIER_PORTAL_RELEASE ;;
   *) usage ;;
 esac
 [ -f .env ] || { echo "no .env: run bin/init-env.sh first" >&2; exit 1; }

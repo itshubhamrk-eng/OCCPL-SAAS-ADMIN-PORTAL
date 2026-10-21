@@ -128,6 +128,29 @@ nightly backup.
 - **Resize:** upgrade the VPS plan in the provider's panel (a reboot), then raise
   `CORE_MEM_LIMIT`, `KEYCLOAK_MEM_LIMIT`, `MYSQL_MEM_LIMIT` and `MYSQL_BUFFER_POOL` in `.env`.
 
+## 7a. Customer shipping portal (courier profile)
+
+A separate web app for a courier company's business customers (book, compare rates, track, labels). It runs next to the
+courier containers and talks to the same backend; repository `occplsoftech/e-commerce-bussines`.
+
+1. **DNS:** an A/AAAA record for `PORTAL_HOST` (default `portal.<courier host without its first label>`, set by
+   `bin/courier-setup.sh`) pointing at this server, like the other hosts. Caddy gets the certificate by itself.
+2. **`.env`:** `PORTAL_HOST` (written by the setup script), optionally `PORTAL_COMPANY_CODE` (the company whose customers
+   sign in; blank shows a "Company code" field), `PORTAL_COMPANY_NAME`, `PORTAL_SUPPORT_EMAIL`. Then
+   `docker compose up -d` starts `courier-portal` and restarts the backend with the portal's origin in its CORS list and
+   `CUSTOMER_PORTAL_BASE_URL` (the links in activation and password-reset emails).
+3. **Couriers (optional):** `SHIPROCKET_ENABLED=true` with `SHIPROCKET_API_EMAIL`, `SHIPROCKET_API_PASSWORD`,
+   `SHIPROCKET_PICKUP_LOCATION`; `DELHIVERY_ENABLED=true` with `DELHIVERY_API_TOKEN`, `DELHIVERY_PICKUP_LOCATION`. Without
+   them those couriers show as "not connected" and OCCPL's own network is still offered. Use a Shiprocket **API user**,
+   not the owner login. The markup is the administrator-managed rule in the courier app (`/api/v1/pricing-markup-rules`,
+   default 10 % on external couriers); GST on that markup and on OCCPL's network is `app.customer-portal.markup-gst-percent`
+   / `occpl-network-gst-percent` (18 by default - confirm with the accountant).
+4. **Deploys:** the portal repository's Release workflow runs `courier-deploy.sh portal <sha>` over the same restricted SSH
+   key as the courier repositories (environment `dev`: variables `VPS_HOST`, `PORTAL_URL`; secrets `VPS_SSH_KEY`,
+   `VPS_KNOWN_HOSTS`). Rollback: run that workflow by hand with an earlier full commit SHA.
+5. **Customer accounts:** a company administrator grants portal access to a business customer in the courier app
+   (`POST /api/v1/customers/{id}/portal-access`); the customer activates it from the emailed link.
+
 ## 8. Moving to AWS later
 
 `infra/aws` is ready (ADR-0011). Restore the latest backup into RDS with `backup/restore.sh`

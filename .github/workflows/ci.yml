@@ -181,5 +181,5 @@ jobs:
       - name: Caddyfile
         run: |
           docker run --rm -v "$PWD/infra/vps/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            -e ACME_EMAIL=a@b.c -e ADMIN_HOST=admin.x.test -e API_HOST=api.x.test -e AUTH_HOST=auth.x.test -e COURIER_HOST=courier.x.test -e ADMIN_IPS=10.0.0.1/32 \
+            -e ACME_EMAIL=a@b.c -e ADMIN_HOST=admin.x.test -e API_HOST=api.x.test -e AUTH_HOST=auth.x.test -e COURIER_HOST=courier.x.test -e PORTAL_HOST=portal.x.test -e ADMIN_IPS=10.0.0.1/32 \
             caddy:2.10.2 caddy validate --config /etc/caddy/Caddyfile
