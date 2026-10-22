@@ -217,6 +217,19 @@ services:
       DELHIVERY_ENABLED: ${DELHIVERY_ENABLED:-false}
       DELHIVERY_API_TOKEN: ${DELHIVERY_API_TOKEN:-}
       DELHIVERY_PICKUP_LOCATION: ${DELHIVERY_PICKUP_LOCATION:-}
+      # Real e-mail (account activation / password reset links, KYC codes, invoices). Off = written to the log.
+      # Turning it on needs the SMTP relay below (e.g. smtp.gmail.com:587 with an app password, or the provider's SMTP).
+      COMMUNICATION_EMAIL_ENABLED: ${COURIER_EMAIL_ENABLED:-false}
+      COMMUNICATION_EMAIL_FROM: ${COURIER_EMAIL_FROM:-}
+      COMMUNICATION_EMAIL_FROM_NAME: ${COURIER_EMAIL_FROM_NAME:-OCCPL Courier}
+      SPRING_MAIL_HOST: ${COURIER_SMTP_HOST:-}
+      SPRING_MAIL_PORT: ${COURIER_SMTP_PORT:-587}
+      SPRING_MAIL_USERNAME: ${COURIER_SMTP_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${COURIER_SMTP_PASSWORD:-}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${COURIER_SMTP_STARTTLS:-true}
+      # Dev server only: also write KYC one-time codes to the log (handy before SMTP/SMS are set up).
+      KYC_LOG_CODES: ${COURIER_KYC_LOG_CODES:-false}
       DB_HOST: mysql
       DB_PORT: "3306"
       DB_NAME: courier_db
