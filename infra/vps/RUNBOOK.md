@@ -158,6 +158,30 @@ courier containers and talks to the same backend; repository `occplsoftech/e-com
 5. **Customer accounts:** a company administrator grants portal access to a business customer in the courier app
    (`POST /api/v1/customers/{id}/portal-access`); the customer activates it from the emailed link.
 
+
+## 7b. Courier e-mail (SMTP) and KYC codes
+
+The courier backend writes account e-mails (activation, password reset) and KYC codes to its log until real
+e-mail is switched on. To send them for real, add to `/opt/occpl/.env` and recreate the backend:
+
+```
+COURIER_EMAIL_ENABLED=true
+COURIER_SMTP_HOST=smtp.gmail.com        # or your provider's SMTP host
+COURIER_SMTP_PORT=587
+COURIER_SMTP_USERNAME=you@yourdomain.com
+COURIER_SMTP_PASSWORD=<app password>    # never commit it
+COURIER_EMAIL_FROM=you@yourdomain.com   # optional; defaults to the SMTP user name
+```
+
+```
+docker compose --profile courier up -d courier-backend
+```
+
+Mobile (SMS) codes go through each company's own SMS channel (courier-web → Communication Center → Channel
+Settings). Until a company sets one up, mobile KYC codes are refused with a clear message. On the dev server only,
+`COURIER_KYC_LOG_CODES=true` also writes every KYC code to the backend log
+(`docker compose logs courier-backend | grep "DEV KYC CODE"`).
+
 ## 8. Moving to AWS later
 
 `infra/aws` is ready (ADR-0011). Restore the latest backup into RDS with `backup/restore.sh`
