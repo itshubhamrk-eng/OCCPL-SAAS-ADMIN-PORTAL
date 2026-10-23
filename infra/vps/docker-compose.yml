@@ -207,6 +207,9 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       # The browser sends this origin with the sign-in request; the courier answers "Invalid CORS request" for any other.
       APP_CORS_ALLOWEDORIGINS: https://${COURIER_HOST:-courier.localhost},https://${PORTAL_HOST:-portal.localhost}
+      # The courier app's public address: staff activation / password-reset links, and the webhook address couriers
+      # (Delhivery, Shiprocket) push shipment status updates to (shown in Courier Integrations).
+      APP_BASE_URL: https://${COURIER_HOST:-courier.localhost}
       # Where activation and password-reset links for customer-portal accounts point.
       CUSTOMER_PORTAL_BASE_URL: https://${PORTAL_HOST:-portal.localhost}
       # Customer portal couriers. Blank = shown as "not connected"; the provider's API credentials never go in the image.
