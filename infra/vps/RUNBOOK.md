@@ -152,6 +152,10 @@ courier containers and talks to the same backend; repository `occplsoftech/e-com
    The markup is the administrator-managed rule in the courier app (`/api/v1/pricing-markup-rules`,
    default 10 % on external couriers); GST on that markup and on OCCPL's network is `app.customer-portal.markup-gst-percent`
    / `occpl-network-gst-percent` (18 by default - confirm with the accountant).
+   **Status updates:** the backend checks every booked shipment with its courier hourly by itself (`TRACKING_SYNC_ENABLED`,
+   on by default). For instant updates, copy the *Webhook address* shown on each courier's card in Courier Integrations
+   into the courier's panel (Shiprocket: Settings > API > Webhooks; Delhivery: ask the account manager to enable status
+   push to that URL). The address is built from `APP_BASE_URL` (`https://$COURIER_HOST`, set in the compose file).
 4. **Deploys:** the portal repository's Release workflow runs `courier-deploy.sh portal <sha>` over the same restricted SSH
    key as the courier repositories (environment `dev`: variables `VPS_HOST`, `PORTAL_URL`; secrets `VPS_SSH_KEY`,
    `VPS_KNOWN_HOSTS`). Rollback: run that workflow by hand with an earlier full commit SHA.
